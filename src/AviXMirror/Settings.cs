@@ -10,8 +10,16 @@ public enum MirrorMode
     Capture,
     /// <summary>Rétroviseur synthétique dessiné à partir de la télémétrie (aucune capture).</summary>
     Radar,
-    /// <summary>Aucune fenêtre : le jeu dessine lui-même sur le VoCore (fenêtre étendue).</summary>
+    /// <summary>Aucune fenêtre : le jeu dessine lui-même sur le VoCore (nécessite le pilote d'écran VoCore).</summary>
     Direct,
+}
+
+public enum OutputTarget
+{
+    /// <summary>Envoi direct au VoCore en USB (comme SimHub), sans pilote d'écran.</summary>
+    VoCoreUsb,
+    /// <summary>Fenêtre plein écran sur un écran Windows.</summary>
+    EcranWindows,
 }
 
 public enum CaptureSource
@@ -41,7 +49,7 @@ public sealed class Settings
     [Category("1. Général"), DisplayName("Mode")]
     [Description("Capture : recopie le rétro virtuel du jeu sur le VoCore.\n" +
                  "Radar : rétro synthétique dessiné depuis la télémétrie (plugin rF2 Shared Memory).\n" +
-                 "Direct : pas de fenêtre, le jeu est étendu sur le VoCore et y dessine le rétro lui-même.")]
+                 "Direct : le jeu est étendu sur le VoCore (nécessite le pilote d'écran VoCore, déconseillé avec Easy Anti-Cheat).")]
     public MirrorMode Mode { get; set; } = MirrorMode.Capture;
 
     [Category("1. Général"), DisplayName("Démarrage automatique")]
@@ -52,10 +60,40 @@ public sealed class Settings
     [Description("Nom du processus de Le Mans Ultimate (sans .exe).")]
     public string GameProcessName { get; set; } = "Le Mans Ultimate";
 
+    [Category("1. Général"), DisplayName("Délai après lancement du jeu (s)")]
+    [Description("Attente avant de capturer ou de modifier la fenêtre de LMU, pour laisser Easy Anti-Cheat démarrer tranquillement.")]
+    public int GameStartDelaySeconds { get; set; } = 30;
+
     // ---------- Sortie (VoCore) ----------
 
+    [Category("2. Sortie VoCore"), DisplayName("Sortie")]
+    [Description("VoCoreUsb : l'image est envoyée directement au VoCore en USB, comme SimHub. Aucun pilote d'écran, " +
+                 "compatible Easy Anti-Cheat. Fermez SimHub (ou désactivez-y le VoCore) pendant l'utilisation.\n" +
+                 "EcranWindows : fenêtre plein écran sur un écran Windows.")]
+    public OutputTarget Output { get; set; } = OutputTarget.VoCoreUsb;
+
+    [Category("2. Sortie VoCore"), DisplayName("VoCore USB : VID")]
+    [Description("Identifiant fabricant USB (hexadécimal). VoCore = C872.")]
+    public string VoCoreVendorId { get; set; } = "C872";
+
+    [Category("2. Sortie VoCore"), DisplayName("VoCore USB : PID")]
+    [Description("Identifiant produit USB (hexadécimal). VoCore = 1004.")]
+    public string VoCoreProductId { get; set; } = "1004";
+
+    [Category("2. Sortie VoCore"), DisplayName("VoCore USB : largeur native")]
+    [Description("0 = automatique (400 pour le 7,8\" portrait). À régler si l'image est brouillée.")]
+    public int VoCoreWidth { get; set; }
+
+    [Category("2. Sortie VoCore"), DisplayName("VoCore USB : hauteur native")]
+    [Description("0 = automatique (1280 pour le 7,8\" portrait).")]
+    public int VoCoreHeight { get; set; }
+
+    [Category("2. Sortie VoCore"), DisplayName("VoCore USB : luminosité")]
+    [Description("1 à 255. 0 = ne pas modifier.")]
+    public int VoCoreBrightness { get; set; }
+
     [Category("2. Sortie VoCore"), DisplayName("Écran de sortie")]
-    [Description("Écran Windows correspondant au VoCore (pilote d'affichage VoCore requis).")]
+    [Description("Écran Windows utilisé si Sortie = EcranWindows.")]
     [TypeConverter(typeof(ScreenNameConverter))]
     public string OutputScreen { get; set; } = "";
 
@@ -113,14 +151,14 @@ public sealed class Settings
     [Description("Agrandit la fenêtre de LMU (mode fenêtré/sans bordure) au-delà de l'écran principal.\n" +
                  "La bande supplémentaire tombe sur le VoCore ou hors de l'écran : on y place le rétro virtuel " +
                  "dans l'éditeur de HUD, il n'est donc plus visible sur l'écran principal.")]
-    public bool ExtendGameWindow { get; set; }
+    public bool ExtendGameWindow { get; set; } = true;
 
     [Category("4. Fenêtre du jeu"), DisplayName("Hauteur de la bande (px)")]
-    [Description("Hauteur ajoutée à la fenêtre du jeu. En général la hauteur du VoCore (400).")]
+    [Description("Hauteur ajoutée à la fenêtre du jeu, où se place le rétro virtuel (hors de l'écran).")]
     public int ExtensionPixels { get; set; } = 400;
 
     [Category("4. Fenêtre du jeu"), DisplayName("Côté de la bande")]
-    [Description("Haut si le VoCore est placé au-dessus de l'écran principal dans les paramètres d'affichage Windows.")]
+    [Description("Côté de l'écran principal par lequel la fenêtre du jeu dépasse.")]
     public StripSide ExtensionSide { get; set; } = StripSide.Haut;
 
     [Category("4. Fenêtre du jeu"), DisplayName("Écran du jeu")]

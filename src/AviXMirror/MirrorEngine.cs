@@ -1,4 +1,6 @@
+using System.Diagnostics;
 using AviXMirror.Capture;
+using AviXMirror.Output;
 using AviXMirror.Radar;
 using AviXMirror.Util;
 
@@ -19,8 +21,11 @@ public sealed class MirrorEngine : IDisposable
     RadarSource? _radar;
     MirrorForm? _form;
     MjpegServer? _mjpeg;
+    VoCoreUsbOutput? _usb;
 
     IntPtr _gameWindow;
+    IntPtr _gameSeenWindow;
+    readonly Stopwatch _gameSeen = new();
     OriginalWindowState? _original;
 
     record OriginalWindowState(IntPtr Hwnd, IntPtr Style, IntPtr ExStyle, Rectangle Rect);
@@ -43,8 +48,15 @@ public sealed class MirrorEngine : IDisposable
 
         if (_settings.Mode != MirrorMode.Direct)
         {
-            _form = new MirrorForm(Frames, _settings, () => Status);
-            _form.Show();
+            if (_settings.Output == OutputTarget.VoCoreUsb)
+            {
+                _usb = new VoCoreUsbOutput(Frames, _settings);
+            }
+            else
+            {
+                _form = new MirrorForm(Frames, _settings, () => Status);
+                _form.Show();
+            }
         }
 
         if (_settings.Mode == MirrorMode.Radar)
@@ -52,6 +64,8 @@ public sealed class MirrorEngine : IDisposable
             _radar = new RadarSource(Frames, _settings);
             if (_form != null)
                 _radar.FallbackSize = _form.Size;
+            else if (_usb != null)
+                _radar.FallbackSize = _usb.LogicalSize;
         }
 
         if (_settings.MjpegPort > 0 && _settings.Mode != MirrorMode.Direct)
@@ -78,6 +92,8 @@ public sealed class MirrorEngine : IDisposable
         _radar = null;
         _mjpeg?.Dispose();
         _mjpeg = null;
+        _usb?.Dispose();
+        _usb = null;
         _form?.Close();
         _form?.Dispose();
         _form = null;
@@ -103,16 +119,35 @@ public sealed class MirrorEngine : IDisposable
         var s = _settings;
         var messages = new List<string>();
 
-        bool needGame = s.Mode == MirrorMode.Direct || s.ExtendGameWindow ||
-                        (s.Mode == MirrorMode.Capture && s.Source == CaptureSource.FenetreJeu);
+        // Le mode Radar ne touche jamais au jeu : il lit seulement la télémétrie.
+        bool needGame = s.Mode == MirrorMode.Direct ||
+                        (s.Mode == MirrorMode.Capture && (s.ExtendGameWindow || s.Source == CaptureSource.FenetreJeu));
         if (needGame)
         {
             _gameWindow = GameWindow.Find(s.GameProcessName);
             if (_gameWindow == IntPtr.Zero)
+            {
                 messages.Add("En attente de Le Mans Ultimate…");
+                _gameSeenWindow = IntPtr.Zero;
+            }
+            else
+            {
+                // On ne touche pas au jeu tant qu'Easy Anti-Cheat n'a pas fini de démarrer.
+                if (_gameSeenWindow != _gameWindow)
+                {
+                    _gameSeenWindow = _gameWindow;
+                    _gameSeen.Restart();
+                }
+                double wait = s.GameStartDelaySeconds - _gameSeen.Elapsed.TotalSeconds;
+                if (wait > 0)
+                {
+                    messages.Add($"LMU détecté — démarrage dans {Math.Ceiling(wait)} s (laisse Easy Anti-Cheat finir).");
+                    _gameWindow = IntPtr.Zero;
+                }
+            }
         }
 
-        if (_gameWindow != IntPtr.Zero && (s.Mode == MirrorMode.Direct || s.ExtendGameWindow))
+        if (_gameWindow != IntPtr.Zero && (s.Mode == MirrorMode.Direct || (s.ExtendGameWindow && s.Mode == MirrorMode.Capture)))
         {
             RememberGameWindow(_gameWindow);
             GameWindow.Extend(_gameWindow, s);
@@ -127,6 +162,8 @@ public sealed class MirrorEngine : IDisposable
         else if (s.Mode == MirrorMode.Direct && _gameWindow != IntPtr.Zero)
             messages.Add("Mode direct : placez le rétro virtuel de LMU dans la bande étendue.");
 
+        if (_usb != null)
+            messages.Add(_usb.Status);
         if (_mjpeg != null)
             messages.Add($"Flux : http://localhost:{s.MjpegPort}/");
 

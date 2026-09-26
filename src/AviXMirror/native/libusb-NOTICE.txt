@@ -1,0 +1,3 @@
+libusb-1.0.dll : libusb 1.0.27 (binaire MinGW64 officiel, non modifié)
+https://github.com/libusb/libusb/releases/tag/v1.0.27
+Licence : GNU LGPL 2.1 — https://github.com/libusb/libusb/blob/master/COPYING

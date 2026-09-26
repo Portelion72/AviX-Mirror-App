@@ -1,4 +1,4 @@
-using System.Drawing.Drawing2D;
+using AviXMirror.Output;
 using AviXMirror.Util;
 
 namespace AviXMirror;
@@ -88,40 +88,7 @@ public sealed class MirrorForm : Form
         var client = ClientRectangle;
 
         bool drawn = _frames.Read(bmp =>
-        {
-            if (!s.Stretch)
-                g.Clear(Color.Black);
-
-            g.InterpolationMode = InterpolationMode.Bilinear;
-            g.PixelOffsetMode = PixelOffsetMode.Half;
-            g.CompositingMode = CompositingMode.SourceCopy;
-            g.CompositingQuality = CompositingQuality.HighSpeed;
-
-            int rotation = (int)s.Rotation;
-            bool swap = rotation % 180 != 0;
-            float lw = swap ? client.Height : client.Width;
-            float lh = swap ? client.Width : client.Height;
-
-            g.TranslateTransform(client.Width / 2f, client.Height / 2f);
-            if (rotation != 0)
-                g.RotateTransform(rotation);
-            if (s.FlipHorizontal)
-                g.ScaleTransform(-1, 1);
-
-            RectangleF dest;
-            if (s.Stretch)
-            {
-                dest = new RectangleF(-lw / 2, -lh / 2, lw, lh);
-            }
-            else
-            {
-                float scale = Math.Min(lw / bmp.Width, lh / bmp.Height);
-                float dw = bmp.Width * scale, dh = bmp.Height * scale;
-                dest = new RectangleF(-dw / 2, -dh / 2, dw, dh);
-            }
-            g.DrawImage(bmp, dest, new RectangleF(0, 0, bmp.Width, bmp.Height), GraphicsUnit.Pixel);
-            g.ResetTransform();
-        });
+            FrameRenderer.Draw(g, bmp, client.Size, (int)s.Rotation, s.FlipHorizontal, s.Stretch));
 
         if (!drawn)
         {
