@@ -22,6 +22,7 @@ public sealed class MirrorEngine : IDisposable
     MaskForm? _mask;
     MjpegServer? _mjpeg;
     VoCoreUsbOutput? _usb;
+    AcCameraSource? _acCamera;
 
     IntPtr _gameWindow;
     IntPtr _gameSeenWindow;
@@ -52,6 +53,8 @@ public sealed class MirrorEngine : IDisposable
 
         if (_settings.Mode == MirrorMode.Radar)
             _radar = new RadarSource(Frames, _settings) { FallbackSize = _usb.LogicalSize };
+        else if (_settings.Mode == MirrorMode.CameraAssettoCorsa)
+            _acCamera = new AcCameraSource(Frames, _settings);
 
         if (_settings.MjpegPort > 0)
         {
@@ -75,6 +78,8 @@ public sealed class MirrorEngine : IDisposable
         StopCapture();
         _radar?.Dispose();
         _radar = null;
+        _acCamera?.Dispose();
+        _acCamera = null;
         _mjpeg?.Dispose();
         _mjpeg = null;
         _usb?.Dispose();
@@ -157,6 +162,10 @@ public sealed class MirrorEngine : IDisposable
         else if (s.Mode == MirrorMode.Radar && _radar != null)
         {
             messages.Add(_radar.Status);
+        }
+        else if (_acCamera != null)
+        {
+            messages.Add(_acCamera.Status);
         }
 
         if (_usb != null)

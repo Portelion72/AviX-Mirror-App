@@ -13,7 +13,7 @@ public sealed class AcTelemetry : IRadarTelemetry
 {
     public const string MapName = "AviXMirror.AC.v1";
     public const int MaxCars = 64;
-    const int Version = 1;
+    const int Version = 2;
 
     // Disposition identique à integrations/AssettoCorsa/AviXMirror/AviXMirror.lua (champs de 4 octets).
     const int OffVersion = 0, OffPacket = 4, OffCount = 8, OffPlayer = 12, OffTrackLength = 16, OffTrack = 20;
@@ -23,7 +23,7 @@ public sealed class AcTelemetry : IRadarTelemetry
     const int OffModel = OffArrays + (FloatArrays + IntArrays) * MaxCars * 4;
     const int ModelChars = 48, DriverChars = 32;
     const int OffDriver = OffModel + MaxCars * ModelChars;
-    public const int Size = OffDriver + MaxCars * DriverChars;
+    public const int Size = 9104; // OffDriver + MaxCars * DriverChars + bloc caméra (voir AcCamera)
 
     enum F { PosX, PosY, PosZ, LookX, LookY, LookZ, UpX, UpY, UpZ, VelX, VelY, VelZ, Spline, RacePosition, Flags }
 

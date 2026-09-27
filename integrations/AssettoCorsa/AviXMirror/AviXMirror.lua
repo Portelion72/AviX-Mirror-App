@@ -1,6 +1,8 @@
 -- AviX Mirror : exporte l'état de toutes les voitures pour le rétroviseur VoCore.
 -- La mémoire partagée officielle d'Assetto Corsa ne contient que la voiture du joueur ;
 -- cette app écrit toutes les voitures dans « AviXMirror.AC.v1 », lue par AviXMirror.exe.
+-- Elle rend aussi, sur demande, une vraie caméra arrière (ac.GeometryShot) dans une texture
+-- partagée avec AviXMirror.exe : l'image n'est jamais affichée à l'écran du jeu.
 -- La disposition doit rester identique à src/AviXMirror/Radar/AcTelemetry.cs.
 
 local MAX_CARS = 64
@@ -21,9 +23,93 @@ local mem = ac.writeMemoryMappedFile('AviXMirror.AC.v1', [[
   int flags[64];
   char model[64][48];
   char driver[64][32];
+
+  int camEnabled;
+  int camWidth;
+  int camHeight;
+  int camFps;
+  float camFov;
+  float camBack;
+  float camUp;
+
+  int64_t camHandle;
+  int camFrame;
+  int camFormat;
+  int camActualWidth;
+  int camActualHeight;
+  int camStatus;
 ]])
 
 local FLAG_PITLANE, FLAG_HEADLIGHTS, FLAG_CONNECTED = 1, 2, 4
+local VERSION = 2
+local CAM_FORMAT_RGBA16F = 1
+
+-- ---------- Caméra arrière ----------
+
+-- Champs cam* : camEnabled..camUp sont écrits par AviXMirror.exe (réglages),
+-- camHandle..camStatus par cette app (texture partagée).
+local shot, shotW, shotH
+local camClock, lastShot, retryAt = 0, -1, 0
+local lastHeartbeat, heartbeatAt = 0, 0
+
+local function disposeShot()
+  if shot then shot:dispose() end
+  shot = nil
+  mem.camHandle = 0
+  mem.camActualWidth, mem.camActualHeight = 0, 0
+end
+
+local function updateCamera(dt)
+  camClock = camClock + dt
+  -- camEnabled est un compteur incrémenté par AviXMirror.exe : s'il ne bouge plus depuis 3 s,
+  -- l'appli est fermée et on arrête la caméra pour ne pas consommer de GPU pour rien.
+  if mem.camEnabled ~= lastHeartbeat then
+    lastHeartbeat, heartbeatAt = mem.camEnabled, camClock
+  end
+  if mem.camEnabled == 0 or camClock - heartbeatAt > 3 then
+    if shot then disposeShot() end
+    mem.camStatus = 0
+    return
+  end
+
+  if camClock < retryAt then return end
+
+  local w = math.clamp(mem.camWidth > 0 and mem.camWidth or 1280, 64, 2048)
+  local h = math.clamp(mem.camHeight > 0 and mem.camHeight or 400, 32, 2048)
+  if not shot or w ~= shotW or h ~= shotH then
+    disposeShot()
+    -- Même réglage que l'intégration OBS de CSP : HDR -> LDR proche de l'image du jeu.
+    shot = ac.GeometryShot(ac.findNodes('sceneRoot:yes'), vec2(w, h), 1, false,
+      render.AntialiasingMode.SimplifiedYEBIS, render.TextureFormat.R16G16B16A16.Float, render.TextureFlags.Shared)
+    shot:setShadersType(render.ShadersType.SimplifiedWithLights)
+    shot:setOriginalLighting(true)
+    shot:setSky(true)
+    shot:setTransparentPass(true)
+    shot:setFakeCarShadows(true)
+    shot:setParticles(true)
+    shot:setClippingPlanes(0.25, 3000)
+    shotW, shotH = w, h
+    mem.camHandle = shot:sharedHandle(true)
+    mem.camFormat = CAM_FORMAT_RGBA16F
+    mem.camActualWidth, mem.camActualHeight = w, h
+  end
+
+  local fps = mem.camFps > 0 and mem.camFps or 30
+  if camClock - lastShot < 1 / fps then return end
+  lastShot = camClock
+
+  -- Caméra placée derrière et au-dessus de la voiture, regardant vers l'arrière :
+  -- la voiture du joueur n'est pas dans le champ.
+  local car = ac.getCar(0)
+  if not car then return end
+  local back = mem.camBack > 0 and mem.camBack or 2.4
+  local up = mem.camUp ~= 0 and mem.camUp or 1.0
+  local fov = mem.camFov > 1 and mem.camFov or 20
+  local pos = car.position - car.look * back + car.up * up
+  shot:update(pos, car.look * -1, car.up, fov)
+  mem.camFrame = mem.camFrame + 1
+  mem.camStatus = 1
+end
 
 local function writeString(dst, size, value)
   value = tostring(value or '')
@@ -72,7 +158,14 @@ function script.update(dt)
     end
   end
 
-  mem.version = 1
+  local ok, err = pcall(updateCamera, dt)
+  if not ok then
+    mem.camStatus = -1
+    retryAt = camClock + 5 -- évite de recréer la caméra à chaque image en cas d'erreur
+    ac.debug('AviX Mirror caméra', err)
+  end
+
+  mem.version = VERSION
   mem.carsCount = count
   mem.playerIndex = 0 -- la voiture du joueur est toujours la n° 0 dans AC
   mem.trackLength = sim.trackLengthM
@@ -83,4 +176,9 @@ end
 function windowMain(dt)
   ui.text('AviX Mirror actif')
   ui.text(string.format('%d voiture(s) exportée(s)', exported))
+  if mem.camStatus == 1 then
+    ui.text(string.format('Caméra arrière : %dx%d', mem.camActualWidth, mem.camActualHeight))
+  elseif mem.camStatus == -1 then
+    ui.text('Caméra arrière : erreur (voir Lua Debug)')
+  end
 end

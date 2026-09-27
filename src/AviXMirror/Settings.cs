@@ -10,6 +10,8 @@ public enum MirrorMode
     Capture,
     /// <summary>Rétroviseur synthétique dessiné à partir de la télémétrie (aucune capture).</summary>
     Radar,
+    /// <summary>Vraie caméra arrière d'Assetto Corsa rendue hors écran par l'app Lua (CSP).</summary>
+    CameraAssettoCorsa,
 }
 
 public enum CaptureSource
@@ -45,7 +47,8 @@ public sealed class Settings
 
     [Category("1. Général"), DisplayName("Mode")]
     [Description("Capture : recopie le rétro virtuel du jeu sur le VoCore.\n" +
-                 "Radar : rétro synthétique dessiné depuis la télémétrie (plugin rF2 Shared Memory).")]
+                 "Radar : rétro synthétique dessiné depuis la télémétrie (LMU ou Assetto Corsa).\n" +
+                 "CameraAssettoCorsa : vraie image de ce qui est derrière, rendue par AC hors écran (app Lua CSP).")]
     public MirrorMode Mode { get; set; } = MirrorMode.Capture;
 
     [Category("1. Général"), DisplayName("Démarrage automatique")]
@@ -156,6 +159,37 @@ public sealed class Settings
     public string GameScreen { get; set; } = "";
 
     // ---------- Radar ----------
+
+    // ---------- Caméra Assetto Corsa ----------
+
+    [Category("6. Caméra Assetto Corsa"), DisplayName("Champ de vision horizontal (°)")]
+    [Description("Largeur de la vue arrière. Un vrai rétroviseur intérieur couvre environ 40 à 60°.")]
+    public double AcCamFov { get; set; } = 55;
+
+    [Category("6. Caméra Assetto Corsa"), DisplayName("Recul de la caméra (m)")]
+    [Description("Distance derrière le centre de la voiture. Augmentez si l'arrière de votre voiture apparaît dans l'image.")]
+    public double AcCamBack { get; set; } = 2.4;
+
+    [Category("6. Caméra Assetto Corsa"), DisplayName("Hauteur de la caméra (m)")]
+    public double AcCamUp { get; set; } = 1.0;
+
+    [Category("6. Caméra Assetto Corsa"), DisplayName("Largeur de rendu")]
+    public int AcCamResWidth { get; set; } = 1280;
+
+    [Category("6. Caméra Assetto Corsa"), DisplayName("Hauteur de rendu")]
+    public int AcCamResHeight { get; set; } = 400;
+
+    [Category("6. Caméra Assetto Corsa"), DisplayName("Images par seconde")]
+    [Description("Chaque image est un rendu supplémentaire de la scène par AC : 30 est un bon compromis.")]
+    public int AcCamFps { get; set; } = 30;
+
+    [Category("6. Caméra Assetto Corsa"), DisplayName("Effet miroir")]
+    [Description("Inverse gauche/droite comme un vrai rétroviseur.")]
+    public bool AcCamMirror { get; set; } = true;
+
+    [Category("6. Caméra Assetto Corsa"), DisplayName("Gamma")]
+    [Description("1 = inchangé. Augmentez si l'image est trop sombre, diminuez si elle est trop claire.")]
+    public double AcCamGamma { get; set; } = 1.0;
 
     [Category("5. Radar"), DisplayName("Jeu")]
     [Description("Auto : détecte Le Mans Ultimate ou Assetto Corsa (app Lua « AviX Mirror » pour CSP requise).")]

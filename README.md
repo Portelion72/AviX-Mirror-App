@@ -99,6 +99,21 @@ La catégorie de chaque voiture (silhouette et couleur) est déduite de son iden
 circuit s'apprend comme dans LMU, puis il est mémorisé. Si les voitures apparaissent du mauvais côté,
 activez *Assetto Corsa : inverser gauche/droite*.
 
+## Assetto Corsa : vraie vue arrière, sans rétro virtuel
+
+*Mode* = `CameraAssettoCorsa`. L'app Lua (même installation que ci-dessus) demande à Assetto Corsa
+de rendre une **caméra arrière hors écran**, avec la même technique que l'intégration OBS de CSP.
+L'image est partagée directement sur la carte graphique avec AviX Mirror, qui la retourne en
+miroir et l'envoie au VoCore. **Rien n'est affiché sur l'écran du jeu.**
+
+- Après une mise à jour d'AviX Mirror, recliquez **Installer l'app Assetto Corsa** (nouvelle version de l'app).
+- Réglages (catégorie *6. Caméra Assetto Corsa*) : champ de vision, recul et hauteur de la caméra,
+  résolution, images par seconde (30 par défaut), effet miroir, gamma.
+- Chaque image est un rendu supplémentaire de la scène : comptez une légère baisse de FPS, comme
+  avec un rétroviseur en jeu. Baissez *Images par seconde* si besoin.
+- Si l'arrière de votre voiture apparaît dans l'image, augmentez *Recul de la caméra*.
+- La caméra s'arrête toute seule quand AviX Mirror est fermé.
+
 ## Mode Capture
 
 1. **LMU** : *Paramètres > Affichage* → **Fenêtré** ou **Sans bordure** (pas le plein écran exclusif).
