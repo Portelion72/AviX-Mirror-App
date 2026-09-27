@@ -138,7 +138,13 @@ public sealed class RadarSource : IDisposable
         DrawBackground(g, w, h, horizon);
 
         var world = _world;
-        if (!_hasData || world == null || world.Vehicles.Count == 0)
+        if (!_hasData || world == null)
+        {
+            // Aucun jeu : page de veille AVIX.
+            Ui.Splash.Draw(g, w, h, "En attente du jeu…");
+            return;
+        }
+        if (world.Vehicles.Count == 0)
         {
             DrawCenteredText(g, w, h, Status);
             return;

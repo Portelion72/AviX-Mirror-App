@@ -19,7 +19,7 @@ public static class Theme
     public static readonly Color Success = Color.FromArgb(53, 196, 106);
     public static readonly Color Danger = Color.FromArgb(229, 72, 77);
 
-    public const string DefaultAccent = "#FF5A1F";
+    public const string DefaultAccent = "#C4C007"; // jaune-vert du logo AVIX
     public const string DefaultFont = "Bahnschrift";
 
     public static Color Accent { get; private set; } = ColorTranslator.FromHtml(DefaultAccent);
@@ -100,6 +100,36 @@ public static class Theme
         {
             // Ancien Windows : barre de titre standard.
         }
+    }
+
+    static Image? _logo;
+
+    /// <summary>Logo AVIX (« SIMRACING & IMPRESSION 3D »), fond transparent, texte clair pour fond sombre.</summary>
+    public static Image Logo
+    {
+        get
+        {
+            if (_logo == null)
+            {
+                using var stream = typeof(Theme).Assembly.GetManifestResourceStream("Brand.avix-logo.png")
+                    ?? throw new InvalidOperationException("Logo manquant");
+                _logo = new Bitmap(stream);
+            }
+            return _logo;
+        }
+    }
+
+    /// <summary>Dessine le logo centré dans <paramref name="box"/> en gardant ses proportions.</summary>
+    public static RectangleF DrawLogo(Graphics g, RectangleF box)
+    {
+        var logo = Logo;
+        float scale = Math.Min(box.Width / logo.Width, box.Height / logo.Height);
+        var r = new RectangleF(box.X + (box.Width - logo.Width * scale) / 2, box.Y + (box.Height - logo.Height * scale) / 2,
+            logo.Width * scale, logo.Height * scale);
+        g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+        lock (logo)
+            g.DrawImage(logo, r);
+        return r;
     }
 
     /// <summary>Icône de l'application : rétroviseur stylisé sur fond d'accent.</summary>

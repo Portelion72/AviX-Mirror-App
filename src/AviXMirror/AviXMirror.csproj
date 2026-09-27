@@ -19,6 +19,7 @@
     <None Include="native\libusb-1.0.dll" Link="libusb-1.0.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <EmbeddedResource Include="..\..\integrations\AssettoCorsa\AviXMirror\manifest.ini" LogicalName="AcApp.manifest.ini" />
     <EmbeddedResource Include="..\..\integrations\AssettoCorsa\AviXMirror\AviXMirror.lua" LogicalName="AcApp.AviXMirror.lua" />
+    <EmbeddedResource Include="Assets\avix-logo.png" LogicalName="Brand.avix-logo.png" />
     <None Include="native\libusb-NOTICE.txt" Link="libusb-NOTICE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 

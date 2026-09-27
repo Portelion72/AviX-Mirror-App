@@ -190,12 +190,9 @@ public sealed class HeaderBar : Control
         Theme.Smooth(g);
         g.Clear(Theme.Background);
 
-        // Logotype : « AVIX » en blanc, « _3D » en couleur d'accent.
-        using var logo = Theme.Font(20f, FontStyle.Bold);
-        var avix = TextRenderer.MeasureText(g, "AVIX", logo, Size.Empty, TextFormatFlags.NoPadding);
-        TextRenderer.DrawText(g, "AVIX", logo, new Point(24, 16), Theme.Text, TextFormatFlags.NoPadding);
-        TextRenderer.DrawText(g, "_3D", logo, new Point(24 + avix.Width, 16), Theme.Accent, TextFormatFlags.NoPadding);
-        var logoWidth = avix.Width + TextRenderer.MeasureText(g, "_3D", logo, Size.Empty, TextFormatFlags.NoPadding).Width;
+        // Logo AVIX.
+        var logo = Theme.DrawLogo(g, new RectangleF(20, 10, 190, Height - 22));
+        int logoWidth = (int)(logo.Right - 24);
 
         using var product = Theme.Font(11f, FontStyle.Regular);
         using var sep = new Pen(Theme.Border, 1);
@@ -229,11 +226,13 @@ public sealed class HeaderBar : Control
 public sealed class MirrorPreview : Control
 {
     readonly FrameBuffer _frames;
+    readonly Func<(Color[] Left, Color[] Right)>? _leds;
     int _pending;
 
-    public MirrorPreview(FrameBuffer frames)
+    public MirrorPreview(FrameBuffer frames, Func<(Color[] Left, Color[] Right)>? leds = null)
     {
         _frames = frames;
+        _leds = leds;
         SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw | ControlStyles.UserPaint, true);
         _frames.Updated += OnFrame;
     }
@@ -256,9 +255,10 @@ public sealed class MirrorPreview : Control
         Theme.Smooth(g);
         g.Clear(Parent?.BackColor ?? Theme.Surface);
 
-        // Cadre au format du VoCore 7,8" (1280 x 400).
+        // Cadre au format du VoCore 7,8" (1280 x 400), avec une marge de chaque côté pour les LEDs.
+        const float ledGutter = 26;
         float ratio = 1280f / 400f;
-        float w = Width - 2, h = w / ratio;
+        float w = Width - 2 - ledGutter * 2, h = w / ratio;
         if (h > Height - 2) { h = Height - 2; w = h * ratio; }
         var frame = new RectangleF((Width - w) / 2, (Height - h) / 2, w, h);
         using var path = Theme.RoundedRect(frame, h * 0.18f);
@@ -283,6 +283,38 @@ public sealed class MirrorPreview : Control
         Theme.Smooth(g);
         using var pen = new Pen(Theme.Border, 2);
         g.DrawPath(pen, path);
+
+        // LEDs du spotter : barrette gauche et barrette droite, de l'arrière (bas) vers l'avant (haut).
+        if (_leds != null)
+        {
+            var (left, right) = _leds();
+            DrawLedBar(g, left, frame.Left - ledGutter + 6, frame);
+            DrawLedBar(g, right, frame.Right + 8, frame);
+        }
+    }
+
+    static void DrawLedBar(Graphics g, Color[] leds, float x, RectangleF frame)
+    {
+        if (leds.Length == 0)
+            return;
+        float step = frame.Height / leds.Length;
+        float d = Math.Min(12, step * 0.7f);
+        for (int i = 0; i < leds.Length; i++)
+        {
+            var c = leds[i];
+            bool lit = c.R + c.G + c.B > 0;
+            // Aperçu à pleine intensité (la luminosité réglée n'est pas représentative à l'écran).
+            int max = Math.Max(1, Math.Max((int)c.R, Math.Max((int)c.G, (int)c.B)));
+            var shown = lit ? Color.FromArgb(c.R * 255 / max, c.G * 255 / max, c.B * 255 / max) : Theme.SurfaceRaised;
+            float y = frame.Bottom - step * (i + 0.5f) - d / 2;
+            using var brush = new SolidBrush(shown);
+            g.FillEllipse(brush, x, y, d, d);
+            if (lit)
+            {
+                using var glow = new SolidBrush(Color.FromArgb(60, shown));
+                g.FillEllipse(glow, x - 4, y - 4, d + 8, d + 8);
+            }
+        }
     }
 
     protected override void Dispose(bool disposing)

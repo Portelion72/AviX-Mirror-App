@@ -23,6 +23,10 @@ public sealed class MirrorEngine : IDisposable
     MjpegServer? _mjpeg;
     VoCoreUsbOutput? _usb;
     AcCameraSource? _acCamera;
+    Spotter? _spotter;
+
+    /// <summary>Couleurs des LEDs du spotter (gauche, droite) pour l'aperçu, ou vides.</summary>
+    public (Color[] Left, Color[] Right) LedSides => _spotter?.Sides ?? (Array.Empty<Color>(), Array.Empty<Color>());
 
     IntPtr _gameWindow;
     IntPtr _gameSeenWindow;
@@ -54,6 +58,13 @@ public sealed class MirrorEngine : IDisposable
         // Écran d'accueil AVIX_3D sur le VoCore en attendant les premières images.
         var size = _usb.LogicalSize;
         Frames.Write(size.Width, size.Height, bmp => Ui.Splash.Draw(bmp, "En attente du jeu…"));
+
+        if (_settings.LedsEnabled)
+        {
+            _spotter = new Spotter(_settings);
+            var usb = _usb;
+            _spotter.Changed += chain => usb.SetLeds(chain);
+        }
 
         if (_settings.Mode == MirrorMode.Radar)
             _radar = new RadarSource(Frames, _settings) { FallbackSize = _usb.LogicalSize };
@@ -88,12 +99,15 @@ public sealed class MirrorEngine : IDisposable
         _usb?.UpdateSettings(copy);
         _radar?.UpdateSettings(copy);
         _acCamera?.UpdateSettings(copy);
+        _spotter?.UpdateSettings(copy);
     }
 
     public void Stop()
     {
         _watchdog.Stop();
         StopCapture();
+        _spotter?.Dispose();
+        _spotter = null;
         _radar?.Dispose();
         _radar = null;
         _acCamera?.Dispose();

@@ -27,6 +27,18 @@ public enum RadarGame
     AssettoCorsa,
 }
 
+public enum LedChainOrder
+{
+    DroiteGauche,
+    GaucheDroite,
+}
+
+public enum LedProtocol
+{
+    Is31Compatible,
+    Complet,
+}
+
 public enum StripSide
 {
     Haut,
@@ -223,6 +235,38 @@ public sealed class Settings
     [Category("5. Radar"), DisplayName("Hauteur de rendu")]
     public int RadarHeight { get; set; } = 400;
 
+    // ---------- LEDs spotter ----------
+
+    [Category("8. LEDs spotter"), DisplayName("Activées")]
+    [Description("LEDs WS2812B pilotées par la carte MPro du VoCore : s'allument quand une voiture arrive ou est à côté de vous.")]
+    public bool LedsEnabled { get; set; } = true;
+
+    [Category("8. LEDs spotter"), DisplayName("LEDs par côté")]
+    public int LedsPerSide { get; set; } = 8;
+
+    [Category("8. LEDs spotter"), DisplayName("Ordre de câblage")]
+    [Description("DroiteGauche : la barrette droite est la première de la chaîne, puis la gauche.")]
+    public LedChainOrder LedOrder { get; set; } = LedChainOrder.DroiteGauche;
+
+    [Category("8. LEDs spotter"), DisplayName("Inverser le sens (droite)")]
+    [Description("Active si les LEDs de droite se remplissent dans le mauvais sens.")]
+    public bool LedInvertRight { get; set; }
+
+    [Category("8. LEDs spotter"), DisplayName("Inverser le sens (gauche)")]
+    public bool LedInvertLeft { get; set; }
+
+    [Category("8. LEDs spotter"), DisplayName("Luminosité")]
+    [Description("0 à 255.")]
+    public int LedBrightness { get; set; } = 140;
+
+    [Category("8. LEDs spotter"), DisplayName("Distance d'alerte (m)")]
+    [Description("Une voiture qui arrive sur un côté est signalée à partir de cette distance derrière vous.")]
+    public double LedWarnDistance { get; set; } = 25;
+
+    [Category("8. LEDs spotter"), DisplayName("Protocole")]
+    [Description("Is31Compatible : protocole standard des LEDs VoCore (celui de SimHub). Complet : firmware « 512 LEDs ».")]
+    public LedProtocol LedProtocol { get; set; } = LedProtocol.Is31Compatible;
+
     // ---------- Apparence ----------
 
     [Category("7. Apparence"), DisplayName("Couleur d'accent")]
@@ -235,7 +279,7 @@ public sealed class Settings
 
     // ---------- Persistance ----------
 
-    const int CurrentVersion = 2;
+    const int CurrentVersion = 3;
 
     [Browsable(false)]
     public int SettingsVersion { get; set; }
@@ -263,6 +307,13 @@ public sealed class Settings
                     // v2 : l'extension de fenêtre déformait le jeu, elle est désactivée au profit du cache.
                     loaded.ExtendGameWindow = false;
                     loaded.HideMirrorOnScreen = true;
+                    loaded.SettingsVersion = 2;
+                }
+                if (loaded.SettingsVersion < 3)
+                {
+                    // v3 : couleur de la marque AVIX (l'ancien orange par défaut est remplacé).
+                    if (string.Equals(loaded.AccentColor, "#FF5A1F", StringComparison.OrdinalIgnoreCase))
+                        loaded.AccentColor = Ui.Theme.DefaultAccent;
                     loaded.SettingsVersion = CurrentVersion;
                 }
                 return loaded;

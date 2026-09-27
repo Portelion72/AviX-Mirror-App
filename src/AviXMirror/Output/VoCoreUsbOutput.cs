@@ -56,15 +56,32 @@ public sealed class VoCoreUsbOutput : IDisposable
 
         while (_running)
         {
-            if (_handle == IntPtr.Zero && !TryOpen())
+            if (_handle == IntPtr.Zero)
             {
-                Thread.Sleep(2000);
-                continue;
+                if (!TryOpen())
+                {
+                    Thread.Sleep(2000);
+                    continue;
+                }
+                if (_settings.LedsEnabled)
+                    LedTestSweep();
             }
 
             _frameReady.WaitOne(500);
             if (!_running)
                 break;
+
+            // LEDs d'abord : elles doivent réagir même si l'image ne change pas.
+            try
+            {
+                SendLedsIfNeeded();
+            }
+            catch (Exception ex)
+            {
+                Status = "VoCore USB : erreur LEDs — " + ex.Message;
+                Close();
+                continue;
+            }
 
             var s = _settings;
             double minInterval = 1.0 / Math.Clamp(s.TargetFps, 5, 60);
@@ -92,6 +109,7 @@ public sealed class VoCoreUsbOutput : IDisposable
                 Close();
             }
         }
+        LedsOff();
         Close();
     }
 
@@ -139,6 +157,8 @@ public sealed class VoCoreUsbOutput : IDisposable
             if (s.VoCoreBrightness is > 0 and <= 255)
                 SendCommand(new byte[] { 0x00, 0x51, 0x02, 0x00, 0x00, 0x00, (byte)s.VoCoreBrightness, 0x00 });
 
+            _ledsInitialized = false;
+            _ledsDirty = _leds.Length > 0;
             Status = $"VoCore USB connecté — modèle 0x{screenId:X}, {_nativeSize.Width}x{_nativeSize.Height}.";
             return true;
         }
@@ -282,12 +302,164 @@ public sealed class VoCoreUsbOutput : IDisposable
         }
     }
 
+    // ---------- LEDs WS2812B (via le bus I2C de la carte MPro) ----------
+    // Protocole de github.com/Vonger/V7B_WS2812B : contrôleur de LEDs à l'adresse I2C 0x74,
+    // écriture I2C = transfert de contrôle 0xB5 (tampon : adresse, longueur écrite, longueur lue,
+    // registre, données) puis 0xB6 pour déclencher l'écriture.
+
+    const byte LedI2cAddress = 0x74;
+    const int I2cPacket = 16;
+
+    readonly object _ledLock = new();
+    Color[] _leds = Array.Empty<Color>();
+    bool _ledsDirty, _ledsInitialized;
+    LedProtocol _ledProtocolUsed;
+
+    /// <summary>Nouvelles couleurs des LEDs, dans l'ordre de la chaîne.</summary>
+    public void SetLeds(Color[] chain)
+    {
+        lock (_ledLock)
+        {
+            _leds = chain;
+            _ledsDirty = true;
+        }
+        _frameReady.Set();
+    }
+
+    void SendLedsIfNeeded()
+    {
+        Color[] leds;
+        lock (_ledLock)
+        {
+            if (!_ledsDirty || _handle == IntPtr.Zero)
+                return;
+            leds = _leds;
+            _ledsDirty = false;
+        }
+        SendLeds(leds, _settings.LedProtocol);
+    }
+
+    void SendLeds(Color[] leds, LedProtocol protocol)
+    {
+        if (!_ledsInitialized || protocol != _ledProtocolUsed)
+        {
+            if (protocol == LedProtocol.Is31Compatible)
+                InitIs31();
+            _ledsInitialized = true;
+            _ledProtocolUsed = protocol;
+        }
+
+        var data = new byte[leds.Length * 3];
+        for (int i = 0; i < leds.Length; i++)
+        {
+            var c = leds[i];
+            if (protocol == LedProtocol.Is31Compatible)
+            {
+                // Mode IS31FL3731 : R, G, B à partir du registre 0x24 (le firmware convertit en GRB).
+                data[i * 3] = c.R; data[i * 3 + 1] = c.G; data[i * 3 + 2] = c.B;
+            }
+            else
+            {
+                // Mode complet : octets envoyés tels quels aux WS2812B, qui attendent G, R, B.
+                data[i * 3] = c.G; data[i * 3 + 1] = c.R; data[i * 3 + 2] = c.B;
+            }
+        }
+
+        for (int used = 0; used < data.Length; used += I2cPacket)
+        {
+            int size = Math.Min(I2cPacket, data.Length - used);
+            var chunk = new byte[size];
+            Array.Copy(data, used, chunk, 0, size);
+            if (protocol == LedProtocol.Is31Compatible)
+                I2cWrite(new[] { (byte)(0x24 + used) }, chunk);
+            else
+                I2cWrite(new[] { (byte)(used >> 8), (byte)(used & 0xff) }, chunk);
+        }
+    }
+
+    /// <summary>Initialisation d'un contrôleur compatible IS31FL3731 (mode image, banque 0, toutes LEDs actives).</summary>
+    void InitIs31()
+    {
+        I2cWrite(new byte[] { 0xfd }, new byte[] { 0x0b });  // page « fonctions »
+        I2cWrite(new byte[] { 0x0a }, new byte[] { 0x00 });  // arrêt
+        Thread.Sleep(10);
+        I2cWrite(new byte[] { 0x0a }, new byte[] { 0x01 });  // marche
+        I2cWrite(new byte[] { 0x00 }, new byte[] { 0x01 });  // mode image
+        I2cWrite(new byte[] { 0x01 }, new byte[] { 0x00 });  // image = banque 0
+        I2cWrite(new byte[] { 0xfd }, new byte[] { 0x00 });  // page 0
+        var enable = new byte[0x12];
+        Array.Fill(enable, (byte)0xff);
+        I2cWrite(new byte[] { 0x00 }, enable.AsSpan(0, 16).ToArray());
+        I2cWrite(new byte[] { 0x10 }, enable.AsSpan(16, 2).ToArray());
+    }
+
+    unsafe void I2cWrite(byte[] register, byte[] payload)
+    {
+        var buf = new byte[3 + register.Length + payload.Length];
+        buf[0] = LedI2cAddress;
+        buf[1] = (byte)(register.Length + payload.Length); // octets écrits (registre + données)
+        buf[2] = 0;                                         // octets lus
+        register.CopyTo(buf, 3);
+        payload.CopyTo(buf, 3 + register.Length);
+        fixed (byte* p = buf)
+        {
+            int r = LibUsb.libusb_control_transfer(_handle, RequestOut, 0xB5, 0, 0, p, (ushort)buf.Length, CommandTimeout);
+            if (r < 0)
+                throw new IOException("écriture I2C refusée (" + LibUsb.ErrorName(r) + ")");
+            r = LibUsb.libusb_control_transfer(_handle, RequestIn, 0xB6, 0, 0, p, 1, CommandTimeout);
+            if (r < 0)
+                throw new IOException("déclenchement I2C refusé (" + LibUsb.ErrorName(r) + ")");
+        }
+    }
+
+    /// <summary>
+    /// Animation au branchement : chaque LED s'allume à tour de rôle dans l'ordre de la chaîne
+    /// (couleur de la marque). Permet de vérifier le câblage et le sens des barrettes.
+    /// </summary>
+    void LedTestSweep()
+    {
+        var s = _settings;
+        int total = Math.Clamp(s.LedsPerSide, 1, 64) * 2;
+        float k = Math.Clamp(s.LedBrightness, 0, 255) / 255f;
+        var accent = Ui.Theme.Accent;
+        var on = Color.FromArgb((int)(accent.R * k), (int)(accent.G * k), (int)(accent.B * k));
+        try
+        {
+            for (int i = 0; i <= total && _running; i++)
+            {
+                var leds = new Color[total];
+                if (i < total)
+                    leds[i] = on;
+                SendLeds(leds, s.LedProtocol);
+                Thread.Sleep(45);
+            }
+        }
+        catch (Exception ex)
+        {
+            Status = "VoCore USB : LEDs indisponibles — " + ex.Message;
+        }
+        lock (_ledLock)
+            _ledsDirty = _leds.Length > 0; // réaffiche l'état du spotter
+    }
+
+    /// <summary>Éteint les LEDs (à l'arrêt de l'application).</summary>
+    void LedsOff()
+    {
+        Color[] leds;
+        lock (_ledLock)
+            leds = _leds;
+        if (leds.Length == 0 || _handle == IntPtr.Zero)
+            return;
+        try { SendLeds(new Color[leds.Length], _settings.LedProtocol); } catch { }
+    }
+
     public void Dispose()
     {
         _running = false;
         _frames.Updated -= OnFrame;
         _frameReady.Set();
         _thread.Join(2000);
+        LedsOff();
         Close();
         if (_context != IntPtr.Zero)
         {

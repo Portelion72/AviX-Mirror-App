@@ -93,6 +93,7 @@ public sealed class AcCameraSource : IDisposable
         if (!OpenMemory())
         {
             Status = "Caméra Assetto Corsa : en attente d'AC (app Lua « AviX Mirror » pour CSP)…";
+            _output.Write(1280, 400, bmp => Ui.Splash.Draw(bmp, "En attente d'Assetto Corsa…"));
             Thread.Sleep(1000);
             return;
         }

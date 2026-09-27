@@ -11,6 +11,27 @@ direct de l'image envoyée au VoCore, état détaillé et réglages avancés. La
 **police** se changent dans *7. Apparence* (effet immédiat). Au démarrage, le VoCore affiche un écran
 d'accueil AVIX_3D en attendant les images du jeu.
 
+## LEDs spotter (WS2812B sur la carte MPro)
+
+Deux barrettes de 8 LEDs WS2812B, une de chaque côté de l'écran, branchées en série sur la carte MPro
+du VoCore (droite puis gauche). AviX Mirror les pilote par le même câble USB que l'image, avec le
+protocole I2C de VoCore (contrôleur de LEDs à l'adresse `0x74`, compatible IS31FL3731,
+cf. [Vonger/V7B_WS2812B](https://github.com/Vonger/V7B_WS2812B)).
+
+| Situation | LEDs du côté concerné |
+|-----------|------------------------|
+| Voiture qui arrive derrière, à moins de 25 m | jaune → orange, de plus en plus de LEDs allumées |
+| Voiture à côté de vous | toutes rouges |
+| Voitures des deux côtés (sandwich) | rouge clignotant des deux côtés |
+
+Fonctionne dans tous les modes (Radar, Caméra AC, Capture), avec LMU et Assetto Corsa. Au branchement,
+les LEDs s'allument une par une dans l'ordre de la chaîne (couleur AVIX) : vérifiez que la droite
+s'allume en premier, et utilisez *Inverser le sens* si une barrette se remplit à l'envers. Réglages
+dans *8. LEDs spotter* (luminosité, distance d'alerte, ordre de câblage, protocole). L'aperçu de la
+fenêtre montre l'état des LEDs de chaque côté du rétro.
+
+Quand aucun jeu ne tourne, le VoCore affiche la page de veille avec le logo AVIX.
+
 ## Compatible Easy Anti-Cheat
 
 - **Aucun pilote d'écran VoCore n'est nécessaire.** AviX Mirror envoie l'image au VoCore **en USB**,

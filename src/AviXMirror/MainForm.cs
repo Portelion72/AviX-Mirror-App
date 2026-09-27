@@ -30,7 +30,7 @@ public sealed class MainForm : Form
         ForeColor = Theme.Text;
         DoubleBuffered = true;
 
-        _preview = new MirrorPreview(_engine.Frames) { Dock = DockStyle.Fill };
+        _preview = new MirrorPreview(_engine.Frames, () => _engine.LedSides) { Dock = DockStyle.Fill };
 
         _grid.SelectedObject = _settings.Clone();
         StyleGrid();
