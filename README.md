@@ -4,6 +4,13 @@ Application Windows qui affiche le rétroviseur de **Le Mans Ultimate (LMU)** et
 **VoCore 7,8″ (1280×400)** monté comme un vrai rétroviseur, **sans que le rétro virtuel reste
 affiché sur l'écran principal**.
 
+## Interface
+
+Fenêtre sombre aux couleurs d'AVIX_3D : choix du mode par tuiles, gros bouton **DÉMARRER**, aperçu en
+direct de l'image envoyée au VoCore, état détaillé et réglages avancés. La **couleur d'accent** et la
+**police** se changent dans *7. Apparence* (effet immédiat). Au démarrage, le VoCore affiche un écran
+d'accueil AVIX_3D en attendant les images du jeu.
+
 ## Compatible Easy Anti-Cheat
 
 - **Aucun pilote d'écran VoCore n'est nécessaire.** AviX Mirror envoie l'image au VoCore **en USB**,
@@ -168,7 +175,8 @@ Quand on clique **Arrêter**, la fenêtre de LMU retrouve sa taille et son style
 ```
 src/AviXMirror/
   Program.cs              point d'entrée
-  MainForm.cs             fenêtre de réglages
+  MainForm.cs             fenêtre principale (tuiles de mode, aperçu VoCore, réglages)
+  Ui/                     thème AVIX_3D, contrôles dessinés, écran d'accueil du VoCore
   MirrorEngine.cs         orchestration (recherche du jeu, capture/radar, sortie)
   MaskForm.cs             cache noir sur le rétro de l'écran principal
   CalibrationForm.cs      sélection de la zone du rétro à la souris

@@ -51,6 +51,10 @@ public sealed class MirrorEngine : IDisposable
 
         _usb = new VoCoreUsbOutput(Frames, _settings);
 
+        // Écran d'accueil AVIX_3D sur le VoCore en attendant les premières images.
+        var size = _usb.LogicalSize;
+        Frames.Write(size.Width, size.Height, bmp => Ui.Splash.Draw(bmp, "En attente du jeu…"));
+
         if (_settings.Mode == MirrorMode.Radar)
             _radar = new RadarSource(Frames, _settings) { FallbackSize = _usb.LogicalSize };
         else if (_settings.Mode == MirrorMode.CameraAssettoCorsa)

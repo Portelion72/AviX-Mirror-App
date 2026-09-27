@@ -223,6 +223,16 @@ public sealed class Settings
     [Category("5. Radar"), DisplayName("Hauteur de rendu")]
     public int RadarHeight { get; set; } = 400;
 
+    // ---------- Apparence ----------
+
+    [Category("7. Apparence"), DisplayName("Couleur d'accent")]
+    [Description("Couleur de la marque au format #RRVVBB (boutons, logo, liserés, écran d'accueil du VoCore).")]
+    public string AccentColor { get; set; } = Ui.Theme.DefaultAccent;
+
+    [Category("7. Apparence"), DisplayName("Police")]
+    [Description("Nom d'une police installée sur Windows (par défaut Bahnschrift).")]
+    public string UiFont { get; set; } = Ui.Theme.DefaultFont;
+
     // ---------- Persistance ----------
 
     const int CurrentVersion = 2;
