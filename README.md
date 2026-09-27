@@ -72,7 +72,7 @@ Quand aucun jeu ne tourne, le VoCore affiche la page de veille avec le logo AVIX
 | Mode | Principe |
 |------|----------|
 | **Radar** (recommandé) | Rétro synthétique dessiné depuis la télémétrie : les voitures derrière vous en perspective, avec **la silhouette et la couleur de leur catégorie**, la distance, la vitesse de rapprochement et une alerte de voiture à côté. Ne touche pas au jeu, rien ne s'affiche sur l'écran principal. |
-| **Capture** | La vraie image du rétro virtuel de LMU, lue dans la fenêtre du jeu et envoyée au VoCore. Un **cache noir** est posé sur le rétro de l'écran principal. |
+| **Capture** | La vraie image du rétro virtuel de LMU, lue dans la fenêtre du jeu et envoyée au VoCore. Un **cache** est posé sur le rétro de l'écran principal. |
 
 Dans les deux cas, l'image part **en USB vers le VoCore**, avec son pilote USB : pas de second écran Windows.
 
@@ -174,8 +174,10 @@ miroir et l'envoie au VoCore. **Rien n'est affiché sur l'écran du jeu.**
 3. Après le délai de 30 s qui suit le lancement de LMU, cliquez **Calibrer la zone**. Un cadre au
    format du VoCore (1280 × 400) couvre l'image : déplacez-le sur le rétro et réduisez-le par ses
    coins (le format est conservé), puis **Valider**.
-4. Le rétro s'affiche sur le VoCore. Un cache noir le recouvre sur l'écran principal ; la capture
-   n'est pas affectée, car elle lit la fenêtre du jeu et non l'écran.
+4. Le rétro s'affiche sur le VoCore. Un cache le recouvre sur l'écran principal ; la capture
+   n'est pas affectée, car elle lit la fenêtre du jeu et non l'écran. Le cache prend la couleur de
+   l'image juste sous son bord (*Cache : couleur du décor*) et peut déborder de la zone de capture
+   (*Cache : marge à gauche / droite / en haut / en bas*, dans *4. Fenêtre du jeu*).
 5. Si l'image est à l'envers, réglez *Rotation* = `Rotation180`.
 
 ### Sans aucun rétro visible sur l'écran (expérimental)
@@ -211,7 +213,7 @@ composant web d'un tableau de bord SimHub.
 | Cadre jaune autour du jeu | Limitation de Windows 10. Il disparaît sous Windows 11. |
 | Radar : « En attente de LMU » | Le plugin rF2 Shared Memory Map n'est pas activé. |
 | Image du jeu déformée | Désactivez *Étendre la fenêtre de LMU* et cliquez **Arrêter** puis **Démarrer** : la fenêtre du jeu reprend sa taille. |
-| Le cache noir est décalé | Refaites **Calibrer la zone** après avoir placé le rétro dans le HUD. |
+| Le cache est décalé | Refaites **Calibrer la zone** après avoir placé le rétro dans le HUD. |
 
 Quand on clique **Arrêter**, la fenêtre de LMU retrouve sa taille et son style d'origine.
 
@@ -223,7 +225,7 @@ src/AviXMirror/
   MainForm.cs             fenêtre principale (tuiles de mode, aperçu VoCore, réglages)
   Ui/                     thème AVIX_3D, contrôles dessinés, écran d'accueil du VoCore
   MirrorEngine.cs         orchestration (recherche du jeu, capture/radar, sortie)
-  MaskForm.cs             cache noir sur le rétro de l'écran principal
+  MaskForm.cs             cache sur le rétro de l'écran principal
   CalibrationForm.cs      sélection de la zone du rétro à la souris
   Settings.cs             réglages (JSON)
   Capture/                Windows.Graphics.Capture + Direct3D 11

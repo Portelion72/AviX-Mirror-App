@@ -282,7 +282,7 @@ public sealed class MirrorEngine : IDisposable
         return $"Capture {src.Width}x{src.Height} — {zone}";
     }
 
-    /// <summary>Pose le cache noir sur la zone du rétro, sur l'écran principal.</summary>
+    /// <summary>Pose le cache sur la zone du rétro (plus ses marges), sur l'écran principal.</summary>
     void UpdateMask(Settings s)
     {
         bool show = s.HideMirrorOnScreen && !s.ExtendGameWindow && s.Source == CaptureSource.FenetreJeu &&
@@ -296,8 +296,12 @@ public sealed class MirrorEngine : IDisposable
 
         // La capture de fenêtre commence au coin visible de la fenêtre du jeu.
         var window = Native.GetVisibleBounds(_captureWindow);
-        var bounds = new Rectangle(window.X + s.CropX, window.Y + s.CropY, s.CropWidth, s.CropHeight);
+        int left = Math.Max(0, s.MaskMarginLeft), right = Math.Max(0, s.MaskMarginRight);
+        int top = Math.Max(0, s.MaskMarginTop), bottom = Math.Max(0, s.MaskMarginBottom);
+        var bounds = new Rectangle(window.X + s.CropX - left, window.Y + s.CropY - top,
+            s.CropWidth + left + right, s.CropHeight + top + bottom);
         _mask ??= new MaskForm();
+        _mask.MatchColor = s.MaskMatchColor;
         _mask.Cover(bounds);
     }
 

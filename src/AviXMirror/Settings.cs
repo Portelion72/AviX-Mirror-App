@@ -148,9 +148,27 @@ public sealed class Settings
     // ---------- Fenêtre du jeu ----------
 
     [Category("4. Fenêtre du jeu"), DisplayName("Masquer le rétro sur l'écran")]
-    [Description("Pose un cache noir sur la zone du rétro virtuel, sur l'écran principal. La capture n'est pas " +
+    [Description("Pose un cache sur la zone du rétro virtuel, sur l'écran principal (couleur du décor, marges réglables). La capture n'est pas " +
                  "affectée : elle lit la fenêtre du jeu, pas l'écran. Placez un petit rétro dans un coin (ex. en haut, sur le toit).")]
     public bool HideMirrorOnScreen { get; set; } = true;
+
+    [Category("4. Fenêtre du jeu"), DisplayName("Cache : marge à gauche (px)")]
+    [Description("Agrandit le cache au-delà de la zone de capture (cadre du rétro, bord flou…). N'agrandit pas la capture.")]
+    public int MaskMarginLeft { get; set; }
+
+    [Category("4. Fenêtre du jeu"), DisplayName("Cache : marge à droite (px)")]
+    public int MaskMarginRight { get; set; }
+
+    [Category("4. Fenêtre du jeu"), DisplayName("Cache : marge en haut (px)")]
+    public int MaskMarginTop { get; set; }
+
+    [Category("4. Fenêtre du jeu"), DisplayName("Cache : marge en bas (px)")]
+    public int MaskMarginBottom { get; set; }
+
+    [Category("4. Fenêtre du jeu"), DisplayName("Cache : couleur du décor")]
+    [Description("Vrai : le cache prend la couleur de l'image juste en dessous de lui (1 px sous son bord), " +
+                 "mise à jour en continu, pour se fondre dans le décor. Faux : cache noir.")]
+    public bool MaskMatchColor { get; set; } = true;
 
     [Category("4. Fenêtre du jeu"), DisplayName("Étendre la fenêtre de LMU (expérimental)")]
     [Description("Agrandit la fenêtre de LMU au-delà de l'écran pour y cacher le rétro. " +
