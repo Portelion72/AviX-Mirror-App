@@ -273,6 +273,10 @@ public sealed class Settings
     [Description("ATH façon caméra de recul Bosch : flèche colorée au-dessus des voitures derrière (vert > 1 s, orange > 0,5 s, rouge), échelles de distance et de temps sur les côtés. Tous les modes.")]
     public bool HudEnabled { get; set; } = true;
 
+    [Category("9. ATH caméra de recul"), DisplayName("Taille des flèches (%)")]
+    [Description("100 = taille normale ; de 20 à 400 %. Les flèches restent plus grosses sur les voitures proches.")]
+    public double HudArrowSize { get; set; } = 100;
+
     [Category("9. ATH caméra de recul"), DisplayName("Inverser gauche/droite des flèches")]
     [Description("Modes caméra et capture : à activer si les flèches apparaissent du mauvais côté des voitures.")]
     public bool HudInvertSide { get; set; }

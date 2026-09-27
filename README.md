@@ -17,7 +17,7 @@ Dans les trois modes (Radar, Caméra AC, Capture LMU), un ATH inspiré des camé
 Motorsport s'affiche par-dessus l'image :
 
 - **Flèche au-dessus de chaque voiture derrière**, colorée selon l'écart en temps : vert au-delà
-  d'1 s, orange entre 0,5 et 1 s, rouge en dessous.
+  d'1 s, orange entre 0,5 et 1 s, rouge en dessous. Taille réglable (*Taille des flèches (%)*).
 - **Échelle de distance à gauche et de temps à droite**, fixes, sur toute la hauteur de l'écran et
   découpées en 10 graduations égales (par défaut 0–100 m par pas de 10 m et 0–2 s par pas de 0,2 s,
   réglables), affichées en miroir (réglage « Échelles en miroir »). Un repère coloré montre l'écart de chaque voiture sur les deux échelles.

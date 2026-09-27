@@ -66,6 +66,9 @@ public sealed class MirrorEngine : IDisposable
             _hud = new Hud.HudOverlay(_settings, _settings.Mode);
             var hud = _hud;
             Frames.PostProcess = bmp => hud.Draw(bmp);
+            // Capture LMU : ATH dessiné en pleine résolution de l'écran, par-dessus l'image agrandie.
+            if (_settings.Mode == MirrorMode.Capture)
+                Frames.UpscaleTo = size;
         }
 
         if (_settings.LedsEnabled)
@@ -117,6 +120,7 @@ public sealed class MirrorEngine : IDisposable
         _watchdog.Stop();
         StopCapture();
         Frames.PostProcess = null;
+        Frames.UpscaleTo = null;
         _hud?.Dispose();
         _hud = null;
         _spotter?.Dispose();

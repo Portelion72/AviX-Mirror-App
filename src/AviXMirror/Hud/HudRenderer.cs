@@ -61,7 +61,7 @@ public static class HudRenderer
             var top = project(t.Lx, t.Ly + 1.4, t.Lz - CarLength / 2);
             if (top is not { } p)
                 continue;
-            float size = (float)Math.Clamp(900 / t.Lz, 14, 56) * unit;
+            float size = (float)(Math.Clamp(900 / t.Lz, 14, 56) * Math.Clamp(s.HudArrowSize, 20, 400) / 100) * unit;
             DrawArrow(g, p.X, p.Y - 4 * unit, size, color);
         }
     }
