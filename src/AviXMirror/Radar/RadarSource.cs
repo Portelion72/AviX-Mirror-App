@@ -12,7 +12,6 @@ namespace AviXMirror.Radar;
 /// </summary>
 public sealed class RadarSource : IDisposable
 {
-    const double ScoringPollSeconds = 0.05;
     const double MaxExtrapolationSeconds = 0.4;
 
     readonly FrameBuffer _output;
@@ -27,6 +26,8 @@ public sealed class RadarSource : IDisposable
     bool _hasData;
     double _lastET = double.NaN;
     readonly Stopwatch _sinceUpdate = Stopwatch.StartNew();
+    readonly Stopwatch _clock = Stopwatch.StartNew();
+    readonly MotionSmoother _smoother = new();
 
     readonly Dictionary<int, Font> _fonts = new();
 
@@ -48,18 +49,14 @@ public sealed class RadarSource : IDisposable
     void Run()
     {
         var clock = Stopwatch.StartNew();
-        double nextPoll = 0;
         while (_running)
         {
             var s = _settings;
             double frameTime = 1.0 / Math.Clamp(s.TargetFps, 5, 240);
             double start = clock.Elapsed.TotalSeconds;
 
-            if (start >= nextPoll)
-            {
-                Poll();
-                nextPoll = start + ScoringPollSeconds;
-            }
+            // Lecture à chaque image : AC envoie ses données à chaque image du jeu, LMU ~5 fois par seconde.
+            Poll();
 
             int w = s.RadarWidth > 0 ? s.RadarWidth : FallbackSize.Width;
             int h = s.RadarHeight > 0 ? s.RadarHeight : FallbackSize.Height;
@@ -103,6 +100,7 @@ public sealed class RadarSource : IDisposable
                 {
                     _lastET = world.Time;
                     _sinceUpdate.Restart();
+                    _smoother.OnSample(world, _clock.Elapsed.TotalSeconds);
                     _track.Update(world);
                 }
                 _world = world;
@@ -158,9 +156,11 @@ public sealed class RadarSource : IDisposable
         }
 
         double dt = Math.Min(_sinceUpdate.Elapsed.TotalSeconds, MaxExtrapolationSeconds);
-        var ori = player.Orientation;
+        double now = _clock.Elapsed.TotalSeconds;
+        // Position et orientation lissées : prolongées entre deux relevés, sans à-coup à chaque nouveau relevé.
+        var ori = _smoother.Orientation(player, now) ?? player.Orientation;
         var pv = player.Velocity;
-        var pp = new RF2Vec3 { X = player.Position.X + pv.X * dt, Y = player.Position.Y + pv.Y * dt, Z = player.Position.Z + pv.Z * dt };
+        var pp = _smoother.Position(player, now);
 
         double fov = Math.Clamp(s.RadarFov, 20, 150) * Math.PI / 180;
         double focal = w / 2.0 / Math.Tan(fov / 2);
@@ -180,7 +180,8 @@ public sealed class RadarSource : IDisposable
                 continue;
 
             var vv = v.Velocity;
-            var (lx, ly, lz) = view.ToLocal(v.Position.X + vv.X * dt, v.Position.Y + vv.Y * dt, v.Position.Z + vv.Z * dt);
+            var vp = _smoother.Position(v, now);
+            var (lx, ly, lz) = view.ToLocal(vp.X, vp.Y, vp.Z);
 
             if (Math.Abs(ly) > 15)
                 continue; // Autre partie du circuit (pont, tunnel…).
@@ -288,6 +289,8 @@ public sealed class RadarSource : IDisposable
         public bool Valid;
         public (double X, double Y, double Z) Left, Right, KerbLeft, KerbRight;
         public int Index;
+        public double Heading;   // cap de la piste (rad), pour repérer les virages
+        public bool Corner;      // vibreurs dessinés seulement dans les virages
     }
 
     /// <summary>
@@ -321,11 +324,13 @@ public sealed class RadarSource : IDisposable
                 KerbLeft = view.ToLocal(c.X + px * (hw + 0.9), c.Y, c.Z + pz * (hw + 0.9)),
                 KerbRight = view.ToLocal(c.X - px * (hw + 0.9), c.Y, c.Z - pz * (hw + 0.9)),
                 Index = (int)Math.Floor(lapDist / TrackMap.BinSize),
+                Heading = Math.Atan2(dir.X, dir.Z),
             };
             valid++;
         }
         if (valid < 6)
             return false;
+        MarkCorners(points);
 
         var asphalt = Color.FromArgb(58, 60, 64);
         var fog = Color.FromArgb(58, 70, 86);
@@ -351,7 +356,7 @@ public sealed class RadarSource : IDisposable
             g.FillPolygon(brush, quad);
 
             // Vibreurs rouge/blanc sur les bords, lignes blanches de bord de piste.
-            if (dist < 60 && Clip(far.KerbLeft, near.KerbLeft, out var fkl, out var nkl) &&
+            if (dist < 60 && far.Corner && Clip(far.KerbLeft, near.KerbLeft, out var fkl, out var nkl) &&
                 Clip(far.KerbRight, near.KerbRight, out var fkr, out var nkr))
             {
                 // Les couleurs se répètent tous les 2 m, comme les bandes d'un vrai vibreur.
@@ -366,6 +371,29 @@ public sealed class RadarSource : IDisposable
         foreach (var b in kerbBrushes)
             b.Dispose();
         return true;
+    }
+
+    /// <summary>
+    /// Repère les virages : la piste change de cap de plus de 5° sur 12 m (rayon inférieur à ~140 m).
+    /// Les vibreurs sont prolongés de quelques mètres avant et après, comme sur un vrai circuit.
+    /// </summary>
+    static void MarkCorners(RoadPoint[] points)
+    {
+        const int Half = 3;          // 3 cases de 2 m de chaque côté
+        const int Extend = 4;        // prolongement des vibreurs (8 m)
+        const double Threshold = 5 * Math.PI / 180;
+        var corner = new bool[points.Length];
+        for (int k = Half; k < points.Length - Half; k++)
+        {
+            if (!points[k - Half].Valid || !points[k + Half].Valid)
+                continue;
+            double turn = Math.Abs(Math.IEEERemainder(points[k + Half].Heading - points[k - Half].Heading, 2 * Math.PI));
+            if (turn > Threshold)
+                for (int j = Math.Max(0, k - Extend); j <= Math.Min(points.Length - 1, k + Extend); j++)
+                    corner[j] = true;
+        }
+        for (int k = 0; k < points.Length; k++)
+            points[k].Corner = corner[k];
     }
 
     /// <summary>Coupe un segment au plan proche de la caméra (les points derrière elle ne se projettent pas).</summary>

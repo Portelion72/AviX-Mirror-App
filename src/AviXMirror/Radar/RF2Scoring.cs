@@ -158,6 +158,24 @@ public sealed class RF2ScoringReader : IDisposable
         _file = null;
     }
 
+    /// <summary>Compteur de mise à jour du plugin (change à chaque nouveau relevé).</summary>
+    public bool TryPeekVersion(out uint version)
+    {
+        version = 0;
+        if (!TryOpen())
+            return false;
+        try
+        {
+            version = _view!.ReadUInt32(4); // mVersionUpdateEnd
+            return true;
+        }
+        catch
+        {
+            Close();
+            return false;
+        }
+    }
+
     /// <summary>Lit une copie cohérente des données. Retourne faux si LMU/le plugin n'est pas actif.</summary>
     public bool TryRead(out RF2Scoring scoring)
     {

@@ -98,11 +98,16 @@ immédiatement aux sessions suivantes. La piste du rétro tourne alors dans les 
 relief, avec vibreurs rouge/blanc et lignes de bord ; tant que l'endroit n'est pas connu, une route
 droite s'affiche.
 
-**Vibreurs aux couleurs du circuit** : jaune/bleu au Mans, vert/blanc/rouge à Monza, rouge/blanc
-par défaut. Les couleurs sont dans `AviXMirror.kerbs.json` (créé à côté de l'exe au premier
+**Vibreurs aux couleurs du circuit**, dessinés seulement dans les virages : jaune/bleu au Mans,
+vert/blanc/rouge à Monza et Imola, rouge/jaune à Spa, blanc/vert/jaune à Interlagos, bleu/rouge au
+Paul Ricard, noir/blanc à Silverstone, rouge/blanc/noir à Lusail, rouge/blanc ailleurs. Les couleurs sont dans `AviXMirror.kerbs.v2.json` (créé à côté de l'exe au premier
 lancement) : chaque ligne associe un mot du nom du circuit à une suite de couleurs, que vous pouvez
 modifier ou compléter, par exemple `"interlagos": ["#FFD700", "#009C3B"]`. Tous les circuits de LMU y
 sont listés, DLC compris (WEC, ELMS, US Track Pass), ainsi que les principaux circuits d'Assetto Corsa.
+
+**Fluidité** : LMU ne donne la position des voitures que 5 fois par seconde. Entre deux relevés,
+AviX Mirror prolonge le mouvement (vitesse et rotation de la voiture) et corrige les écarts en douceur :
+la vue tourne sans à-coups dans les virages.
 
 Phares allumés : halo lumineux. Contour rouge : voiture à moins de 10 m. Bandeau orange sur un
 bord : voiture à côté de vous. Si les voitures apparaissent du mauvais côté, activez

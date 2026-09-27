@@ -236,17 +236,71 @@ public sealed class VoCoreUsbOutput : IDisposable
 
         // L'image est en paysage ; si l'écran est natif en portrait, on la tourne de 90°.
         int rotation = (int)s.Rotation + (_nativeSize.Height > _nativeSize.Width ? 90 : 0);
+        rotation = ((rotation % 360) + 360) % 360;
         var target = _nativeBitmap;
+        bool direct = false;
         bool drawn = _frames.Read(frame =>
         {
+            // Voie rapide : image déjà à la bonne taille, rotation par quart de tour faite pendant la
+            // conversion des couleurs (évite un redimensionnement graphique à chaque image).
+            bool swap = rotation % 180 != 0;
+            int w = swap ? _nativeSize.Height : _nativeSize.Width, h = swap ? _nativeSize.Width : _nativeSize.Height;
+            if (rotation % 90 == 0 && frame.Width == w && frame.Height == h)
+            {
+                ConvertRotated(frame, rotation, s.FlipHorizontal, _nativeSize, _pixels);
+                direct = true;
+                return;
+            }
             using var g = Graphics.FromImage(target);
             FrameRenderer.Draw(g, frame, target.Size, rotation, s.FlipHorizontal, s.Stretch);
         });
         if (!drawn)
             return false;
 
-        ConvertToRgb565(target, _pixels);
+        if (!direct)
+            ConvertToRgb565(target, _pixels);
         return true;
+    }
+
+    /// <summary>
+    /// Conversion en RGB565 avec rotation (0/90/180/270°, sens horaire) et miroir, pixel à pixel.
+    /// Même résultat que FrameRenderer.Draw (miroir puis rotation), sans passer par GDI+.
+    /// </summary>
+    static unsafe void ConvertRotated(Bitmap src, int rotation, bool flip, Size native, byte[] output)
+    {
+        int W = native.Width, H = native.Height, w = src.Width, h = src.Height;
+        var data = src.LockBits(new Rectangle(0, 0, w, h), ImageLockMode.ReadOnly, PixelFormat.Format32bppRgb);
+        try
+        {
+            byte* basePtr = (byte*)data.Scan0;
+            int stride = data.Stride;
+            fixed (byte* outPtr = output)
+            {
+                ushort* dst = (ushort*)outPtr;
+                for (int dy = 0; dy < H; dy++)
+                {
+                    for (int dx = 0; dx < W; dx++)
+                    {
+                        int sx, sy;
+                        switch (rotation)
+                        {
+                            case 90: sx = dy; sy = h - 1 - dx; break;
+                            case 180: sx = w - 1 - dx; sy = h - 1 - dy; break;
+                            case 270: sx = w - 1 - dy; sy = dx; break;
+                            default: sx = dx; sy = dy; break;
+                        }
+                        if (flip)
+                            sx = w - 1 - sx;
+                        uint p = *(uint*)(basePtr + (long)sy * stride + sx * 4);
+                        *dst++ = (ushort)(((p >> 8) & 0xF800) | ((p >> 5) & 0x07E0) | ((p >> 3) & 0x001F));
+                    }
+                }
+            }
+        }
+        finally
+        {
+            src.UnlockBits(data);
+        }
     }
 
     static unsafe void ConvertToRgb565(Bitmap bmp, byte[] output)

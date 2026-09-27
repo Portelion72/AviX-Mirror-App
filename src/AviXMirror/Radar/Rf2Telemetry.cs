@@ -4,12 +4,23 @@ namespace AviXMirror.Radar;
 public sealed class Rf2Telemetry : IRadarTelemetry
 {
     readonly RF2ScoringReader _reader = new();
+    uint _lastVersion;
+    RadarWorld? _lastWorld;
+    string _lastStatus = "";
 
     public string GameName => "Le Mans Ultimate";
 
     public bool TryRead(Settings settings, out RadarWorld? world, out string status)
     {
         world = null;
+        // Rien de nouveau depuis la dernière lecture : on renvoie l'état déjà décodé (lecture à chaque image sans coût).
+        if (_lastWorld != null && _reader.TryPeekVersion(out var version) && version == _lastVersion)
+        {
+            world = _lastWorld;
+            status = _lastStatus;
+            return true;
+        }
+
         if (!_reader.TryRead(out var scoring))
         {
             status = "En attente de LMU (plugin rF2 Shared Memory Map)…";
@@ -50,6 +61,7 @@ public sealed class Rf2Telemetry : IRadarTelemetry
                 },
                 Left = new RF2Vec3 { X = v.Ori[0].X, Y = v.Ori[1].X, Z = v.Ori[2].X },
                 Orientation = v.Ori,
+                LocalRotation = v.LocalRot,
                 LapDist = v.LapDist,
                 PathLateral = v.PathLateral,
                 TrackEdge = v.TrackEdge,
@@ -65,6 +77,9 @@ public sealed class Rf2Telemetry : IRadarTelemetry
         }
 
         status = $"LMU connecté — {world.Vehicles.Count} voitures";
+        _lastVersion = scoring.VersionUpdateEnd;
+        _lastWorld = world;
+        _lastStatus = status;
         return true;
     }
 

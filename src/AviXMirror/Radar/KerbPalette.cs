@@ -6,7 +6,7 @@ namespace AviXMirror.Radar;
 
 /// <summary>
 /// Couleurs des vibreurs selon le circuit. Les valeurs par défaut sont écrites au premier lancement dans
-/// « AviXMirror.kerbs.json » (à côté de l'exe) : chaque entrée associe un mot-clé du nom du circuit à une
+/// « AviXMirror.kerbs.v2.json » (à côté de l'exe) : chaque entrée associe un mot-clé du nom du circuit à une
 /// suite de couleurs qui se répètent le long du vibreur. Le fichier peut être modifié librement.
 /// </summary>
 public static class KerbPalette
@@ -18,18 +18,18 @@ public static class KerbPalette
         // Le Mans Ultimate — jeu de base
         (new[] { "sarthe", "le mans", "lemans", "le_mans" }, new[] { "#F2C200", "#1C4FC4" }),
         (new[] { "monza" }, new[] { "#1E9A3A", White, "#D42020" }),
-        (new[] { "spa", "francorchamps" }, new[] { Red, White }),
+        (new[] { "spa", "francorchamps" }, new[] { "#D5122A", "#F5C400" }),   // rouge/jaune de la Wallonie
         (new[] { "sebring" }, new[] { Red, White }),
         (new[] { "portimao", "algarve" }, new[] { Red, White }),
         (new[] { "bahrain", "sakhir" }, new[] { Red, White }),
         (new[] { "fuji" }, new[] { Red, White }),
         // Le Mans Ultimate — DLC WEC, ELMS et US Track Pass
-        (new[] { "lusail", "losail", "qatar" }, new[] { Red, White }),
-        (new[] { "imola", "enzo e dino" }, new[] { Red, White }),
-        (new[] { "interlagos", "sao paulo", "carlos pace" }, new[] { Red, White }),
+        (new[] { "lusail", "losail", "qatar" }, new[] { "#B3122A", White, "#1A1A1A" }), // motifs Sadu
+        (new[] { "imola", "enzo e dino" }, new[] { "#1E9A3A", White, "#D42020" }),
+        (new[] { "interlagos", "sao paulo", "carlos pace" }, new[] { White, "#1E9A3A", "#F5C400" }),
         (new[] { "americas", "cota", "austin" }, new[] { Red, White }),
-        (new[] { "silverstone" }, new[] { Red, White }),
-        (new[] { "ricard", "castellet" }, new[] { Red, White }),
+        (new[] { "silverstone" }, new[] { "#1A1A1A", White }),
+        (new[] { "ricard", "castellet" }, new[] { "#1C4FC4", "#D42020" }),
         (new[] { "catalunya", "barcelona" }, new[] { Red, White }),
         (new[] { "daytona" }, new[] { Red, White }),
         (new[] { "laguna" }, new[] { Red, White }),
@@ -47,7 +47,7 @@ public static class KerbPalette
         (new[] { "suzuka" }, new[] { Red, White }),
     };
 
-    public static string FilePath => Path.Combine(AppContext.BaseDirectory, "AviXMirror.kerbs.json");
+    public static string FilePath => Path.Combine(AppContext.BaseDirectory, "AviXMirror.kerbs.v2.json");
 
     static Dictionary<string, string[]>? _table;
     static readonly Dictionary<string, Color[]> Cache = new();

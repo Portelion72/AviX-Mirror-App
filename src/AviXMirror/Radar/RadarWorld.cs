@@ -18,6 +18,9 @@ public sealed class RadarVehicle
     /// </summary>
     public RF2Vec3[]? Orientation;
 
+    /// <summary>Vitesse de rotation (rad/s) dans le repère local, pour prolonger l'orientation entre deux relevés.</summary>
+    public RF2Vec3 LocalRotation;
+
     /// <summary>Distance parcourue sur le tour (m), NaN si inconnue.</summary>
     public double LapDist = double.NaN;
 
