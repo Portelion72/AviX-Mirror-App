@@ -43,12 +43,28 @@ local mem = ac.writeMemoryMappedFile('AviXMirror.AC.v1', [[
 local FLAG_PITLANE, FLAG_HEADLIGHTS, FLAG_CONNECTED = 1, 2, 4
 local VERSION = 2
 local CAM_FORMAT_RGBA8 = 2
+local CAM_STATUS_SHARED, CAM_STATUS_ENCODED, CAM_STATUS_ERROR = 1, 2, -1
+
+-- Mode de secours pour les CSP sans texture partagée (ex. 0.1.79) : l'image est encodée (DDS)
+-- et copiée dans une seconde mémoire partagée. Plus lent, mais sans dépendance à la version.
+local IMAGE_MAX = 4 * 1024 * 1024
+local image -- ouverte à la demande
+local function openImage()
+  if not image then
+    image = ac.writeMemoryMappedFile('AviXMirror.AC.Image.v1', string.format([[
+      int frame;
+      int size;
+      uint8_t data[%d];
+    ]], IMAGE_MAX))
+  end
+  return image
+end
 
 -- ---------- Caméra arrière ----------
 
 -- Champs cam* : camEnabled..camUp sont écrits par AviXMirror.exe (réglages),
 -- camHandle..camStatus par cette app (texture partagée).
-local shot, shotW, shotH
+local shot, shotW, shotH, shotMode
 local camClock, lastShot, retryAt = 0, -1, 0
 local lastHeartbeat, heartbeatAt = 0, 0
 local lastError = nil
@@ -85,19 +101,39 @@ local function updateCamera(dt)
     disposeShot()
     -- Réglage le plus simple et le plus sûr : format de texture par défaut, sans post-traitement,
     -- avec les shaders utilisés par les rétroviseurs du jeu.
-    shot = ac.GeometryShot(ac.findNodes('sceneRoot:yes'), vec2(w, h), 1, false,
-      render.AntialiasingMode.None, render.TextureFormat.R8G8B8A8.UNorm, render.TextureFlags.Shared)
-    shot:setShadersType(render.ShadersType.SimplifiedWithLights)
-    shot:setOriginalLighting(true)
-    shot:setSky(true)
-    shot:setClippingPlanes(0.25, 2000)
+    -- Les CSP anciens ne connaissent pas render.TextureFlags : 1 = texture partagée.
+    local sharedFlag = render.TextureFlags and render.TextureFlags.Shared or 1
+    local rgba8 = render.TextureFormat and render.TextureFormat.R8G8B8A8 and render.TextureFormat.R8G8B8A8.UNorm or 28
+    local noAA = render.AntialiasingMode and render.AntialiasingMode.None or 0
+    shot = ac.GeometryShot(ac.findNodes('sceneRoot:yes'), vec2(w, h), 1, false, noAA, rgba8, sharedFlag)
+    -- Chaque réglage est facultatif : il peut manquer sur les anciennes versions de CSP.
+    if shot.setShadersType and render.ShadersType then shot:setShadersType(render.ShadersType.SimplifiedWithLights) end
+    if shot.setOriginalLighting then shot:setOriginalLighting(true) end
+    if shot.setSky then shot:setSky(true) end
+    if shot.setClippingPlanes then shot:setClippingPlanes(0.25, 2000) end
     shotW, shotH = w, h
-    mem.camHandle = shot:sharedHandle(true)
+    local handle = 0
+    if shot.sharedHandle then
+      local ok, value = pcall(shot.sharedHandle, shot, true)
+      if ok and value and tonumber(value) ~= 0 then handle = value end
+    end
+    if handle ~= 0 then
+      mem.camHandle = handle
+      shotMode = CAM_STATUS_SHARED
+    elseif shot.encode then
+      mem.camHandle = 0
+      shotMode = CAM_STATUS_ENCODED
+      openImage()
+    else
+      disposeShot()
+      error('CSP trop ancien : mettez à jour Custom Shaders Patch dans Content Manager.')
+    end
     mem.camFormat = CAM_FORMAT_RGBA8
     mem.camActualWidth, mem.camActualHeight = w, h
   end
 
   local fps = mem.camFps > 0 and mem.camFps or 30
+  if shotMode == CAM_STATUS_ENCODED then fps = math.min(fps, 20) end -- l'encodage coûte plus cher
   if camClock - lastShot < 1 / fps then return end
   lastShot = camClock
 
@@ -110,8 +146,19 @@ local function updateCamera(dt)
   local fov = mem.camFov > 1 and mem.camFov or 20
   local pos = car.position - car.look * back + car.up * up
   shot:update(pos, car.look * -1, car.up, fov)
+
+  if shotMode == CAM_STATUS_ENCODED then
+    local bytes = shot:encode()
+    if bytes and #bytes > 0 and #bytes <= IMAGE_MAX then
+      local img = openImage()
+      ffi.copy(img.data, bytes, #bytes)
+      img.size = #bytes
+      img.frame = img.frame + 1
+    end
+  end
+
   mem.camFrame = mem.camFrame + 1
-  mem.camStatus = 1
+  mem.camStatus = shotMode
 end
 
 local function writeString(dst, size, value)
@@ -163,7 +210,7 @@ function script.update(dt)
 
   local ok, err = pcall(updateCamera, dt)
   if not ok then
-    mem.camStatus = -1
+    mem.camStatus = CAM_STATUS_ERROR
     retryAt = camClock + 5 -- évite de recréer la caméra à chaque image en cas d'erreur
     lastError = err
     ac.debug('AviX Mirror caméra', err)
@@ -180,8 +227,9 @@ end
 function windowMain(dt)
   ui.text('AviX Mirror actif')
   ui.text(string.format('%d voiture(s) exportée(s)', exported))
-  if mem.camStatus == 1 then
-    ui.text(string.format('Caméra arrière : %dx%d', mem.camActualWidth, mem.camActualHeight))
+  if mem.camStatus == CAM_STATUS_SHARED or mem.camStatus == CAM_STATUS_ENCODED then
+    ui.text(string.format('Caméra arrière : %dx%d (%s)', mem.camActualWidth, mem.camActualHeight,
+      mem.camStatus == CAM_STATUS_SHARED and 'texture partagée' or 'mode compatibilité'))
   elseif mem.camStatus == -1 then
     ui.textWrapped('Caméra arrière, erreur : ' .. tostring(lastError))
   end

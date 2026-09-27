@@ -23,6 +23,12 @@ public sealed class AcCameraSource : IDisposable
     const int OffFov = 9060, OffBack = 9064, OffUp = 9068;
     const int OffHandle = 9072, OffFrame = 9080, OffStatus = 9096;
     const int ExpectedVersion = 2;
+    const int StatusEncoded = 2;
+
+    // Mode de secours (CSP sans texture partagée) : image DDS copiée par l'app Lua.
+    const string ImageMapName = "AviXMirror.AC.Image.v1";
+    const int ImageMax = 4 * 1024 * 1024;
+    const int ImageHeader = 8; // int frame; int size;
 
     readonly FrameBuffer _output;
     readonly Thread _thread;
@@ -31,6 +37,10 @@ public sealed class AcCameraSource : IDisposable
 
     MemoryMappedFile? _file;
     MemoryMappedViewAccessor? _view;
+    MemoryMappedFile? _imageFile;
+    MemoryMappedViewAccessor? _imageView;
+    byte[] _imageBytes = Array.Empty<byte>();
+    int _lastImageFrame = -1;
     ID3D11Device? _device;
     ID3D11DeviceContext? _context;
     ID3D11Texture2D? _shared, _staging;
@@ -112,6 +122,11 @@ public sealed class AcCameraSource : IDisposable
             Status = "Caméra Assetto Corsa : erreur dans l'app Lua (voir l'app « Lua Debug » de CSP).";
             return;
         }
+        if (status == StatusEncoded)
+        {
+            ReadEncodedImage(s);
+            return;
+        }
         if (handle == 0)
         {
             Status = "Caméra Assetto Corsa : préparation de la caméra…";
@@ -151,6 +166,86 @@ public sealed class AcCameraSource : IDisposable
         }
 
         Status = $"Caméra Assetto Corsa : {desc.Width}x{desc.Height}, image n° {frame}.";
+    }
+
+    /// <summary>Mode compatibilité : lit l'image DDS non compressée écrite par l'app Lua.</summary>
+    void ReadEncodedImage(Settings s)
+    {
+        if (_imageView == null)
+        {
+            try
+            {
+                _imageFile = MemoryMappedFile.OpenExisting(ImageMapName, MemoryMappedFileRights.Read);
+                _imageView = _imageFile.CreateViewAccessor(0, ImageHeader + ImageMax, MemoryMappedFileAccess.Read);
+            }
+            catch
+            {
+                _imageFile?.Dispose();
+                _imageFile = null;
+                Status = "Caméra Assetto Corsa (mode compatibilité) : en attente de l'image…";
+                return;
+            }
+        }
+
+        int frame = _imageView.ReadInt32(0);
+        int size = _imageView.ReadInt32(4);
+        if (frame == _lastImageFrame || size <= 128 || size > ImageMax)
+            return;
+        _lastImageFrame = frame;
+        if (_imageBytes.Length < size)
+            _imageBytes = new byte[size];
+        _imageView.ReadArray(ImageHeader, _imageBytes, 0, size);
+
+        if (!TryDecodeDds(_imageBytes, size, s.AcCamMirror, out int w, out int h))
+        {
+            Status = "Caméra Assetto Corsa (mode compatibilité) : format d'image non reconnu.";
+            return;
+        }
+        Status = $"Caméra Assetto Corsa (mode compatibilité, mettez CSP à jour pour plus de fluidité) : {w}x{h}.";
+    }
+
+    /// <summary>Décode une image DDS 32 bits non compressée (RGBA ou BGRA) vers le tampon de sortie.</summary>
+    unsafe bool TryDecodeDds(byte[] dds, int size, bool mirror, out int width, out int height)
+    {
+        width = height = 0;
+        if (dds[0] != 'D' || dds[1] != 'D' || dds[2] != 'S' || dds[3] != ' ')
+            return false;
+        int flags = BitConverter.ToInt32(dds, 8);
+        height = BitConverter.ToInt32(dds, 12);
+        width = BitConverter.ToInt32(dds, 16);
+        int pitchOrSize = BitConverter.ToInt32(dds, 20);
+        int fourCC = BitConverter.ToInt32(dds, 84);
+        int bitCount = BitConverter.ToInt32(dds, 88);
+        uint redMask = BitConverter.ToUInt32(dds, 92);
+
+        int offset = 128;
+        bool bgr;
+        if (fourCC == 0x30315844) // « DX10 »
+        {
+            int dxgi = BitConverter.ToInt32(dds, 128);
+            offset += 20;
+            if (dxgi is 28 or 29 or 27) bgr = false;          // R8G8B8A8
+            else if (dxgi is 87 or 88 or 91 or 93) bgr = true; // B8G8R8A8 / B8G8R8X8
+            else return false;
+        }
+        else
+        {
+            if (bitCount != 32)
+                return false;
+            bgr = redMask == 0x00FF0000;
+        }
+
+        int pitch = (flags & 0x8) != 0 && pitchOrSize >= width * 4 ? pitchOrSize : width * 4;
+        if (width <= 0 || height <= 0 || offset + (long)pitch * height > size)
+            return false;
+
+        int w = width, h = height;
+        fixed (byte* p = dds)
+        {
+            var src = (IntPtr)(p + offset);
+            _output.Write(w, h, bmp => Copy8(src, pitch, bmp, mirror, bgr));
+        }
+        return true;
     }
 
     bool OpenMemory()
@@ -287,6 +382,8 @@ public sealed class AcCameraSource : IDisposable
         // Demande à l'app Lua d'arrêter la caméra (économise le GPU).
         try { _view?.Write(OffEnabled, 0); } catch { }
         ReleaseTexture();
+        _imageView?.Dispose();
+        _imageFile?.Dispose();
         _context?.ClearState();
         _context?.Dispose();
         _device?.Dispose();
