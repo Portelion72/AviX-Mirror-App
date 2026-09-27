@@ -20,6 +20,8 @@ public sealed class MainForm : Form
         StartPosition = FormStartPosition.CenterScreen;
 
         _grid.SelectedObject = _settings.Clone();
+        // Les réglages s'appliquent en direct (luminosité, champ de vision…) ; « Appliquer » les enregistre.
+        _grid.PropertyValueChanged += (_, _) => _engine.UpdateLive(EditedSettings());
 
         var apply = new Button { Text = "Appliquer", AutoSize = true };
         var calibrate = new Button { Text = "Calibrer la zone", AutoSize = true };

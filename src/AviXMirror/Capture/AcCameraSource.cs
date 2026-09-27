@@ -49,7 +49,10 @@ public sealed class AcCameraSource : IDisposable
     int _heartbeat;
     bool _forceEncoded;
     readonly byte[] _halfToByte = new byte[65536];
-    double _lutGamma = double.NaN;
+    readonly byte[] _byteToByte = new byte[256];
+    (double Exposure, double Gamma) _lutParams = (double.NaN, double.NaN);
+
+    public void UpdateSettings(Settings settings) => _settings = settings;
 
     public string Status { get; private set; } = "Caméra Assetto Corsa : démarrage…";
 
@@ -165,9 +168,9 @@ public sealed class AcCameraSource : IDisposable
         try
         {
             bool mirror = s.AcCamMirror;
+            BuildLut(s.AcCamExposure, s.AcCamGamma);
             if (desc.Format == Format.R16G16B16A16_Float)
             {
-                BuildLut(s.AcCamGamma);
                 _output.Write((int)desc.Width, (int)desc.Height, bmp => CopyHalf(map.DataPointer, (int)map.RowPitch, bmp, mirror));
             }
             else
@@ -212,7 +215,7 @@ public sealed class AcCameraSource : IDisposable
             _imageBytes = new byte[size];
         _imageView.ReadArray(ImageHeader, _imageBytes, 0, size);
 
-        if (!TryDecodeDds(_imageBytes, size, s.AcCamMirror, out int w, out int h))
+        if (!TryDecodeDds(_imageBytes, size, s, out int w, out int h))
         {
             Status = "Caméra Assetto Corsa (mode compatibilité) : format d'image non reconnu.";
             return;
@@ -221,7 +224,7 @@ public sealed class AcCameraSource : IDisposable
     }
 
     /// <summary>Décode une image DDS 32 bits non compressée (RGBA ou BGRA) vers le tampon de sortie.</summary>
-    unsafe bool TryDecodeDds(byte[] dds, int size, bool mirror, out int width, out int height)
+    unsafe bool TryDecodeDds(byte[] dds, int size, Settings s, out int width, out int height)
     {
         width = height = 0;
         if (dds[0] != 'D' || dds[1] != 'D' || dds[2] != 'S' || dds[3] != ' ')
@@ -256,9 +259,11 @@ public sealed class AcCameraSource : IDisposable
             return false;
 
         int w = width, h = height;
+        bool mirror = s.AcCamMirror;
         fixed (byte* p = dds)
         {
             var src = (IntPtr)(p + offset);
+            BuildLut(s.AcCamExposure, s.AcCamGamma);
             _output.Write(w, h, bmp => Copy8(src, pitch, bmp, mirror, bgr));
         }
         return true;
@@ -326,20 +331,26 @@ public sealed class AcCameraSource : IDisposable
         _openedHandle = 0;
     }
 
-    /// <summary>Table demi-flottant -> octet (avec correction gamma optionnelle).</summary>
-    void BuildLut(double gamma)
+    /// <summary>
+    /// Tables de conversion (demi-flottant -> octet et octet -> octet) avec exposition et gamma :
+    /// sortie = (entrée × exposition) ^ (1 / gamma), limitée à 0..1.
+    /// </summary>
+    void BuildLut(double exposure, double gamma)
     {
+        exposure = Math.Clamp(exposure, 0.1, 8);
         gamma = Math.Clamp(gamma, 0.2, 5);
-        if (gamma == _lutGamma)
+        if ((exposure, gamma) == _lutParams)
             return;
+        static byte Map(double v, double exposure, double gamma) =>
+            (byte)Math.Round(Math.Pow(Math.Clamp(v * exposure, 0, 1), 1 / gamma) * 255);
         for (int i = 0; i < 65536; i++)
         {
             float v = (float)BitConverter.UInt16BitsToHalf((ushort)i);
-            if (float.IsNaN(v) || v <= 0) { _halfToByte[i] = 0; continue; }
-            double c = Math.Pow(Math.Min(v, 1f), 1 / gamma);
-            _halfToByte[i] = (byte)Math.Round(c * 255);
+            _halfToByte[i] = float.IsNaN(v) || v <= 0 ? (byte)0 : Map(v, exposure, gamma);
         }
-        _lutGamma = gamma;
+        for (int i = 0; i < 256; i++)
+            _byteToByte[i] = Map(i / 255.0, exposure, gamma);
+        _lutParams = (exposure, gamma);
     }
 
     unsafe void CopyHalf(IntPtr source, int pitch, Bitmap bmp, bool mirror)
@@ -368,11 +379,12 @@ public sealed class AcCameraSource : IDisposable
         }
     }
 
-    static unsafe void Copy8(IntPtr source, int pitch, Bitmap bmp, bool mirror, bool bgr)
+    unsafe void Copy8(IntPtr source, int pitch, Bitmap bmp, bool mirror, bool bgr)
     {
         var data = bmp.LockBits(new Rectangle(0, 0, bmp.Width, bmp.Height), ImageLockMode.WriteOnly, PixelFormat.Format32bppRgb);
         try
         {
+            fixed (byte* lut = _byteToByte)
             for (int y = 0; y < bmp.Height; y++)
             {
                 byte* src = (byte*)source + (long)y * pitch;
@@ -381,8 +393,8 @@ public sealed class AcCameraSource : IDisposable
                 {
                     byte* p = src + x * 4;
                     uint pixel = bgr
-                        ? ((uint)p[2] << 16) | ((uint)p[1] << 8) | p[0]
-                        : ((uint)p[0] << 16) | ((uint)p[1] << 8) | p[2];
+                        ? ((uint)lut[p[2]] << 16) | ((uint)lut[p[1]] << 8) | lut[p[0]]
+                        : ((uint)lut[p[0]] << 16) | ((uint)lut[p[1]] << 8) | lut[p[2]];
                     dst[mirror ? bmp.Width - 1 - x : x] = pixel;
                 }
             }

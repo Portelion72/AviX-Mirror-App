@@ -187,9 +187,13 @@ public sealed class Settings
     [Description("Inverse gauche/droite comme un vrai rétroviseur.")]
     public bool AcCamMirror { get; set; } = true;
 
+    [Category("6. Caméra Assetto Corsa"), DisplayName("Exposition")]
+    [Description("Luminosité de l'image : 1 = inchangée, 2 = deux fois plus claire. S'applique en direct.")]
+    public double AcCamExposure { get; set; } = 1.8;
+
     [Category("6. Caméra Assetto Corsa"), DisplayName("Gamma")]
-    [Description("1 = inchangé. Augmentez si l'image est trop sombre, diminuez si elle est trop claire.")]
-    public double AcCamGamma { get; set; } = 1.0;
+    [Description("Éclaircit les zones sombres sans brûler les zones claires : 1 = inchangé, 1.5 à 2.2 = ombres plus claires. S'applique en direct.")]
+    public double AcCamGamma { get; set; } = 1.4;
 
     [Category("5. Radar"), DisplayName("Jeu")]
     [Description("Auto : détecte Le Mans Ultimate ou Assetto Corsa (app Lua « AviX Mirror » pour CSP requise).")]

@@ -72,6 +72,20 @@ public sealed class MirrorEngine : IDisposable
         _watchdog.Start();
     }
 
+    /// <summary>Applique des réglages sans redémarrer (luminosité, caméra, radar…).</summary>
+    public void UpdateLive(Settings settings)
+    {
+        if (!Running)
+            return;
+        var copy = settings.Clone();
+        // Les réglages de structure (mode, jeu, sortie) demandent un redémarrage : on les garde.
+        copy.Mode = _settings.Mode;
+        _settings = copy;
+        _usb?.UpdateSettings(copy);
+        _radar?.UpdateSettings(copy);
+        _acCamera?.UpdateSettings(copy);
+    }
+
     public void Stop()
     {
         _watchdog.Stop();

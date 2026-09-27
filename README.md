@@ -108,7 +108,8 @@ miroir et l'envoie au VoCore. **Rien n'est affiché sur l'écran du jeu.**
 
 - Après une mise à jour d'AviX Mirror, recliquez **Installer l'app Assetto Corsa** (nouvelle version de l'app).
 - Réglages (catégorie *6. Caméra Assetto Corsa*) : champ de vision, recul et hauteur de la caméra,
-  résolution, images par seconde (30 par défaut), effet miroir, gamma.
+  résolution, images par seconde (30 par défaut), effet miroir, **exposition** (1,8 par défaut) et
+  **gamma** (1,4). Les réglages s'appliquent en direct pendant que vous roulez ; « Appliquer » les enregistre.
 - Chaque image est un rendu supplémentaire de la scène : comptez une légère baisse de FPS, comme
   avec un rétroviseur en jeu. Baissez *Images par seconde* si besoin.
 - Si l'arrière de votre voiture apparaît dans l'image, augmentez *Recul de la caméra*.
