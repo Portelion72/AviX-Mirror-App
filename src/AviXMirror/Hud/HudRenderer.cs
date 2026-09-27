@@ -41,8 +41,8 @@ public static class HudRenderer
         {
             var dTicks = Enumerable.Range(0, 11).Select(i => (YAt(i / 10.0), i == 0 ? "" : $"{maxD * i / 10:0.#} m"));
             var tTicks = Enumerable.Range(0, 11).Select(i => (YAt(i / 10.0), i == 0 ? "" : $"{maxT * i / 10:0.0#} s"));
-            DrawScale(g, 0, band, yTop, yBottom, unit, dTicks, left: true);
-            DrawScale(g, w - band, band, yTop, yBottom, unit, tTicks, left: false);
+            DrawScale(g, 0, band, yTop, yBottom, unit, dTicks, left: true, s.HudMirrorScales);
+            DrawScale(g, w - band, band, yTop, yBottom, unit, tTicks, left: false, s.HudMirrorScales);
         }
 
         foreach (var t in list)
@@ -73,12 +73,21 @@ public static class HudRenderer
         : Color.FromArgb(70, 220, 90);
 
     static void DrawScale(Graphics g, float x, float width, float yTop, float yBottom, float unit,
-        IEnumerable<(float Y, string Label)> ticks, bool left)
+        IEnumerable<(float Y, string Label)> ticks, bool left, bool mirrored)
     {
         using (var bg = new LinearGradientBrush(new RectangleF(x, 0, width, yBottom + yTop + 1),
                    left ? Color.FromArgb(170, 0, 0, 0) : Color.FromArgb(0, 0, 0, 0),
                    left ? Color.FromArgb(0, 0, 0, 0) : Color.FromArgb(170, 0, 0, 0), LinearGradientMode.Horizontal))
             g.FillRectangle(bg, x, 0, width, yBottom + yTop);
+
+        // Effet miroir : graduations et chiffres retournés dans leur bande, lisibles à l'endroit
+        // quand l'image est vue en reflet (rétroviseur).
+        var saved = g.Transform;
+        if (mirrored)
+        {
+            g.TranslateTransform(2 * x + width, 0);
+            g.ScaleTransform(-1, 1);
+        }
 
         float edge = left ? x + 5 * unit : x + width - 5 * unit;
         using var spine = new Pen(Color.FromArgb(230, 235, 235, 235), 3 * unit);
@@ -98,6 +107,8 @@ public static class HudRenderer
             float ly = Math.Max(y, yTop + size.Height / 2);
             DrawOutlinedText(g, label, font, new PointF(cx, ly), Color.FromArgb(245, 245, 245), bottomAnchored: false);
         }
+        g.Transform = saved;
+        saved.Dispose();
     }
 
     static void DrawMarker(Graphics g, float x, float y, float unit, Color color, bool pointRight)

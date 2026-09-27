@@ -280,6 +280,10 @@ public sealed class Settings
     [Category("9. ATH caméra de recul"), DisplayName("Échelles distance / temps")]
     public bool HudShowScales { get; set; } = true;
 
+    [Category("9. ATH caméra de recul"), DisplayName("Échelles en miroir")]
+    [Description("Retourne les graduations et les chiffres des deux échelles (effet miroir).")]
+    public bool HudMirrorScales { get; set; } = true;
+
     [Category("9. ATH caméra de recul"), DisplayName("Échelle de distance : maximum (m)")]
     [Description("Haut de l'échelle de gauche (0 m en bas), découpée en 10 graduations égales.")]
     public double HudScaleDistance { get; set; } = 100;
