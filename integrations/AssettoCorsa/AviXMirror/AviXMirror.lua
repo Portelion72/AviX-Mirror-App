@@ -42,7 +42,7 @@ local mem = ac.writeMemoryMappedFile('AviXMirror.AC.v1', [[
 
 local FLAG_PITLANE, FLAG_HEADLIGHTS, FLAG_CONNECTED = 1, 2, 4
 local VERSION = 2
-local CAM_FORMAT_RGBA16F = 1
+local CAM_FORMAT_RGBA8 = 2
 
 -- ---------- Caméra arrière ----------
 
@@ -51,6 +51,7 @@ local CAM_FORMAT_RGBA16F = 1
 local shot, shotW, shotH
 local camClock, lastShot, retryAt = 0, -1, 0
 local lastHeartbeat, heartbeatAt = 0, 0
+local lastError = nil
 
 local function disposeShot()
   if shot then shot:dispose() end
@@ -74,23 +75,25 @@ local function updateCamera(dt)
 
   if camClock < retryAt then return end
 
+  -- On attend d'être vraiment en piste avant de créer la caméra (pas au chargement, ni dans les menus).
+  local sim = ac.getSim()
+  if camClock < 8 or sim.isInMainMenu or sim.isPaused or sim.isReplayActive then return end
+
   local w = math.clamp(mem.camWidth > 0 and mem.camWidth or 1280, 64, 2048)
   local h = math.clamp(mem.camHeight > 0 and mem.camHeight or 400, 32, 2048)
   if not shot or w ~= shotW or h ~= shotH then
     disposeShot()
-    -- Même réglage que l'intégration OBS de CSP : HDR -> LDR proche de l'image du jeu.
+    -- Réglage le plus simple et le plus sûr : format de texture par défaut, sans post-traitement,
+    -- avec les shaders utilisés par les rétroviseurs du jeu.
     shot = ac.GeometryShot(ac.findNodes('sceneRoot:yes'), vec2(w, h), 1, false,
-      render.AntialiasingMode.SimplifiedYEBIS, render.TextureFormat.R16G16B16A16.Float, render.TextureFlags.Shared)
+      render.AntialiasingMode.None, render.TextureFormat.R8G8B8A8.UNorm, render.TextureFlags.Shared)
     shot:setShadersType(render.ShadersType.SimplifiedWithLights)
     shot:setOriginalLighting(true)
     shot:setSky(true)
-    shot:setTransparentPass(true)
-    shot:setFakeCarShadows(true)
-    shot:setParticles(true)
-    shot:setClippingPlanes(0.25, 3000)
+    shot:setClippingPlanes(0.25, 2000)
     shotW, shotH = w, h
     mem.camHandle = shot:sharedHandle(true)
-    mem.camFormat = CAM_FORMAT_RGBA16F
+    mem.camFormat = CAM_FORMAT_RGBA8
     mem.camActualWidth, mem.camActualHeight = w, h
   end
 
@@ -162,6 +165,7 @@ function script.update(dt)
   if not ok then
     mem.camStatus = -1
     retryAt = camClock + 5 -- évite de recréer la caméra à chaque image en cas d'erreur
+    lastError = err
     ac.debug('AviX Mirror caméra', err)
   end
 
@@ -179,6 +183,6 @@ function windowMain(dt)
   if mem.camStatus == 1 then
     ui.text(string.format('Caméra arrière : %dx%d', mem.camActualWidth, mem.camActualHeight))
   elseif mem.camStatus == -1 then
-    ui.text('Caméra arrière : erreur (voir Lua Debug)')
+    ui.textWrapped('Caméra arrière, erreur : ' .. tostring(lastError))
   end
 end
