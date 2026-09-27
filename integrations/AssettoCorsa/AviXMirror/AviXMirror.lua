@@ -70,10 +70,53 @@ local lastHeartbeat, heartbeatAt = 0, 0
 local lastError = nil
 
 local function disposeShot()
-  if shot then shot:dispose() end
-  shot = nil
+  if shot then pcall(shot.dispose, shot) end
+  shot, shotMode, shotW, shotH = nil, nil, nil, nil
   mem.camHandle = 0
   mem.camActualWidth, mem.camActualHeight = 0, 0
+end
+
+-- Référence de texture partagée -> entier (selon la version de CSP : nombre, entier 64 bits ou pointeur).
+local function handleToNumber(value)
+  if value == nil then return 0 end
+  if type(value) == 'number' then return value end
+  local ok, n = pcall(function () return tonumber(ffi.cast('uint64_t', value)) end)
+  return ok and n or 0
+end
+
+local function createShot(w, h, forceEncoded)
+  -- Réglage le plus simple et le plus sûr : format de texture par défaut, sans post-traitement,
+  -- avec les shaders utilisés par les rétroviseurs du jeu.
+  -- Les CSP anciens ne connaissent pas render.TextureFlags : 1 = texture partagée.
+  local sharedFlag = render.TextureFlags and render.TextureFlags.Shared or 1
+  local rgba8 = render.TextureFormat and render.TextureFormat.R8G8B8A8 and render.TextureFormat.R8G8B8A8.UNorm or 28
+  local noAA = render.AntialiasingMode and render.AntialiasingMode.None or 0
+  shot = ac.GeometryShot(ac.findNodes('sceneRoot:yes'), vec2(w, h), 1, false, noAA, rgba8, sharedFlag)
+  -- Chaque réglage est facultatif : il peut manquer sur les anciennes versions de CSP.
+  if shot.setShadersType and render.ShadersType then shot:setShadersType(render.ShadersType.SimplifiedWithLights) end
+  if shot.setOriginalLighting then shot:setOriginalLighting(true) end
+  if shot.setSky then shot:setSky(true) end
+  if shot.setClippingPlanes then shot:setClippingPlanes(0.25, 2000) end
+
+  local handle = 0
+  if not forceEncoded and shot.sharedHandle then
+    local ok, value = pcall(shot.sharedHandle, shot, true)
+    if ok then handle = handleToNumber(value) end
+  end
+
+  if handle ~= 0 then
+    mem.camHandle = handle
+    shotMode = CAM_STATUS_SHARED
+  elseif shot.encode then
+    mem.camHandle = 0
+    openImage()
+    shotMode = CAM_STATUS_ENCODED
+  else
+    error('CSP trop ancien : mettez à jour Custom Shaders Patch dans Content Manager.')
+  end
+  mem.camFormat = CAM_FORMAT_RGBA8
+  mem.camActualWidth, mem.camActualHeight = w, h
+  shotW, shotH = w, h -- seulement une fois la création réussie
 end
 
 local function updateCamera(dt)
@@ -97,42 +140,21 @@ local function updateCamera(dt)
 
   local w = math.clamp(mem.camWidth > 0 and mem.camWidth or 1280, 64, 2048)
   local h = math.clamp(mem.camHeight > 0 and mem.camHeight or 400, 32, 2048)
+  -- camFps négatif : AviXMirror.exe n'a pas pu ouvrir la texture partagée, il demande le mode compatibilité.
+  local forceEncoded = mem.camFps < 0
+  if shot and forceEncoded and shotMode == CAM_STATUS_SHARED then disposeShot() end
+
   if not shot or w ~= shotW or h ~= shotH then
     disposeShot()
-    -- Réglage le plus simple et le plus sûr : format de texture par défaut, sans post-traitement,
-    -- avec les shaders utilisés par les rétroviseurs du jeu.
-    -- Les CSP anciens ne connaissent pas render.TextureFlags : 1 = texture partagée.
-    local sharedFlag = render.TextureFlags and render.TextureFlags.Shared or 1
-    local rgba8 = render.TextureFormat and render.TextureFormat.R8G8B8A8 and render.TextureFormat.R8G8B8A8.UNorm or 28
-    local noAA = render.AntialiasingMode and render.AntialiasingMode.None or 0
-    shot = ac.GeometryShot(ac.findNodes('sceneRoot:yes'), vec2(w, h), 1, false, noAA, rgba8, sharedFlag)
-    -- Chaque réglage est facultatif : il peut manquer sur les anciennes versions de CSP.
-    if shot.setShadersType and render.ShadersType then shot:setShadersType(render.ShadersType.SimplifiedWithLights) end
-    if shot.setOriginalLighting then shot:setOriginalLighting(true) end
-    if shot.setSky then shot:setSky(true) end
-    if shot.setClippingPlanes then shot:setClippingPlanes(0.25, 2000) end
-    shotW, shotH = w, h
-    local handle = 0
-    if shot.sharedHandle then
-      local ok, value = pcall(shot.sharedHandle, shot, true)
-      if ok and value and tonumber(value) ~= 0 then handle = value end
-    end
-    if handle ~= 0 then
-      mem.camHandle = handle
-      shotMode = CAM_STATUS_SHARED
-    elseif shot.encode then
-      mem.camHandle = 0
-      shotMode = CAM_STATUS_ENCODED
-      openImage()
-    else
+    local ok, err = pcall(createShot, w, h, forceEncoded)
+    if not ok then
+      -- Caméra à moitié créée : on la détruit pour repartir de zéro au prochain essai.
       disposeShot()
-      error('CSP trop ancien : mettez à jour Custom Shaders Patch dans Content Manager.')
+      error(err, 0)
     end
-    mem.camFormat = CAM_FORMAT_RGBA8
-    mem.camActualWidth, mem.camActualHeight = w, h
   end
 
-  local fps = mem.camFps > 0 and mem.camFps or 30
+  local fps = math.abs(mem.camFps) > 0 and math.abs(mem.camFps) or 30
   if shotMode == CAM_STATUS_ENCODED then fps = math.min(fps, 20) end -- l'encodage coûte plus cher
   if camClock - lastShot < 1 / fps then return end
   lastShot = camClock
@@ -158,7 +180,7 @@ local function updateCamera(dt)
   end
 
   mem.camFrame = mem.camFrame + 1
-  mem.camStatus = shotMode
+  mem.camStatus = shotMode or 0
 end
 
 local function writeString(dst, size, value)

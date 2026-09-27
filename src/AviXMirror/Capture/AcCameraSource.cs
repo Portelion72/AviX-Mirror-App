@@ -47,6 +47,7 @@ public sealed class AcCameraSource : IDisposable
     long _openedHandle;
     int _lastFrame = -1;
     int _heartbeat;
+    bool _forceEncoded;
     readonly byte[] _halfToByte = new byte[65536];
     double _lutGamma = double.NaN;
 
@@ -107,7 +108,9 @@ public sealed class AcCameraSource : IDisposable
         double vfov = 2 * Math.Atan(Math.Tan(hfov / 2) * height / width) * 180 / Math.PI;
         view.Write(OffWidth, width);
         view.Write(OffHeight, height);
-        view.Write(OffFps, Math.Clamp(s.AcCamFps, 10, 60));
+        // FPS négatif = demande du mode compatibilité (texture partagée inutilisable).
+        int fps = Math.Clamp(s.AcCamFps, 10, 60);
+        view.Write(OffFps, _forceEncoded ? -fps : fps);
         view.Write(OffFov, (float)vfov);
         view.Write(OffBack, (float)s.AcCamBack);
         view.Write(OffUp, (float)s.AcCamUp);
@@ -136,7 +139,20 @@ public sealed class AcCameraSource : IDisposable
 
         EnsureDevice();
         if (handle != _openedHandle)
-            OpenTexture(handle);
+        {
+            try
+            {
+                OpenTexture(handle);
+            }
+            catch (Exception ex)
+            {
+                // Texture non partageable entre processus (certaines versions de CSP) : mode compatibilité.
+                ReleaseTexture();
+                _forceEncoded = true;
+                Status = "Caméra Assetto Corsa : texture partagée inaccessible (" + ex.Message + "), passage en mode compatibilité…";
+                return;
+            }
+        }
 
         int frame = view.ReadInt32(OffFrame);
         if (frame == _lastFrame)
