@@ -17,15 +17,14 @@ Dans les trois modes (Radar, Caméra AC, Capture LMU), un ATH inspiré des camé
 Motorsport s'affiche par-dessus l'image :
 
 - **Flèche au-dessus de chaque voiture derrière**, colorée selon l'écart en temps : vert au-delà
-  d'1 s, orange entre 0,5 et 1 s, rouge en dessous ; avec la distance, l'écart en secondes et la
-  vitesse de rapprochement (▲ km/h).
-- **Échelle de distance à gauche** (5, 10, 20, 30, 50, 75, 100 m) et **échelle de temps à droite**
-  (0,25 à 3 s, calculée avec votre vitesse), alignées sur la perspective de l'image, avec un repère
-  coloré pour chaque voiture.
+  d'1 s, orange entre 0,5 et 1 s, rouge en dessous.
+- **Échelle de distance à gauche et de temps à droite**, découpées en 10 graduations régulières à
+  l'écran ; chaque graduation indique la distance (m) ou le temps (s, selon votre vitesse)
+  correspondant à cette hauteur de l'image. Un repère coloré montre chaque voiture sur les échelles.
 
 En Caméra AC, l'ATH utilise exactement le point de vue de la caméra. En Capture LMU, le point de vue du
 rétro virtuel du jeu est approché : ajustez *9. ATH caméra de recul* (champ de vision, hauteur, position)
-si les flèches sont décalées.
+si les flèches sont décalées, et *Inverser gauche/droite des flèches* si elles sont du mauvais côté.
 
 ## LEDs spotter (WS2812B sur la carte MPro)
 

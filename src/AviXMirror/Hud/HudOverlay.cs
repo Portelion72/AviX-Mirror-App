@@ -101,12 +101,16 @@ public sealed class HudOverlay : IDisposable
         }
 
         double focal = h / 2.0 / Math.Tan(Math.Clamp(vfovDeg, 2, 120) * Math.PI / 360);
+        bool invert = s.HudInvertSide;
         return (lx, ly, lz) =>
         {
             double dz = lz - back;
             if (dz < 0.5)
                 return null;
-            double x = w / 2.0 + (mirror ? -1 : 1) * lx * focal / dz;
+            // Côté de l'image : symétrique du repère de la voiture (un rétro inverse gauche et droite),
+            // avec un réglage pour inverser si besoin.
+            double side = (mirror ? 1 : -1) * (invert ? -1 : 1);
+            double x = w / 2.0 + side * lx * focal / dz;
             double y = h / 2.0 - (ly - up) * focal / dz;
             return new PointF((float)x, (float)y);
         };
