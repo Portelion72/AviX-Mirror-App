@@ -5,7 +5,7 @@ namespace AviXMirror.Util;
 
 /// <summary>
 /// Dernière image produite (capture ou radar), partagée entre le producteur,
-/// la fenêtre du rétroviseur et le serveur MJPEG.
+/// l'écran VoCore et l'aperçu.
 /// </summary>
 public sealed class FrameBuffer : IDisposable
 {

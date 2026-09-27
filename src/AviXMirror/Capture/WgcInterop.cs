@@ -64,21 +64,6 @@ internal static class WgcInterop
         }
     }
 
-    public static GraphicsCaptureItem CreateItemForMonitor(IntPtr hmonitor)
-    {
-        var interop = GraphicsCaptureItem.As<IGraphicsCaptureItemInterop>();
-        var guid = GraphicsCaptureItemGuid;
-        var ptr = interop.CreateForMonitor(hmonitor, ref guid);
-        try
-        {
-            return GraphicsCaptureItem.FromAbi(ptr);
-        }
-        finally
-        {
-            Marshal.Release(ptr);
-        }
-    }
-
     public static ID3D11Texture2D GetTexture(IDirect3DSurface surface)
     {
         var access = surface.As<IDirect3DDxgiInterfaceAccess>();

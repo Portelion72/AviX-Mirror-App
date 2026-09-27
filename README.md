@@ -8,7 +8,7 @@ affiché sur l'écran principal**.
 
 Fenêtre sombre aux couleurs d'AVIX_3D : choix du mode par tuiles, gros bouton **DÉMARRER**, aperçu en
 direct de l'image envoyée au VoCore, état détaillé et réglages avancés. La **couleur d'accent** et la
-**police** se changent dans *7. Apparence* (effet immédiat). Au démarrage, le VoCore affiche un écran
+**police** se changent dans *8. Apparence* (effet immédiat). Au démarrage, le VoCore affiche un écran
 d'accueil AVIX_3D en attendant les images du jeu.
 
 ## ATH façon caméra de recul (Bosch)
@@ -23,7 +23,7 @@ Motorsport s'affiche par-dessus l'image :
   réglables), affichées en miroir (réglage « Échelles en miroir »). Un repère coloré montre l'écart de chaque voiture sur les deux échelles.
 
 En Caméra AC, l'ATH utilise exactement le point de vue de la caméra. En Capture LMU, le point de vue du
-rétro virtuel du jeu est approché : ajustez *9. ATH caméra de recul* (champ de vision, hauteur, position)
+rétro virtuel du jeu est approché : ajustez *6. ATH caméra de recul* (champ de vision, hauteur, position)
 si les flèches sont décalées, et *Inverser gauche/droite des flèches* si elles sont du mauvais côté.
 
 ## LEDs spotter (WS2812B sur la carte MPro)
@@ -42,7 +42,7 @@ cf. [Vonger/V7B_WS2812B](https://github.com/Vonger/V7B_WS2812B)).
 Fonctionne dans tous les modes (Radar, Caméra AC, Capture), avec LMU et Assetto Corsa. Au branchement,
 les LEDs s'allument une par une dans l'ordre de la chaîne (couleur AVIX) : vérifiez que la droite
 s'allume en premier, et utilisez *Inverser le sens* si une barrette se remplit à l'envers. Réglages
-dans *8. LEDs spotter* (luminosité, distance d'alerte, ordre de câblage, protocole). L'aperçu de la
+dans *7. LEDs spotter* (luminosité, distance d'alerte, ordre de câblage, protocole). L'aperçu de la
 fenêtre montre l'état des LEDs de chaque côté du rétro.
 
 Quand aucun jeu ne tourne, le VoCore affiche la page de veille avec le logo AVIX.
@@ -53,8 +53,8 @@ Quand aucun jeu ne tourne, le VoCore affiche la page de veille avec le logo AVIX
   exactement comme SimHub, avec le pilote USB déjà installé par SimHub. Le pilote
   d’« écran Windows » du VoCore est **à désinstaller** : c’est la cause la plus probable de l’erreur
   Easy Anti-Cheat **30007** (« Driver Signature Enforcement »).
-- AviX Mirror ne lit ni n'écrit jamais la mémoire du jeu et n'injecte rien. Il attend
-  **30 s** après l'apparition de LMU (réglable) avant de toucher à sa fenêtre, pour laisser
+- AviX Mirror ne lit ni n'écrit jamais la mémoire du jeu et n'injecte rien. En mode Capture, il
+  attend **30 s** après l'apparition de LMU (réglable) avant de capturer sa fenêtre, pour laisser
   Easy Anti-Cheat démarrer.
 - Le mode **Radar** ne touche pas du tout au jeu : il lit seulement la télémétrie partagée,
   comme SimHub ou CrewChief.
@@ -72,9 +72,10 @@ Quand aucun jeu ne tourne, le VoCore affiche la page de veille avec le logo AVIX
 | Mode | Principe |
 |------|----------|
 | **Radar** (recommandé) | Rétro synthétique dessiné depuis la télémétrie : les voitures derrière vous en perspective, avec **la silhouette et la couleur de leur catégorie**, la distance, la vitesse de rapprochement et une alerte de voiture à côté. Ne touche pas au jeu, rien ne s'affiche sur l'écran principal. |
-| **Capture** | La vraie image du rétro virtuel de LMU, lue dans la fenêtre du jeu et envoyée au VoCore. Un **cache** est posé sur le rétro de l'écran principal. |
+| **Caméra Assetto Corsa** | Vraie vue arrière rendue hors écran par Assetto Corsa (app Lua CSP). Rien ne s'affiche sur l'écran du jeu. |
+| **Capture LMU** | La vraie image du rétro virtuel de LMU, lue dans la fenêtre du jeu et envoyée au VoCore. Un **cache** est posé sur le rétro de l'écran principal. |
 
-Dans les deux cas, l'image part **en USB vers le VoCore**, avec son pilote USB : pas de second écran Windows.
+Dans tous les cas, l'image part **en USB vers le VoCore**, avec son pilote USB : pas de second écran Windows.
 
 ## Pré-requis
 
@@ -93,7 +94,7 @@ Les réglages sont enregistrés dans `AviXMirror.settings.json`, dans le même d
 
 ## Mode Radar
 
-*Mode* = `Radar`, puis **Démarrer**. Aucune autre configuration.
+Mode **Radar**, puis **Démarrer**. Aucune autre configuration.
 
 ![Silhouettes du radar](docs/radar-silhouettes.png)
 
@@ -112,7 +113,7 @@ Lamborghini SC63, Isotta Fraschini Tipo 6, Glickenhaus 007, Vanwall 680, Aston M
 Oreca 07, Ligier JS P325, Ginetta G61, Duqueine D09, Ferrari 296 / 488, Porsche 911, BMW M4,
 Aston Martin Vantage, Lexus RC F, McLaren 720S, Corvette, Ford Mustang, Lamborghini Huracán,
 Mercedes-AMG. La voiture est reconnue par son nom dans LMU ; sinon la silhouette de sa catégorie est
-utilisée. Réglage : *5. Radar › Face avant par voiture (LMU)*. Les formes sont décrites dans
+utilisée. Réglage : *4. Radar › Face avant par voiture (LMU)*. Les formes sont décrites dans
 `src/AviXMirror/Radar/CarFronts.txt`.
 
 ![Faces avant LMU](docs/radar-faces-lmu.png)
@@ -150,7 +151,7 @@ position, la direction, la vitesse, la progression sur le tour et le modèle de 
 2. Dans AviX Mirror, cliquez **Installer l'app Assetto Corsa** : elle est copiée dans
    `assettocorsa\apps\lua\AviXMirror` (dossier trouvé automatiquement dans Steam). Pour une installation
    manuelle, copiez le dossier `AssettoCorsa-app-CSP\AviXMirror` de l'archive au même endroit.
-3. *Mode* = `Radar`, *Jeu* = `Auto` (ou `AssettoCorsa`), puis **Démarrer**.
+3. Mode **Radar**, *Jeu* = `Auto` (ou `AssettoCorsa`), puis **Démarrer**.
 4. Lancez une session depuis Content Manager. L'app démarre toute seule (fenêtre « AviX Mirror »
    facultative dans la barre d'apps CSP).
 
@@ -161,15 +162,15 @@ activez *Assetto Corsa : inverser gauche/droite*.
 
 ## Assetto Corsa : vraie vue arrière, sans rétro virtuel
 
-*Mode* = `CameraAssettoCorsa`. L'app Lua (même installation que ci-dessus) demande à Assetto Corsa
+Mode **Caméra Assetto Corsa**. L'app Lua (même installation que ci-dessus) demande à Assetto Corsa
 de rendre une **caméra arrière hors écran**, avec la même technique que l'intégration OBS de CSP.
 L'image est partagée directement sur la carte graphique avec AviX Mirror, qui la retourne en
 miroir et l'envoie au VoCore. **Rien n'est affiché sur l'écran du jeu.**
 
 - Après une mise à jour d'AviX Mirror, recliquez **Installer l'app Assetto Corsa** (nouvelle version de l'app).
-- Réglages (catégorie *6. Caméra Assetto Corsa*) : champ de vision, recul et hauteur de la caméra,
-  résolution, images par seconde (30 par défaut), effet miroir, **exposition** (1,8 par défaut) et
-  **gamma** (1,4). Les réglages s'appliquent en direct pendant que vous roulez ; « Appliquer » les enregistre.
+- Réglages (catégorie *5. Caméra Assetto Corsa*) : champ de vision, recul et hauteur de la caméra,
+  résolution, images par seconde (30 par défaut), effet miroir, **exposition** et **gamma** (1 = neutre). Les réglages s'appliquent en direct pendant que vous roulez ;
+  « Enregistrer les réglages » les conserve.
 - Chaque image est un rendu supplémentaire de la scène : comptez une légère baisse de FPS, comme
   avec un rétroviseur en jeu. Baissez *Images par seconde* si besoin.
 - Si l'arrière de votre voiture apparaît dans l'image, augmentez *Recul de la caméra*.
@@ -182,52 +183,28 @@ miroir et l'envoie au VoCore. **Rien n'est affiché sur l'écran du jeu.**
 
 1. **LMU** : *Paramètres > Affichage* → **Fenêtré** ou **Sans bordure** (pas le plein écran exclusif).
    Dans l'éditeur de HUD, placez le **rétro virtuel** dans un coin où il gêne peu (par exemple en haut, sur le toit).
-2. **AviX Mirror** : *Mode* = `Capture`, *Masquer le rétro sur l'écran* = `True`, puis **Démarrer**.
+2. **AviX Mirror** : mode **Capture LMU**, puis **Démarrer** (*Cacher le rétro du jeu* est activé par défaut).
 3. Après le délai de 30 s qui suit le lancement de LMU, cliquez **Calibrer la zone**. Un cadre au
    format du VoCore (1280 × 400) couvre l'image : déplacez-le sur le rétro et réduisez-le par ses
    coins (le format est conservé), puis **Valider**.
 4. Le rétro s'affiche sur le VoCore. Un cache le recouvre sur l'écran principal ; la capture
    n'est pas affectée, car elle lit la fenêtre du jeu et non l'écran. Le cache prend la couleur de
    l'image juste sous son bord (*Cache : couleur du décor*) et peut déborder de la zone de capture
-   (*Cache : marge à gauche / droite / en haut / en bas*, dans *4. Fenêtre du jeu*).
+   (*Cache : marge à gauche / droite / en haut / en bas*, dans *3. Capture LMU*).
 5. Si l'image est à l'envers, réglez *Rotation* = `Rotation180`.
-
-### Sans aucun rétro visible sur l'écran (expérimental)
-
-Pour que le rétro virtuel ne soit pas du tout affiché, il faut que LMU le dessine **hors de
-l'écran** : *Étendre la fenêtre de LMU* = `True` agrandit la zone de rendu du jeu d'une bande (400 px
-par défaut) au-dessus de l'écran, sans changer son style, puis lui signale la fin du
-redimensionnement pour qu'il recalcule son rendu. Placez ensuite le rétro virtuel dans cette bande
-(visible dans **Calibrer la zone**).
-
-- Si l'image du jeu reste **déformée**, LMU n'accepte pas cette taille : désactivez l'option
-  (l'appli abandonne d'elle-même après 3 essais). Essayez en mode **Fenêtré** plutôt que
-  *Sans bordure*.
-- Même sans déformation, le centre de la vue est décalé vers le haut de la moitié de la bande :
-  compensez avec la position du siège / l'inclinaison de la vue dans LMU, ou réduisez la bande à la
-  hauteur du rétro virtuel.
-
-## Flux MJPEG (optionnel)
-
-*Flux MJPEG (port)* = `8765` diffuse le rétro sur `http://localhost:8765/` (page plein écran),
-`/stream` (flux MJPEG) et `/snapshot.jpg`. Utile pour un navigateur, une tablette ou un
-composant web d'un tableau de bord SimHub.
 
 ## Dépannage
 
 | Symptôme | Solution |
 |----------|----------|
 | Easy Anti-Cheat erreur 30007 | Désinstallez le pilote d'**écran** VoCore (voir plus haut) et redémarrez. |
-| « VoCore USB : écran introuvable ou occupé » | Fermez SimHub (ou désactivez-y le VoCore). Vérifiez dans le Gestionnaire de périphériques que l'ID matériel est `USB\VID_C872&PID_1004` ; sinon, reportez-le dans *VID* / *PID*. |
-| Image brouillée ou en biais sur le VoCore | Mauvaise résolution native : réglez *largeur/hauteur native* (400 × 1280 ou 1280 × 400). |
-| « En attente de Le Mans Ultimate » | Vérifiez *Processus du jeu* (`Le Mans Ultimate`). |
+| « VoCore USB : écran introuvable ou occupé » | Fermez SimHub (ou désactivez-y le VoCore). Vérifiez dans le Gestionnaire de périphériques que l'ID matériel est `USB\VID_C872&PID_1004` ; sinon, reportez-le dans `VoCoreVendorId` / `VoCoreProductId` de `AviXMirror.settings.json` (réglages experts, masqués dans la fenêtre). |
+| Image brouillée ou en biais sur le VoCore | Mauvaise résolution native : réglez `VoCoreWidth` / `VoCoreHeight` dans `AviXMirror.settings.json` (400 × 1280 ou 1280 × 400). |
+| « En attente de Le Mans Ultimate » | Vérifiez `GameProcessName` (`Le Mans Ultimate`) dans `AviXMirror.settings.json`. |
 | Image noire en mode Capture | LMU est en plein écran exclusif : passez en Fenêtré / Sans bordure. |
 | Cadre jaune autour du jeu | Limitation de Windows 10. Il disparaît sous Windows 11. |
 | Radar : « En attente de LMU » | Le plugin rF2 Shared Memory Map n'est pas activé. |
-| Image du jeu déformée | Désactivez *Étendre la fenêtre de LMU* et cliquez **Arrêter** puis **Démarrer** : la fenêtre du jeu reprend sa taille. |
 | Le cache est décalé | Refaites **Calibrer la zone** après avoir placé le rétro dans le HUD. |
-
-Quand on clique **Arrêter**, la fenêtre de LMU retrouve sa taille et son style d'origine.
 
 ## Structure du code
 
@@ -240,9 +217,11 @@ src/AviXMirror/
   MaskForm.cs             cache sur le rétro de l'écran principal
   CalibrationForm.cs      sélection de la zone du rétro à la souris
   Settings.cs             réglages (JSON)
-  Capture/                Windows.Graphics.Capture + Direct3D 11
+  Capture/                capture LMU (Windows.Graphics.Capture), caméra Assetto Corsa, exposition HDR
+  Hud/                    ATH façon caméra de recul (flèches, échelles)
   Output/                 envoi USB au VoCore (libusb, protocole du pilote officiel Vonger/mpro_drm)
-  Radar/                  télémétrie LMU (rF2) et Assetto Corsa, tracé du circuit, vibreurs, rendu
+  Radar/                  télémétrie LMU (rF2) et Assetto Corsa, tracé du circuit, vibreurs, rendu,
+                          faces avant des voitures (CarFronts.txt), spotter à LEDs
+  Util/                   Win32, tampon d'image, recherche de la fenêtre du jeu, installation de l'app AC
 integrations/AssettoCorsa/AviXMirror/   app Lua pour Custom Shaders Patch (export de toutes les voitures)
-  Util/                   Win32, extension de fenêtre, tampon d'image, serveur MJPEG
 ```

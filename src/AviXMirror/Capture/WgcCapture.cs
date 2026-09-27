@@ -50,9 +50,6 @@ public sealed class WgcCapture : IDisposable
     public static WgcCapture ForWindow(IntPtr hwnd, FrameBuffer output) =>
         new(WgcInterop.CreateItemForWindow(hwnd), output);
 
-    public static WgcCapture ForMonitor(IntPtr hmonitor, FrameBuffer output) =>
-        new(WgcInterop.CreateItemForMonitor(hmonitor), output);
-
     WgcCapture(GraphicsCaptureItem item, FrameBuffer output)
     {
         _item = item;
@@ -98,11 +95,6 @@ public sealed class WgcCapture : IDisposable
         {
             // Non supporté : le cadre reste affiché (Windows 10).
         }
-    }
-
-    public void SetCursor(bool visible)
-    {
-        try { _session.IsCursorCaptureEnabled = visible; } catch { }
     }
 
     public void SetCrop(Rectangle crop)

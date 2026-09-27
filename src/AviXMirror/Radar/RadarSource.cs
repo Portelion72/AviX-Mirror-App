@@ -32,7 +32,7 @@ public sealed class RadarSource : IDisposable
     readonly Dictionary<int, Font> _fonts = new();
 
     /// <summary>Taille de rendu quand les réglages indiquent 0 (taille de la fenêtre).</summary>
-    public Size FallbackSize { get; init; } = new(1280, 400);
+    public Size OutputSize { get; init; } = new(1280, 400);
 
     public string Status { get; private set; } = "Démarrage…";
 
@@ -58,8 +58,7 @@ public sealed class RadarSource : IDisposable
             // Lecture à chaque image : AC envoie ses données à chaque image du jeu, LMU ~5 fois par seconde.
             Poll();
 
-            int w = s.RadarWidth > 0 ? s.RadarWidth : FallbackSize.Width;
-            int h = s.RadarHeight > 0 ? s.RadarHeight : FallbackSize.Height;
+            int w = OutputSize.Width, h = OutputSize.Height;
             try
             {
                 _output.Write(Math.Max(64, w), Math.Max(32, h), bmp =>

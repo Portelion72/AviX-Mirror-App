@@ -10,6 +10,7 @@ public sealed class MainForm : Form
     readonly HeaderBar _header = new();
     readonly FlatButton _startStop = new() { Text = "Démarrer", Primary = true, Height = 52, Dock = DockStyle.Fill };
     readonly FlatButton _calibrate = new() { Text = "Calibrer la zone du rétro", Dock = DockStyle.Fill };
+    readonly FlatButton _installAc = new() { Text = "Installer l'app Assetto Corsa", Dock = DockStyle.Fill };
     readonly Label _status = new() { Dock = DockStyle.Fill, AutoEllipsis = true };
     readonly Dictionary<MirrorMode, ModeTile> _tiles = new();
     readonly System.Windows.Forms.Timer _statusTimer = new() { Interval = 500 };
@@ -110,7 +111,7 @@ public sealed class MainForm : Form
         Add(new SectionLabel("Mode"), 26, new Padding(0));
         AddTile(MirrorMode.Radar, "Radar", "Vue synthétique des voitures derrière vous, sur le tracé du circuit. LMU et Assetto Corsa.");
         AddTile(MirrorMode.CameraAssettoCorsa, "Caméra Assetto Corsa", "Vraie vue arrière rendue hors écran par l'app CSP.");
-        AddTile(MirrorMode.Capture, "Capture LMU", "Recopie le rétro virtuel du jeu (expérimental).");
+        AddTile(MirrorMode.Capture, "Capture LMU", "Recopie le rétro virtuel de LMU et le cache sur l'écran principal.");
 
         Add(new SectionLabel("Contrôle"), 26, new Padding(0, 8, 0, 0));
         Add(_startStop, 52, new Padding(0, 0, 0, 10));
@@ -118,10 +119,12 @@ public sealed class MainForm : Form
         var save = new FlatButton { Text = "Enregistrer les réglages" };
         save.Click += (_, _) => ApplySettings();
         Add(save, 38);
-        var installAc = new FlatButton { Text = "Installer l'app Assetto Corsa" };
-        installAc.Click += (_, _) => InstallAcApp();
-        Add(installAc, 38);
-        Add(_calibrate, 38);
+        _installAc.Click += (_, _) => InstallAcApp();
+        // Même emplacement pour les deux boutons : un seul est visible selon le mode.
+        var modeAction = new Panel { BackColor = Theme.Background };
+        modeAction.Controls.Add(_installAc);
+        modeAction.Controls.Add(_calibrate);
+        Add(modeAction, 38);
 
         Add(new SectionLabel("État"), 26, new Padding(0, 8, 0, 0));
         var statusCard = new Card { Padding = new Padding(14, 12, 14, 12) };
@@ -210,7 +213,9 @@ public sealed class MainForm : Form
     {
         foreach (var (m, tile) in _tiles)
             tile.Selected = m == mode;
+        // Seuls les boutons utiles au mode choisi sont affichés.
         _calibrate.Visible = mode == MirrorMode.Capture;
+        _installAc.Visible = mode != MirrorMode.Capture;
 
         var edited = EditedSettings();
         if (edited.Mode != mode)
@@ -317,7 +322,7 @@ public sealed class MainForm : Form
                 "App installée dans :\n" + target + "\n\n" +
                 "Elle nécessite Custom Shaders Patch (Content Manager > Paramètres > Custom Shaders Patch). " +
                 "Elle démarre toute seule avec Assetto Corsa ; rien à ouvrir en jeu.\n\n" +
-                "Dans AviX Mirror, choisissez Mode = Radar.",
+                "Dans AviX Mirror, choisissez le mode Radar ou Caméra Assetto Corsa.",
                 "Assetto Corsa", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         catch (Exception ex)
