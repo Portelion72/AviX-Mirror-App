@@ -12,6 +12,9 @@ public sealed class FrameBuffer : IDisposable
     Bitmap? _bitmap;
     long _sequence;
 
+    /// <summary>Traitement appliqué à chaque nouvelle image avant diffusion (ex. ATH par-dessus la caméra).</summary>
+    public Action<Bitmap>? PostProcess { get; set; }
+
     /// <summary>Déclenché (sur le thread du producteur) après chaque nouvelle image.</summary>
     public event Action? Updated;
 
@@ -28,6 +31,7 @@ public sealed class FrameBuffer : IDisposable
                 _bitmap = new Bitmap(width, height, PixelFormat.Format32bppRgb);
             }
             fill(_bitmap);
+            try { PostProcess?.Invoke(_bitmap); } catch { /* l'ATH ne doit jamais bloquer l'image */ }
             _sequence++;
         }
         Updated?.Invoke();

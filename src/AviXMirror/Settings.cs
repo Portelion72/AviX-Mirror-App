@@ -200,12 +200,12 @@ public sealed class Settings
     public bool AcCamMirror { get; set; } = true;
 
     [Category("6. Caméra Assetto Corsa"), DisplayName("Exposition")]
-    [Description("Luminosité de l'image : 1 = inchangée, 2 = deux fois plus claire. S'applique en direct.")]
-    public double AcCamExposure { get; set; } = 1.8;
+    [Description("Correction de l'exposition automatique : 1 = neutre, 1,5 = plus clair, 0,7 = plus sombre. S'applique en direct.")]
+    public double AcCamExposure { get; set; } = 1.0;
 
     [Category("6. Caméra Assetto Corsa"), DisplayName("Gamma")]
     [Description("Éclaircit les zones sombres sans brûler les zones claires : 1 = inchangé, 1.5 à 2.2 = ombres plus claires. S'applique en direct.")]
-    public double AcCamGamma { get; set; } = 1.4;
+    public double AcCamGamma { get; set; } = 1.0;
 
     [Category("5. Radar"), DisplayName("Jeu")]
     [Description("Auto : détecte Le Mans Ultimate ou Assetto Corsa (app Lua « AviX Mirror » pour CSP requise).")]
@@ -267,6 +267,25 @@ public sealed class Settings
     [Description("Is31Compatible : protocole standard des LEDs VoCore (celui de SimHub). Complet : firmware « 512 LEDs ».")]
     public LedProtocol LedProtocol { get; set; } = LedProtocol.Is31Compatible;
 
+    // ---------- ATH ----------
+
+    [Category("9. ATH caméra de recul"), DisplayName("Activé")]
+    [Description("ATH façon caméra de recul Bosch : flèche colorée au-dessus des voitures derrière (vert > 1 s, orange > 0,5 s, rouge), échelles de distance et de temps sur les côtés. Tous les modes.")]
+    public bool HudEnabled { get; set; } = true;
+
+    [Category("9. ATH caméra de recul"), DisplayName("Échelles distance / temps")]
+    public bool HudShowScales { get; set; } = true;
+
+    [Category("9. ATH caméra de recul"), DisplayName("Capture LMU : champ de vision vertical (°)")]
+    [Description("Point de vue approché du rétro virtuel de LMU, pour placer les flèches sur les voitures. À ajuster si elles sont décalées.")]
+    public double HudCaptureFov { get; set; } = 14;
+
+    [Category("9. ATH caméra de recul"), DisplayName("Capture LMU : hauteur de l'œil (m)")]
+    public double HudCaptureHeight { get; set; } = 0.9;
+
+    [Category("9. ATH caméra de recul"), DisplayName("Capture LMU : position du rétro vers l'avant (m)")]
+    public double HudCaptureForward { get; set; } = 0.6;
+
     // ---------- Apparence ----------
 
     [Category("7. Apparence"), DisplayName("Couleur d'accent")]
@@ -279,7 +298,7 @@ public sealed class Settings
 
     // ---------- Persistance ----------
 
-    const int CurrentVersion = 3;
+    const int CurrentVersion = 4;
 
     [Browsable(false)]
     public int SettingsVersion { get; set; }
@@ -314,6 +333,13 @@ public sealed class Settings
                     // v3 : couleur de la marque AVIX (l'ancien orange par défaut est remplacé).
                     if (string.Equals(loaded.AccentColor, "#FF5A1F", StringComparison.OrdinalIgnoreCase))
                         loaded.AccentColor = Ui.Theme.DefaultAccent;
+                    loaded.SettingsVersion = 3;
+                }
+                if (loaded.SettingsVersion < 4)
+                {
+                    // v4 : exposition automatique HDR ; les anciennes valeurs par défaut deviennent neutres.
+                    if (Math.Abs(loaded.AcCamExposure - 1.8) < 1e-6) loaded.AcCamExposure = 1.0;
+                    if (Math.Abs(loaded.AcCamGamma - 1.4) < 1e-6) loaded.AcCamGamma = 1.0;
                     loaded.SettingsVersion = CurrentVersion;
                 }
                 return loaded;

@@ -11,6 +11,22 @@ direct de l'image envoyée au VoCore, état détaillé et réglages avancés. La
 **police** se changent dans *7. Apparence* (effet immédiat). Au démarrage, le VoCore affiche un écran
 d'accueil AVIX_3D en attendant les images du jeu.
 
+## ATH façon caméra de recul (Bosch)
+
+Dans les trois modes (Radar, Caméra AC, Capture LMU), un ATH inspiré des caméras de recul Bosch
+Motorsport s'affiche par-dessus l'image :
+
+- **Flèche au-dessus de chaque voiture derrière**, colorée selon l'écart en temps : vert au-delà
+  d'1 s, orange entre 0,5 et 1 s, rouge en dessous ; avec la distance, l'écart en secondes et la
+  vitesse de rapprochement (▲ km/h).
+- **Échelle de distance à gauche** (5, 10, 20, 30, 50, 75, 100 m) et **échelle de temps à droite**
+  (0,25 à 3 s, calculée avec votre vitesse), alignées sur la perspective de l'image, avec un repère
+  coloré pour chaque voiture.
+
+En Caméra AC, l'ATH utilise exactement le point de vue de la caméra. En Capture LMU, le point de vue du
+rétro virtuel du jeu est approché : ajustez *9. ATH caméra de recul* (champ de vision, hauteur, position)
+si les flèches sont décalées.
+
 ## LEDs spotter (WS2812B sur la carte MPro)
 
 Deux barrettes de 8 LEDs WS2812B, une de chaque côté de l'écran, branchées en série sur la carte MPro
@@ -146,6 +162,9 @@ miroir et l'envoie au VoCore. **Rien n'est affiché sur l'écran du jeu.**
 - Chaque image est un rendu supplémentaire de la scène : comptez une légère baisse de FPS, comme
   avec un rétroviseur en jeu. Baissez *Images par seconde* si besoin.
 - Si l'arrière de votre voiture apparaît dans l'image, augmentez *Recul de la caméra*.
+- L'image est rendue en HDR puis ramenée dans la plage de l'écran avec une **exposition automatique**
+  et une courbe filmique : plus d'image blanche quand le ciel ou le soleil entre dans le champ.
+  *Exposition* corrige cette exposition automatique (1 = neutre).
 - La caméra s'arrête toute seule quand AviX Mirror est fermé.
 
 ## Mode Capture
@@ -153,8 +172,9 @@ miroir et l'envoie au VoCore. **Rien n'est affiché sur l'écran du jeu.**
 1. **LMU** : *Paramètres > Affichage* → **Fenêtré** ou **Sans bordure** (pas le plein écran exclusif).
    Dans l'éditeur de HUD, placez le **rétro virtuel** dans un coin où il gêne peu (par exemple en haut, sur le toit).
 2. **AviX Mirror** : *Mode* = `Capture`, *Masquer le rétro sur l'écran* = `True`, puis **Démarrer**.
-3. Après le délai de 30 s qui suit le lancement de LMU, cliquez **Calibrer la zone**, tracez un
-   rectangle autour du rétro, puis **Valider**.
+3. Après le délai de 30 s qui suit le lancement de LMU, cliquez **Calibrer la zone**. Un cadre au
+   format du VoCore (1280 × 400) couvre l'image : déplacez-le sur le rétro et réduisez-le par ses
+   coins (le format est conservé), puis **Valider**.
 4. Le rétro s'affiche sur le VoCore. Un cache noir le recouvre sur l'écran principal ; la capture
    n'est pas affectée, car elle lit la fenêtre du jeu et non l'écran.
 5. Si l'image est à l'envers, réglez *Rotation* = `Rotation180`.

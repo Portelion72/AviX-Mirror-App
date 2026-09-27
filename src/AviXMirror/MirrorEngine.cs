@@ -24,6 +24,7 @@ public sealed class MirrorEngine : IDisposable
     VoCoreUsbOutput? _usb;
     AcCameraSource? _acCamera;
     Spotter? _spotter;
+    Hud.HudOverlay? _hud;
 
     /// <summary>Couleurs des LEDs du spotter (gauche, droite) pour l'aperçu, ou vides.</summary>
     public (Color[] Left, Color[] Right) LedSides => _spotter?.Sides ?? (Array.Empty<Color>(), Array.Empty<Color>());
@@ -58,6 +59,14 @@ public sealed class MirrorEngine : IDisposable
         // Écran d'accueil AVIX_3D sur le VoCore en attendant les premières images.
         var size = _usb.LogicalSize;
         Frames.Write(size.Width, size.Height, bmp => Ui.Splash.Draw(bmp, "En attente du jeu…"));
+
+        // ATH par-dessus les images des modes caméra et capture (le radar dessine le sien).
+        if (_settings.Mode is MirrorMode.CameraAssettoCorsa or MirrorMode.Capture)
+        {
+            _hud = new Hud.HudOverlay(_settings, _settings.Mode);
+            var hud = _hud;
+            Frames.PostProcess = bmp => hud.Draw(bmp);
+        }
 
         if (_settings.LedsEnabled)
         {
@@ -100,12 +109,16 @@ public sealed class MirrorEngine : IDisposable
         _radar?.UpdateSettings(copy);
         _acCamera?.UpdateSettings(copy);
         _spotter?.UpdateSettings(copy);
+        _hud?.UpdateSettings(copy);
     }
 
     public void Stop()
     {
         _watchdog.Stop();
         StopCapture();
+        Frames.PostProcess = null;
+        _hud?.Dispose();
+        _hud = null;
         _spotter?.Dispose();
         _spotter = null;
         _radar?.Dispose();

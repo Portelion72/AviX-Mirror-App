@@ -27,7 +27,7 @@ public sealed class AcCameraSource : IDisposable
 
     // Mode de secours (CSP sans texture partagée) : image DDS copiée par l'app Lua.
     const string ImageMapName = "AviXMirror.AC.Image.v1";
-    const int ImageMax = 4 * 1024 * 1024;
+    const int ImageMax = 8 * 1024 * 1024;
     const int ImageHeader = 8; // int frame; int size;
 
     readonly FrameBuffer _output;
@@ -46,6 +46,7 @@ public sealed class AcCameraSource : IDisposable
     ID3D11Texture2D? _shared, _staging;
     long _openedHandle;
     int _lastFrame = -1;
+    readonly ToneMapper _tone = new();
     int _heartbeat;
     bool _forceEncoded;
     readonly byte[] _halfToByte = new byte[65536];
@@ -172,7 +173,9 @@ public sealed class AcCameraSource : IDisposable
             BuildLut(s.AcCamExposure, s.AcCamGamma);
             if (desc.Format == Format.R16G16B16A16_Float)
             {
-                _output.Write((int)desc.Width, (int)desc.Height, bmp => CopyHalf(map.DataPointer, (int)map.RowPitch, bmp, mirror));
+                // Image HDR : exposition automatique + courbe filmique (plus d'image blanche).
+                _output.Write((int)desc.Width, (int)desc.Height,
+                    bmp => _tone.Process(map.DataPointer, (int)map.RowPitch, bmp, mirror, s.AcCamExposure, s.AcCamGamma));
             }
             else
             {
@@ -207,14 +210,17 @@ public sealed class AcCameraSource : IDisposable
             }
         }
 
+        // Compteur impair = image en cours d'écriture par l'app Lua : on attend la suivante.
         int frame = _imageView.ReadInt32(0);
         int size = _imageView.ReadInt32(4);
-        if (frame == _lastImageFrame || size <= 128 || size > ImageMax)
+        if ((frame & 1) != 0 || frame == _lastImageFrame || size <= 128 || size > ImageMax)
             return;
-        _lastImageFrame = frame;
         if (_imageBytes.Length < size)
             _imageBytes = new byte[size];
         _imageView.ReadArray(ImageHeader, _imageBytes, 0, size);
+        if (_imageView.ReadInt32(0) != frame)
+            return; // l'image a changé pendant la lecture : copie incomplète, ignorée
+        _lastImageFrame = frame;
 
         if (!TryDecodeDds(_imageBytes, size, s, out int w, out int h))
         {
@@ -239,14 +245,19 @@ public sealed class AcCameraSource : IDisposable
         uint redMask = BitConverter.ToUInt32(dds, 92);
 
         int offset = 128;
-        bool bgr;
+        bool bgr = false, half = false;
         if (fourCC == 0x30315844) // « DX10 »
         {
             int dxgi = BitConverter.ToInt32(dds, 128);
             offset += 20;
             if (dxgi is 28 or 29 or 27) bgr = false;          // R8G8B8A8
             else if (dxgi is 87 or 88 or 91 or 93) bgr = true; // B8G8R8A8 / B8G8R8X8
+            else if (dxgi == 10) half = true;                  // R16G16B16A16_FLOAT (HDR)
             else return false;
+        }
+        else if (fourCC == 113) // D3DFMT_A16B16G16R16F (HDR, ancien en-tête)
+        {
+            half = true;
         }
         else
         {
@@ -255,7 +266,8 @@ public sealed class AcCameraSource : IDisposable
             bgr = redMask == 0x00FF0000;
         }
 
-        int pitch = (flags & 0x8) != 0 && pitchOrSize >= width * 4 ? pitchOrSize : width * 4;
+        int bpp = half ? 8 : 4;
+        int pitch = (flags & 0x8) != 0 && pitchOrSize >= width * bpp ? pitchOrSize : width * bpp;
         if (width <= 0 || height <= 0 || offset + (long)pitch * height > size)
             return false;
 
@@ -264,8 +276,15 @@ public sealed class AcCameraSource : IDisposable
         fixed (byte* p = dds)
         {
             var src = (IntPtr)(p + offset);
-            BuildLut(s.AcCamExposure, s.AcCamGamma);
-            _output.Write(w, h, bmp => Copy8(src, pitch, bmp, mirror, bgr));
+            if (half)
+            {
+                _output.Write(w, h, bmp => _tone.Process(src, pitch, bmp, mirror, s.AcCamExposure, s.AcCamGamma));
+            }
+            else
+            {
+                BuildLut(s.AcCamExposure, s.AcCamGamma);
+                _output.Write(w, h, bmp => Copy8(src, pitch, bmp, mirror, bgr));
+            }
         }
         return true;
     }

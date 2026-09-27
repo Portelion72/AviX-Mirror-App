@@ -212,7 +212,13 @@ public sealed class RadarSource : IDisposable
         }
 
         foreach (var car in behind.OrderByDescending(c => c.Lz))
-            DrawCar(g, w, horizon, focal, car);
+            DrawCar(g, w, horizon, focal, car, withLabel: !s.HudEnabled);
+
+        // ATH façon caméra de recul : flèches, échelles de distance et de temps.
+        var projector = view;
+        Hud.HudRenderer.Draw(g, w, h, (x, y, z) => z < View.Near ? null : projector.Project((x, y, z)), 0,
+            behind.Select(c => new Hud.HudTarget(c.Lx, c.Ly, c.Lz, c.Closing)),
+            Math.Sqrt(pv.X * pv.X + pv.Y * pv.Y + pv.Z * pv.Z), s);
 
         if (warnLeft) DrawSideWarning(g, w, h, left: true);
         if (warnRight) DrawSideWarning(g, w, h, left: false);
@@ -447,7 +453,7 @@ public sealed class RadarSource : IDisposable
         _ => (1.95, 1.10),
     };
 
-    void DrawCar(Graphics g, int w, float horizon, double focal, in Car car)
+    void DrawCar(Graphics g, int w, float horizon, double focal, in Car car, bool withLabel)
     {
         var kind = Classify(car.Class);
         var (carWidth, carHeight) = CarSize(kind);
@@ -562,6 +568,9 @@ public sealed class RadarSource : IDisposable
                 g.FillPolygon(light, lamp);
             }
         }
+
+        if (!withLabel)
+            return;
 
         // Étiquette
         float fontSize = (float)Math.Clamp(height * 0.35, 11, 26);

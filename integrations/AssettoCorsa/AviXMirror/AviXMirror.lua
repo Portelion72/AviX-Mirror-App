@@ -47,7 +47,7 @@ local CAM_STATUS_SHARED, CAM_STATUS_ENCODED, CAM_STATUS_ERROR = 1, 2, -1
 
 -- Mode de secours pour les CSP sans texture partagée (ex. 0.1.79) : l'image est encodée (DDS)
 -- et copiée dans une seconde mémoire partagée. Plus lent, mais sans dépendance à la version.
-local IMAGE_MAX = 4 * 1024 * 1024
+local IMAGE_MAX = 8 * 1024 * 1024
 local image -- ouverte à la demande
 local function openImage()
   if not image then
@@ -102,9 +102,18 @@ local function createShot(w, h, forceEncoded)
   -- avec les shaders utilisés par les rétroviseurs du jeu.
   -- Les CSP anciens ne connaissent pas render.TextureFlags : 1 = texture partagée.
   local sharedFlag = render.TextureFlags and render.TextureFlags.Shared or 1
-  local rgba8 = render.TextureFormat and render.TextureFormat.R8G8B8A8 and render.TextureFormat.R8G8B8A8.UNorm or 28
+  local formats = render.TextureFormat
+  local rgba16f = formats and formats.R16G16B16A16 and formats.R16G16B16A16.Float or 10
+  local rgba8 = formats and formats.R8G8B8A8 and formats.R8G8B8A8.UNorm or 28
   local noAA = render.AntialiasingMode and render.AntialiasingMode.None or 0
-  shot = ac.GeometryShot(ac.findNodes('sceneRoot:yes'), vec2(w, h), 1, false, noAA, rgba8, sharedFlag)
+  -- Rendu HDR (demi-flottants) : les zones claires ne sont plus écrêtées en blanc, AviX Mirror
+  -- ramène la luminosité dans la plage de l'écran (exposition automatique).
+  -- Ordre des arguments compatible avec toutes les versions de CSP : (…, format, anticrénelage, options).
+  local ok, result = pcall(ac.GeometryShot, ac.findNodes('sceneRoot:yes'), vec2(w, h), 1, false, rgba16f, noAA, sharedFlag)
+  if not ok then
+    result = ac.GeometryShot(ac.findNodes('sceneRoot:yes'), vec2(w, h), 1, false, rgba8, noAA, sharedFlag)
+  end
+  shot = result
   -- Chaque réglage est facultatif : il peut manquer sur les anciennes versions de CSP.
   if render.ShadersType then call(shot, 'setShadersType', render.ShadersType.SimplifiedWithLights) end
   call(shot, 'setOriginalLighting', true)
@@ -187,6 +196,9 @@ local function updateCamera(dt)
     local bytes = shot:encode()
     if bytes and #bytes > 0 and #bytes <= IMAGE_MAX then
       local img = openImage()
+      -- Compteur impair pendant l'écriture, pair une fois l'image complète : AviX Mirror
+      -- ignore les images lues pendant qu'elles sont en train d'être écrites.
+      img.frame = img.frame + 1
       ffi.copy(img.data, bytes, #bytes)
       img.size = #bytes
       img.frame = img.frame + 1
