@@ -28,6 +28,9 @@ public sealed class RadarVehicle
     public double PathLateral, TrackEdge;
 
     public string Class = "", Name = "";
+
+    /// <summary>Nom de la voiture (LMU : modèle et équipe), pour la face avant par marque.</summary>
+    public string Model = "";
     public int Place;
     public bool Headlights, InPits;
 }

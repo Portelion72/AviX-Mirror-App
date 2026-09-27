@@ -121,7 +121,7 @@ public sealed class RadarSource : IDisposable
     struct Car
     {
         public double Lx, Ly, Lz, Closing;
-        public string Label, Class;
+        public string Label, Class, Model;
         public bool Headlights;
     }
 
@@ -207,6 +207,7 @@ public sealed class RadarSource : IDisposable
                 Closing = -relZ * 3.6,
                 Label = s.RadarShowNames ? $"{place} {ShortName(v.Name)}".Trim() : place,
                 Class = v.Class,
+                Model = s.RadarBrandFronts && world.Game == "Le Mans Ultimate" ? v.Model : "",
                 Headlights = v.Headlights,
             });
         }
@@ -442,6 +443,16 @@ public sealed class RadarSource : IDisposable
         return CarKind.Other;
     }
 
+    static string KindName(CarKind kind) => kind switch
+    {
+        CarKind.Hypercar => "hyper",
+        CarKind.Lmp2 => "lmp2",
+        CarKind.Lmp3 => "lmp3",
+        CarKind.Gte => "gte",
+        CarKind.Gt3 => "gt3",
+        _ => "",
+    };
+
     /// <summary>Largeur et hauteur réelles (m) de la voiture vue de face.</summary>
     static (double Width, double Height) CarSize(CarKind kind) => kind switch
     {
@@ -495,8 +506,15 @@ public sealed class RadarSource : IDisposable
         using var light = new SolidBrush(car.Headlights ? Color.FromArgb(255, 255, 250, 215) : Color.FromArgb(220, 185, 185, 175));
         using var glow = new SolidBrush(Color.FromArgb(55, 255, 250, 200));
 
-        bool prototype = kind is CarKind.Hypercar or CarKind.Lmp2 or CarKind.Lmp3;
-        if (prototype)
+        // LMU : face avant propre au modèle (phares, calandre…), si la voiture est reconnue.
+        var front = string.IsNullOrEmpty(car.Model) ? null : CarFronts.Find(KindName(kind), car.Model, car.Class);
+        if (front != null)
+        {
+            using var dark = new SolidBrush(Dark(color, 0.45f));
+            using var trim = new SolidBrush(Color.FromArgb(235, 150, 150, 155));
+            CarFronts.Draw(g, front, P, width, new CarFronts.Paints(bodyBrush, dark, glass, black, trim, light, glow, car.Headlights, outline));
+        }
+        else if (kind is CarKind.Hypercar or CarKind.Lmp2 or CarKind.Lmp3) = kind is CarKind.Hypercar or CarKind.Lmp2 or CarKind.Lmp3;
         {
             // Proto : ailes avant bombées, nez bas, bulle de cockpit étroite au centre.
             double hump = kind == CarKind.Hypercar ? 0.62 : kind == CarKind.Lmp2 ? 0.56 : 0.52;

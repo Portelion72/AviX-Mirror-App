@@ -1,0 +1,250 @@
+# Faces avant des voitures de Le Mans Ultimate, pour le radar.
+#
+# Repère : u de -0.5 (gauche de l'image) à 0.5 (droite), v de 0 (sol) à 1 (haut de la voiture).
+#
+# car <id> <catégories> <mots-clés…>
+#     catégories séparées par des virgules : hyper, lmp2, lmp3, gte, gt3
+#     mots-clés : cherchés dans le nom de la voiture et la classe LMU (majuscules, « _ » = espace)
+# proto <hauteur des ailes> <demi-largeur du cockpit>   carrosserie de prototype (+ bulle, lame avant)
+# gt <hauteur du toit>                                  carrosserie de GT (+ pare-brise, lame, rétros)
+# <peinture> <forme> [m] <coordonnées…>
+#     peinture : body (couleur de la classe), dark (couleur foncée), glass, black, trim (gris), light (phares),
+#                glow (halo, seulement phares allumés)
+#     forme : poly u v u v… | rect u1 v1 u2 v2 | ell u1 v1 u2 v2 | line <épaisseur> u v u v…
+#     m : dessiné aussi en symétrie (coordonnées données pour le côté droit)
+#     « body poly » sans « m » remplace la carrosserie (contour dessiné automatiquement)
+
+# ======================= Hypercars =======================
+
+car toyota_gr010 hyper TOYOTA GR010 GAZOO
+proto 0.60 0.12
+black poly m 0.20 0.10 0.46 0.10 0.46 0.24 0.22 0.27
+black rect -0.10 0.13 0.10 0.25
+glow ell m 0.26 0.34 0.54 0.62
+light poly m 0.47 0.51 0.29 0.49 0.29 0.46 0.46 0.47
+light poly m 0.45 0.43 0.33 0.42 0.33 0.405 0.44 0.41
+
+car ferrari_499p hyper FERRARI 499P AF_CORSE
+proto 0.58 0.12
+black poly m 0.30 0.09 0.48 0.09 0.48 0.30 0.32 0.26
+black rect -0.08 0.13 0.08 0.23
+glow ell m 0.24 0.32 0.54 0.60
+light rect m 0.24 0.455 0.47 0.48
+light rect -0.24 0.355 0.24 0.372
+
+car porsche_963 hyper PORSCHE 963 PENSKE
+proto 0.62 0.12
+black rect m 0.22 0.10 0.46 0.22
+black poly -0.12 0.13 0.12 0.13 0.09 0.26 -0.09 0.26
+glow ell m 0.26 0.36 0.52 0.64
+light ell m 0.305 0.495 0.35 0.535
+light ell m 0.385 0.495 0.43 0.535
+light ell m 0.305 0.425 0.35 0.465
+light ell m 0.385 0.425 0.43 0.465
+light rect -0.20 0.325 0.20 0.34
+
+car peugeot_9x8 hyper PEUGEOT 9X8
+proto 0.56 0.13
+black poly m 0.20 0.09 0.47 0.09 0.44 0.26 0.24 0.30
+black rect -0.12 0.12 0.12 0.27
+glow ell m 0.24 0.30 0.52 0.58
+light poly m 0.29 0.50 0.315 0.50 0.29 0.37 0.265 0.37
+light poly m 0.35 0.50 0.375 0.50 0.35 0.37 0.325 0.37
+light poly m 0.41 0.50 0.435 0.50 0.41 0.37 0.385 0.37
+
+car cadillac_vseries hyper CADILLAC V-SERIES VSERIES V_SERIES
+proto 0.64 0.12
+black poly m 0.20 0.10 0.40 0.10 0.40 0.26 0.22 0.30
+black poly -0.11 0.34 0.11 0.34 0.08 0.14 0 0.10 -0.08 0.14
+glow ell m 0.36 0.24 0.60 0.66
+light poly m 0.48 0.20 0.497 0.20 0.497 0.42 0.472 0.57 0.455 0.57 0.478 0.42
+light rect m 0.37 0.515 0.45 0.535
+
+car bmw_mhybrid hyper BMW
+proto 0.60 0.12
+black poly m 0.22 0.10 0.46 0.10 0.46 0.22 0.24 0.24
+trim rect m 0.012 0.13 0.15 0.35
+black rect m 0.028 0.145 0.134 0.335
+glow ell m 0.26 0.34 0.52 0.62
+light poly m 0.47 0.51 0.29 0.49 0.29 0.46 0.41 0.465 0.43 0.42 0.47 0.42
+
+car alpine_a424 hyper ALPINE A424
+proto 0.60 0.12
+black rect m 0.22 0.10 0.46 0.24
+black poly -0.10 0.12 0.10 0.12 0.06 0.26 -0.06 0.26
+glow ell m 0.26 0.32 0.54 0.62
+light poly m 0.47 0.52 0.28 0.47 0.47 0.40
+dark poly m 0.43 0.49 0.36 0.47 0.43 0.44
+
+car lamborghini_sc63 hyper LAMBORGHINI SC63
+proto 0.60 0.12
+black poly m 0.20 0.09 0.47 0.09 0.47 0.22 0.40 0.28 0.24 0.28 0.20 0.22
+black poly -0.10 0.12 0.10 0.12 0.12 0.20 0.08 0.28 -0.08 0.28 -0.12 0.20
+glow ell m 0.26 0.32 0.52 0.62
+light line m 0.018 0.46 0.52 0.38 0.46 0.30 0.52
+light line m 0.018 0.38 0.46 0.38 0.38
+
+car isotta_tipo6 hyper ISOTTA TIPO
+proto 0.58 0.12
+black rect m 0.22 0.10 0.46 0.23
+black rect -0.10 0.13 0.10 0.25
+glow ell m 0.26 0.32 0.52 0.60
+light rect m 0.28 0.47 0.46 0.49
+light rect m 0.30 0.43 0.44 0.445
+
+car glickenhaus_007 hyper GLICKENHAUS SCG 007
+proto 0.68 0.11
+black poly m 0.20 0.09 0.46 0.09 0.46 0.26 0.22 0.26
+black rect -0.10 0.12 0.10 0.30
+glow ell m 0.26 0.34 0.54 0.66
+light ell m 0.34 0.42 0.44 0.60
+dark ell m 0.365 0.46 0.415 0.56
+
+car vanwall_680 hyper VANWALL VANDERVELL 680
+proto 0.58 0.12
+black rect m 0.22 0.10 0.46 0.22
+black rect -0.10 0.13 0.10 0.24
+glow ell m 0.26 0.32 0.52 0.60
+light poly m 0.46 0.49 0.30 0.49 0.31 0.43 0.45 0.43
+
+car aston_valkyrie hyper ASTON VALKYRIE
+proto 0.64 0.12
+black poly -0.17 0.37 0.17 0.37 0.14 0.18 0.06 0.12 -0.06 0.12 -0.14 0.18
+trim line 0.006 -0.155 0.31 0.155 0.31
+trim line 0.006 -0.145 0.25 0.145 0.25
+trim line 0.006 -0.11 0.19 0.11 0.19
+black rect m 0.22 0.09 0.46 0.20
+glow ell m 0.28 0.44 0.54 0.70
+light poly m 0.45 0.59 0.33 0.615 0.33 0.59 0.45 0.565
+
+# ======================= LMP2 / LMP3 =======================
+
+car oreca_07 lmp2 ORECA LMP2
+proto 0.56 0.12
+black rect -0.13 0.12 0.13 0.26
+glow ell m 0.25 0.28 0.49 0.58
+light rect m 0.39 0.40 0.46 0.47
+light rect m 0.30 0.40 0.37 0.47
+
+car ligier_p325 lmp3 LIGIER JS
+proto 0.52 0.13
+black rect -0.12 0.12 0.12 0.26
+black rect m 0.22 0.10 0.46 0.22
+glow ell m 0.25 0.26 0.51 0.54
+light poly m 0.46 0.46 0.30 0.44 0.30 0.40 0.46 0.40
+
+car ginetta_g61 lmp3 GINETTA G61
+proto 0.54 0.13
+black poly -0.14 0.12 0.14 0.12 0.10 0.28 -0.10 0.28
+black rect m 0.24 0.10 0.46 0.20
+glow ell m 0.25 0.26 0.51 0.56
+light ell m 0.30 0.38 0.45 0.47
+
+car duqueine_d09 lmp3 DUQUEINE D09
+proto 0.52 0.13
+black rect -0.12 0.12 0.12 0.24
+black poly m 0.22 0.10 0.46 0.10 0.46 0.22 0.24 0.26
+glow ell m 0.25 0.26 0.51 0.54
+light poly m 0.47 0.45 0.28 0.42 0.28 0.40 0.47 0.425
+
+# ======================= GT3 / GTE =======================
+
+car ferrari_296 gt3 FERRARI 296 AF_CORSE
+gt 0.96
+black poly m 0.26 0.10 0.47 0.10 0.47 0.30 0.30 0.26
+black poly -0.22 0.10 0.22 0.10 0.18 0.24 -0.18 0.24
+glow ell m 0.24 0.30 0.54 0.60
+light poly m 0.47 0.47 0.40 0.49 0.27 0.43 0.28 0.41 0.42 0.44
+
+car ferrari_488 gte FERRARI 488 AF_CORSE
+gt 0.95
+black poly -0.26 0.10 0.26 0.10 0.22 0.28 -0.22 0.28
+black poly m 0.32 0.10 0.47 0.10 0.47 0.26 0.34 0.24
+glow ell m 0.24 0.30 0.54 0.60
+light poly m 0.47 0.48 0.42 0.50 0.30 0.45 0.31 0.43 0.44 0.45
+
+car porsche_911 gt3,gte PORSCHE 911 RSR MANTHEY
+body poly -0.50 0.04 -0.50 0.40 -0.48 0.55 -0.40 0.61 -0.30 0.58 -0.25 0.56 -0.20 0.96 0.20 0.96 0.25 0.56 0.30 0.58 0.40 0.61 0.48 0.55 0.50 0.40 0.50 0.04
+glass poly -0.26 0.59 -0.18 0.90 0.18 0.90 0.26 0.59
+black rect -0.50 0.00 0.50 0.07
+body rect m 0.40 0.63 0.54 0.69
+black rect -0.20 0.12 0.20 0.24
+black poly m 0.26 0.10 0.46 0.10 0.46 0.24 0.28 0.24
+glow ell m 0.24 0.34 0.54 0.66
+light ell m 0.31 0.45 0.47 0.575
+dark ell m 0.335 0.47 0.445 0.555
+light ell m 0.355 0.495 0.38 0.515
+light ell m 0.40 0.495 0.425 0.515
+light ell m 0.355 0.51 0.38 0.53
+light ell m 0.40 0.51 0.425 0.53
+
+car bmw_m4 gt3 BMW M4
+gt 0.97
+black poly m 0.20 0.10 0.47 0.10 0.47 0.24 0.22 0.20
+trim rect m 0.01 0.10 0.15 0.44
+black rect m 0.025 0.115 0.135 0.425
+trim line m 0.006 0.08 0.12 0.08 0.42
+glow ell m 0.24 0.32 0.54 0.62
+light poly m 0.47 0.49 0.20 0.475 0.20 0.455 0.44 0.435
+
+car aston_vantage gt3,gte ASTON VANTAGE
+gt 0.96
+black poly -0.30 0.40 0.30 0.40 0.26 0.18 0.14 0.09 -0.14 0.09 -0.26 0.18
+trim line 0.006 -0.28 0.33 0.28 0.33
+trim line 0.006 -0.25 0.25 0.25 0.25
+trim line 0.006 -0.18 0.17 0.18 0.17
+glow ell m 0.26 0.34 0.54 0.62
+light poly m 0.47 0.50 0.34 0.47 0.33 0.445 0.47 0.46
+
+car lexus_rcf gt3 LEXUS RC_F RCF
+gt 0.97
+black poly -0.22 0.42 0.22 0.42 0.10 0.28 0.24 0.08 -0.24 0.08 -0.10 0.28
+black poly m 0.30 0.10 0.47 0.10 0.47 0.22 0.34 0.26
+glow ell m 0.24 0.30 0.54 0.60
+light poly m 0.47 0.50 0.30 0.47 0.28 0.44 0.46 0.45
+light line m 0.013 0.45 0.425 0.42 0.33 0.34 0.30
+
+car mclaren_720s gt3 MCLAREN 720S
+gt 0.93
+black poly m 0.26 0.46 0.46 0.50 0.47 0.40 0.40 0.22 0.30 0.30
+black rect -0.18 0.10 0.18 0.22
+glow ell m 0.24 0.32 0.54 0.62
+light poly m 0.45 0.47 0.30 0.445 0.31 0.425 0.45 0.445
+
+car corvette gt3,gte CORVETTE CHEVROLET Z06 C8
+gt 0.95
+black poly m 0.30 0.10 0.47 0.10 0.47 0.34 0.36 0.30
+black poly -0.16 0.10 0.16 0.10 0.12 0.22 -0.12 0.22
+glow ell m 0.22 0.30 0.54 0.60
+light poly m 0.47 0.49 0.26 0.44 0.30 0.42 0.46 0.45
+
+car ford_mustang gt3 FORD MUSTANG
+gt 0.97
+black poly -0.22 0.40 0.22 0.40 0.24 0.16 0.16 0.10 -0.16 0.10 -0.24 0.16
+black poly m 0.30 0.10 0.47 0.10 0.47 0.24 0.32 0.22
+black rect m 0.30 0.41 0.47 0.50
+glow ell m 0.24 0.32 0.54 0.62
+light rect m 0.325 0.425 0.35 0.485
+light rect m 0.37 0.425 0.395 0.485
+light rect m 0.415 0.425 0.44 0.485
+
+car lamborghini_huracan gt3 LAMBORGHINI HURACAN
+gt 0.93
+black poly m 0.22 0.10 0.47 0.10 0.47 0.30 0.30 0.30
+black rect -0.14 0.12 0.14 0.22
+black poly m 0.48 0.51 0.26 0.46 0.28 0.41 0.48 0.43
+glow ell m 0.24 0.32 0.54 0.62
+light line m 0.016 0.45 0.485 0.38 0.46 0.31 0.46
+light line m 0.016 0.38 0.46 0.39 0.425
+
+car mercedes_amg gt3 MERCEDES AMG
+gt 0.96
+black poly -0.22 0.42 0.22 0.42 0.26 0.12 -0.26 0.12
+trim line m 0.008 0.02 0.14 0.02 0.40
+trim line m 0.008 0.065 0.14 0.065 0.40
+trim line m 0.008 0.11 0.14 0.11 0.40
+trim line m 0.008 0.155 0.14 0.155 0.40
+trim line m 0.008 0.20 0.14 0.20 0.40
+black rect m 0.32 0.10 0.47 0.22
+glow ell m 0.24 0.32 0.54 0.62
+light poly m 0.47 0.50 0.29 0.46 0.30 0.435 0.46 0.45

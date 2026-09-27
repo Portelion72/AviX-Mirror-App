@@ -67,6 +67,7 @@ public sealed class Rf2Telemetry : IRadarTelemetry
                 TrackEdge = v.TrackEdge,
                 Class = RF2ScoringReader.DecodeString(v.VehicleClass),
                 Name = RF2ScoringReader.DecodeString(v.DriverName),
+                Model = RF2ScoringReader.DecodeString(v.VehicleName),
                 Place = v.Place,
                 Headlights = v.Headlights != 0,
                 InPits = v.InPits != 0,

@@ -246,6 +246,11 @@ public sealed class Settings
     [Category("5. Radar"), DisplayName("Afficher les noms")]
     public bool RadarShowNames { get; set; } = true;
 
+    [Category("5. Radar"), DisplayName("Face avant par voiture (LMU)")]
+    [Description("Le Mans Ultimate : chaque voiture a sa face avant (phares, calandre) selon sa marque et son modèle. " +
+                 "La couleur reste celle de la classe.")]
+    public bool RadarBrandFronts { get; set; } = true;
+
     [Category("5. Radar"), DisplayName("Largeur de rendu")]
     [Description("Résolution de l'image radar (utilisée pour le flux MJPEG). 0 = taille de la fenêtre.")]
     public int RadarWidth { get; set; } = 1280;

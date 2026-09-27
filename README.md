@@ -105,6 +105,18 @@ Les réglages sont enregistrés dans `AviXMirror.settings.json`, dans le même d
 | GTE | orange | voiture de route, petite calandre, rétroviseurs |
 | GT3 | vert | voiture de route plus haute, grande calandre trapézoïdale, rétroviseurs |
 
+**Face avant par voiture (LMU).** Dans Le Mans Ultimate, chaque voiture reconnue a sa propre face
+avant (phares, calandre, entrées d'air), la couleur restant celle de sa catégorie : Toyota GR010,
+Ferrari 499P, Porsche 963, Peugeot 9X8, Cadillac V-Series.R, BMW M Hybrid V8, Alpine A424,
+Lamborghini SC63, Isotta Fraschini Tipo 6, Glickenhaus 007, Vanwall 680, Aston Martin Valkyrie,
+Oreca 07, Ligier JS P325, Ginetta G61, Duqueine D09, Ferrari 296 / 488, Porsche 911, BMW M4,
+Aston Martin Vantage, Lexus RC F, McLaren 720S, Corvette, Ford Mustang, Lamborghini Huracán,
+Mercedes-AMG. La voiture est reconnue par son nom dans LMU ; sinon la silhouette de sa catégorie est
+utilisée. Réglage : *5. Radar › Face avant par voiture (LMU)*. Les formes sont décrites dans
+`src/AviXMirror/Radar/CarFronts.txt`.
+
+![Faces avant LMU](docs/radar-faces-lmu.png)
+
 **La piste suit le circuit.** LMU ne fournit pas le tracé du circuit : AviX Mirror l'apprend
 en direct à partir des positions de toutes les voitures (centre et largeur de la piste tous les 2 m).
 Le statut indique la part du circuit déjà connue ; en course, quelques minutes suffisent. Le tracé
