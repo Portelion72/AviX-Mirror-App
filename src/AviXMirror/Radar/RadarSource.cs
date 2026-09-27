@@ -514,7 +514,7 @@ public sealed class RadarSource : IDisposable
             using var trim = new SolidBrush(Color.FromArgb(235, 150, 150, 155));
             CarFronts.Draw(g, front, P, width, new CarFronts.Paints(bodyBrush, dark, glass, black, trim, light, glow, car.Headlights, outline));
         }
-        else if (kind is CarKind.Hypercar or CarKind.Lmp2 or CarKind.Lmp3) = kind is CarKind.Hypercar or CarKind.Lmp2 or CarKind.Lmp3;
+        else if (kind is CarKind.Hypercar or CarKind.Lmp2 or CarKind.Lmp3)
         {
             // Proto : ailes avant bombées, nez bas, bulle de cockpit étroite au centre.
             double hump = kind == CarKind.Hypercar ? 0.62 : kind == CarKind.Lmp2 ? 0.56 : 0.52;
