@@ -18,6 +18,13 @@ public enum CaptureSource
     Ecran,
 }
 
+public enum RadarGame
+{
+    Auto,
+    LeMansUltimate,
+    AssettoCorsa,
+}
+
 public enum StripSide
 {
     Haut,
@@ -150,13 +157,21 @@ public sealed class Settings
 
     // ---------- Radar ----------
 
+    [Category("5. Radar"), DisplayName("Jeu")]
+    [Description("Auto : détecte Le Mans Ultimate ou Assetto Corsa (app Lua « AviX Mirror » pour CSP requise).")]
+    public RadarGame RadarGame { get; set; } = RadarGame.Auto;
+
+    [Category("5. Radar"), DisplayName("Assetto Corsa : inverser gauche/droite")]
+    [Description("À activer si, dans Assetto Corsa, les voitures apparaissent du mauvais côté.")]
+    public bool AcInvertLateral { get; set; }
+
     [Category("5. Radar"), DisplayName("Portée (m)")]
     public double RadarRange { get; set; } = 80;
 
     [Category("5. Radar"), DisplayName("Champ de vision (°)")]
     public double RadarFov { get; set; } = 70;
 
-    [Category("5. Radar"), DisplayName("Inverser gauche/droite")]
+    [Category("5. Radar"), DisplayName("LMU : inverser gauche/droite")]
     [Description("À activer si les voitures apparaissent du mauvais côté.")]
     public bool RadarInvertLateral { get; set; }
 

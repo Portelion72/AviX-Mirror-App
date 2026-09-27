@@ -44,42 +44,42 @@ public sealed class TrackMap
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AviXMirror", "circuits");
 
     /// <summary>Ajoute les positions d'un nouveau relevé de télémétrie.</summary>
-    public void Update(in RF2Scoring scoring)
+    public void Update(RadarWorld world)
     {
-        var info = scoring.ScoringInfo;
-        double length = info.LapDist;
-        if (length < 200 || length > 100_000 || scoring.Vehicles == null)
+        double length = world.TrackLength;
+        if (length < 200 || length > 100_000)
             return;
 
-        string key = $"{RF2ScoringReader.DecodeString(info.TrackName)}_{Math.Round(length)}";
+        string key = $"{world.Game}_{world.TrackName}_{Math.Round(length)}";
         if (key != _key)
             SwitchTrack(key, length);
 
-        for (int i = 0; i < info.NumVehicles; i++)
+        foreach (var v in world.Vehicles)
         {
-            ref readonly var v = ref scoring.Vehicles[i];
-            if (v.Ori == null || v.InPits != 0 || v.InGarageStall != 0 || Math.Abs(v.LocalVel.Z) < 8)
+            var vel = v.Velocity;
+            double speed = Math.Sqrt(vel.X * vel.X + vel.Y * vel.Y + vel.Z * vel.Z);
+            if (v.InPits || double.IsNaN(v.LapDist) || speed < 8)
             {
-                _last.Remove(v.ID);
+                _last.Remove(v.Id);
                 continue;
             }
 
-            var sample = new Sample(Wrap(v.LapDist), v.Pos.X, v.Pos.Y, v.Pos.Z,
-                v.Ori[0].X, v.Ori[1].X, v.Ori[2].X, v.PathLateral, Math.Abs(v.TrackEdge));
+            var sample = new Sample(Wrap(v.LapDist), v.Position.X, v.Position.Y, v.Position.Z,
+                v.Left.X, v.Left.Y, v.Left.Z, v.PathLateral, Math.Abs(v.TrackEdge));
 
-            if (_last.TryGetValue(v.ID, out var prev))
+            if (_last.TryGetValue(v.Id, out var prev))
             {
                 double delta = Wrap(sample.LapDist - prev.LapDist);
                 if (delta > BinSize && delta < MaxInterpolation)
                 {
-                    // Comble les cases entre deux relevés (la télémétrie arrive ~5 fois par seconde).
+                    // Comble les cases entre deux relevés (LMU envoie ~5 relevés par seconde).
                     int steps = (int)(delta / BinSize);
                     for (int k = 1; k < steps; k++)
                         Add(Lerp(prev, sample, (double)k / steps, prev.LapDist + delta * k / steps));
                 }
             }
             Add(sample);
-            _last[v.ID] = sample;
+            _last[v.Id] = sample;
         }
 
         ChooseHypothesis();

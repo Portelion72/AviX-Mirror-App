@@ -1,6 +1,6 @@
-# AviX Mirror — rétroviseur VoCore pour Le Mans Ultimate
+# AviX Mirror — rétroviseur VoCore pour Le Mans Ultimate et Assetto Corsa
 
-Application Windows qui affiche le rétroviseur de **Le Mans Ultimate (LMU)** sur un écran
+Application Windows qui affiche le rétroviseur de **Le Mans Ultimate (LMU)** et d'**Assetto Corsa** sur un écran
 **VoCore 7,8″ (1280×400)** monté comme un vrai rétroviseur, **sans que le rétro virtuel reste
 affiché sur l'écran principal**.
 
@@ -70,9 +70,34 @@ immédiatement aux sessions suivantes. La piste du rétro tourne alors dans les 
 relief, avec vibreurs rouge/blanc et lignes de bord ; tant que l'endroit n'est pas connu, une route
 droite s'affiche.
 
+**Vibreurs aux couleurs du circuit** : jaune/bleu au Mans, vert/blanc/rouge à Monza, rouge/blanc
+par défaut. Les couleurs sont dans `AviXMirror.kerbs.json` (créé à côté de l'exe au premier
+lancement) : chaque ligne associe un mot du nom du circuit à une suite de couleurs, que vous pouvez
+modifier ou compléter, par exemple `"interlagos": ["#FFD700", "#009C3B"]`. Tous les circuits de LMU y
+sont listés, DLC compris (WEC, ELMS, US Track Pass), ainsi que les principaux circuits d'Assetto Corsa.
+
 Phares allumés : halo lumineux. Contour rouge : voiture à moins de 10 m. Bandeau orange sur un
 bord : voiture à côté de vous. Si les voitures apparaissent du mauvais côté, activez
 *Inverser gauche/droite*.
+
+## Assetto Corsa (avec Content Manager)
+
+La mémoire partagée officielle d'Assetto Corsa ne donne que **votre** voiture. AviX Mirror utilise donc
+une petite app Lua pour **Custom Shaders Patch** (CSP, installé avec Content Manager) qui exporte la
+position, la direction, la vitesse, la progression sur le tour et le modèle de **toutes** les voitures.
+
+1. Dans Content Manager, vérifiez que **Custom Shaders Patch** est installé (*Paramètres > Custom Shaders Patch*).
+2. Dans AviX Mirror, cliquez **Installer l'app Assetto Corsa** : elle est copiée dans
+   `assettocorsa\apps\lua\AviXMirror` (dossier trouvé automatiquement dans Steam). Pour une installation
+   manuelle, copiez le dossier `AssettoCorsa-app-CSP\AviXMirror` de l'archive au même endroit.
+3. *Mode* = `Radar`, *Jeu* = `Auto` (ou `AssettoCorsa`), puis **Démarrer**.
+4. Lancez une session depuis Content Manager. L'app démarre toute seule (fenêtre « AviX Mirror »
+   facultative dans la barre d'apps CSP).
+
+La catégorie de chaque voiture (silhouette et couleur) est déduite de son identifiant AC : `gt3`,
+`gte`, `lmp2`, `lmp3`, `919`, `499p`, `963`… Les autres voitures sont dessinées en gris. Le tracé du
+circuit s'apprend comme dans LMU, puis il est mémorisé. Si les voitures apparaissent du mauvais côté,
+activez *Assetto Corsa : inverser gauche/droite*.
 
 ## Mode Capture
 
@@ -134,6 +159,7 @@ src/AviXMirror/
   Settings.cs             réglages (JSON)
   Capture/                Windows.Graphics.Capture + Direct3D 11
   Output/                 envoi USB au VoCore (libusb, protocole du pilote officiel Vonger/mpro_drm)
-  Radar/                  mémoire partagée rF2 + rendu du rétro synthétique
+  Radar/                  télémétrie LMU (rF2) et Assetto Corsa, tracé du circuit, vibreurs, rendu
+integrations/AssettoCorsa/AviXMirror/   app Lua pour Custom Shaders Patch (export de toutes les voitures)
   Util/                   Win32, extension de fenêtre, tampon d'image, serveur MJPEG
 ```

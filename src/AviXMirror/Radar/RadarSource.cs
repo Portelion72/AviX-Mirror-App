@@ -7,7 +7,7 @@ namespace AviXMirror.Radar;
 
 /// <summary>
 /// Rétroviseur synthétique : dessine en perspective les voitures situées derrière le joueur
-/// à partir des positions fournies par la mémoire partagée rF2 (LMU).
+/// à partir des positions fournies par le jeu (Le Mans Ultimate ou Assetto Corsa).
 /// Aucun rendu du jeu n'est nécessaire, donc rien ne s'affiche sur l'écran principal.
 /// </summary>
 public sealed class RadarSource : IDisposable
@@ -16,13 +16,14 @@ public sealed class RadarSource : IDisposable
     const double MaxExtrapolationSeconds = 0.4;
 
     readonly FrameBuffer _output;
-    readonly RF2ScoringReader _reader = new();
+    readonly IRadarTelemetry[] _sources = { new Rf2Telemetry(), new AcTelemetry() };
+    IRadarTelemetry? _active;
     readonly TrackMap _track = new();
     readonly Thread _thread;
     volatile bool _running = true;
     volatile Settings _settings;
 
-    RF2Scoring _scoring;
+    RadarWorld? _world;
     bool _hasData;
     double _lastET = double.NaN;
     readonly Stopwatch _sinceUpdate = Stopwatch.StartNew();
@@ -83,32 +84,40 @@ public sealed class RadarSource : IDisposable
 
     void Poll()
     {
-        if (!_reader.TryRead(out var scoring))
+        var s = _settings;
+        var candidates = s.RadarGame switch
         {
-            _hasData = false;
-            Status = "En attente de LMU (plugin rF2 Shared Memory Map)…";
-            return;
+            RadarGame.LeMansUltimate => _sources.OfType<Rf2Telemetry>().Cast<IRadarTelemetry>(),
+            RadarGame.AssettoCorsa => _sources.OfType<AcTelemetry>(),
+            // Auto : on garde le jeu déjà trouvé, sinon on essaie les autres.
+            _ => _active != null ? _sources.OrderBy(x => x == _active ? 0 : 1) : _sources,
+        };
+
+        var waiting = new List<string>();
+        foreach (var source in candidates)
+        {
+            if (source.TryRead(s, out var world, out var status) && world != null)
+            {
+                _active = source;
+                if (world.Time != _lastET)
+                {
+                    _lastET = world.Time;
+                    _sinceUpdate.Restart();
+                    _track.Update(world);
+                }
+                _world = world;
+                _hasData = true;
+                Status = world.Vehicles.Count == 0
+                    ? status + " — pas de session en cours."
+                    : $"{status} — tracé du circuit connu à {_track.Coverage:P0}.";
+                return;
+            }
+            waiting.Add(status);
         }
 
-        int n = scoring.ScoringInfo.NumVehicles;
-        if (n < 0 || n > RF2Scoring.MaxVehicles || scoring.Vehicles == null)
-        {
-            _hasData = false;
-            Status = "Données de télémétrie invalides.";
-            return;
-        }
-
-        if (scoring.ScoringInfo.CurrentET != _lastET)
-        {
-            _lastET = scoring.ScoringInfo.CurrentET;
-            _sinceUpdate.Restart();
-            _track.Update(scoring);
-        }
-        _scoring = scoring;
-        _hasData = true;
-        Status = n == 0
-            ? "LMU connecté — pas de session en cours."
-            : $"LMU connecté — {n} voitures — tracé du circuit connu à {_track.Coverage:P0}.";
+        _active = null;
+        _hasData = false;
+        Status = string.Join("\n", waiting);
     }
 
     struct Car
@@ -117,13 +126,6 @@ public sealed class RadarSource : IDisposable
         public string Label, Class;
         public bool Headlights;
     }
-
-    static RF2Vec3 WorldVelocity(in RF2VehicleScoring v) => new()
-    {
-        X = Dot(v.Ori[0], v.LocalVel),
-        Y = Dot(v.Ori[1], v.LocalVel),
-        Z = Dot(v.Ori[2], v.LocalVel),
-    };
 
     static double Dot(in RF2Vec3 a, in RF2Vec3 b) => a.X * b.X + a.Y * b.Y + a.Z * b.Z;
 
@@ -135,63 +137,44 @@ public sealed class RadarSource : IDisposable
         float horizon = h * 0.42f;
         DrawBackground(g, w, h, horizon);
 
-        if (!_hasData || _scoring.ScoringInfo.NumVehicles == 0)
+        var world = _world;
+        if (!_hasData || world == null || world.Vehicles.Count == 0)
         {
             DrawCenteredText(g, w, h, Status);
             return;
         }
 
-        var vehicles = _scoring.Vehicles;
-        int count = _scoring.ScoringInfo.NumVehicles;
-        int playerIndex = -1;
-        for (int i = 0; i < count; i++)
-            if (vehicles[i].IsPlayer != 0) { playerIndex = i; break; }
-
-        if (playerIndex < 0)
+        var player = world.Player;
+        if (player?.Orientation == null)
         {
             DrawCenteredText(g, w, h, "Pas de voiture joueur (spectateur ?)");
             return;
         }
 
         double dt = Math.Min(_sinceUpdate.Elapsed.TotalSeconds, MaxExtrapolationSeconds);
-        ref readonly var player = ref vehicles[playerIndex];
-        if (player.Ori == null)
-            return;
-        var pv = WorldVelocity(player);
-        var pp = new RF2Vec3 { X = player.Pos.X + pv.X * dt, Y = player.Pos.Y + pv.Y * dt, Z = player.Pos.Z + pv.Z * dt };
+        var ori = player.Orientation;
+        var pv = player.Velocity;
+        var pp = new RF2Vec3 { X = player.Position.X + pv.X * dt, Y = player.Position.Y + pv.Y * dt, Z = player.Position.Z + pv.Z * dt };
 
         double fov = Math.Clamp(s.RadarFov, 20, 150) * Math.PI / 180;
         double focal = w / 2.0 / Math.Tan(fov / 2);
-        var view = new View(player.Ori, pp, s.RadarInvertLateral, w, h, horizon, focal);
-        double playerLapDist = player.LapDist - player.LocalVel.Z * dt; // +z = arrière
-        if (!DrawTrack(g, view, playerLapDist, s.RadarRange))
+        var view = new View(ori, pp, world.InvertLateral, w, h, horizon, focal);
+        // Vitesse vers l'avant = -z local.
+        double forward = -(ori[0].Z * pv.X + ori[1].Z * pv.Y + ori[2].Z * pv.Z);
+        double playerLapDist = player.LapDist + forward * dt;
+        if (double.IsNaN(playerLapDist) || !DrawTrack(g, view, playerLapDist, s.RadarRange, KerbPalette.For(world.TrackName)))
             DrawStaticRoad(g, w, h, horizon);
 
         var behind = new List<Car>();
         bool warnLeft = false, warnRight = false;
 
-        for (int i = 0; i < count; i++)
+        foreach (var v in world.Vehicles)
         {
-            if (i == playerIndex)
-                continue;
-            ref readonly var v = ref vehicles[i];
-            if (v.Ori == null || v.InGarageStall != 0)
+            if (v == player)
                 continue;
 
-            var vv = WorldVelocity(v);
-            var d = new RF2Vec3
-            {
-                X = v.Pos.X + vv.X * dt - pp.X,
-                Y = v.Pos.Y + vv.Y * dt - pp.Y,
-                Z = v.Pos.Z + vv.Z * dt - pp.Z,
-            };
-            // Monde -> repère local du joueur (transposée de la matrice d'orientation).
-            // Repère rF2 : x = gauche, y = haut, z = arrière.
-            double lx = player.Ori[0].X * d.X + player.Ori[1].X * d.Y + player.Ori[2].X * d.Z;
-            double ly = player.Ori[0].Y * d.X + player.Ori[1].Y * d.Y + player.Ori[2].Y * d.Z;
-            double lz = player.Ori[0].Z * d.X + player.Ori[1].Z * d.Y + player.Ori[2].Z * d.Z;
-            if (s.RadarInvertLateral)
-                lx = -lx;
+            var vv = v.Velocity;
+            var (lx, ly, lz) = view.ToLocal(v.Position.X + vv.X * dt, v.Position.Y + vv.Y * dt, v.Position.Z + vv.Z * dt);
 
             if (Math.Abs(ly) > 15)
                 continue; // Autre partie du circuit (pont, tunnel…).
@@ -206,18 +189,18 @@ public sealed class RadarSource : IDisposable
                 continue;
 
             var rel = new RF2Vec3 { X = vv.X - pv.X, Y = vv.Y - pv.Y, Z = vv.Z - pv.Z };
-            double relZ = player.Ori[0].Z * rel.X + player.Ori[1].Z * rel.Y + player.Ori[2].Z * rel.Z;
+            double relZ = ori[0].Z * rel.X + ori[1].Z * rel.Y + ori[2].Z * rel.Z;
 
-            string name = RF2ScoringReader.DecodeString(v.DriverName);
+            string place = v.Place > 0 ? $"P{v.Place}" : "";
             behind.Add(new Car
             {
                 Lx = lx,
                 Ly = ly,
                 Lz = lz,
                 Closing = -relZ * 3.6,
-                Label = s.RadarShowNames ? $"P{v.Place} {ShortName(name)}" : $"P{v.Place}",
-                Class = RF2ScoringReader.DecodeString(v.VehicleClass),
-                Headlights = v.Headlights != 0,
+                Label = s.RadarShowNames ? $"{place} {ShortName(v.Name)}".Trim() : place,
+                Class = v.Class,
+                Headlights = v.Headlights,
             });
         }
 
@@ -305,7 +288,7 @@ public sealed class RadarSource : IDisposable
     /// Dessine la piste derrière le joueur en suivant le tracé appris : elle tourne dans les virages
     /// et suit le relief. Retourne faux si le tracé n'est pas encore connu à cet endroit.
     /// </summary>
-    bool DrawTrack(Graphics g, in View view, double playerLapDist, double range)
+    bool DrawTrack(Graphics g, in View view, double playerLapDist, double range, Color[] kerbColors)
     {
         if (!_track.HasData)
             return false;
@@ -341,8 +324,7 @@ public sealed class RadarSource : IDisposable
         var asphalt = Color.FromArgb(58, 60, 64);
         var fog = Color.FromArgb(58, 70, 86);
         using var brush = new SolidBrush(asphalt);
-        using var kerbRed = new SolidBrush(Color.FromArgb(200, 40, 40));
-        using var kerbWhite = new SolidBrush(Color.FromArgb(225, 225, 225));
+        var kerbBrushes = kerbColors.Select(c => new SolidBrush(c)).ToArray();
         using var line = new Pen(Color.FromArgb(220, 235, 235, 235), 1.5f);
 
         // Du plus loin au plus proche.
@@ -366,7 +348,8 @@ public sealed class RadarSource : IDisposable
             if (dist < 60 && Clip(far.KerbLeft, near.KerbLeft, out var fkl, out var nkl) &&
                 Clip(far.KerbRight, near.KerbRight, out var fkr, out var nkr))
             {
-                var kerb = (far.Index & 1) == 0 ? kerbRed : kerbWhite;
+                // Les couleurs se répètent tous les 2 m, comme les bandes d'un vrai vibreur.
+                var kerb = kerbBrushes[((far.Index % kerbBrushes.Length) + kerbBrushes.Length) % kerbBrushes.Length];
                 g.FillPolygon(kerb, new[] { view.Project(fkl), view.Project(fl), view.Project(nl), view.Project(nkl) });
                 g.FillPolygon(kerb, new[] { view.Project(fr), view.Project(fkr), view.Project(nkr), view.Project(nr) });
             }
@@ -374,6 +357,8 @@ public sealed class RadarSource : IDisposable
             g.DrawLine(line, quad[0], quad[3]);
             g.DrawLine(line, quad[1], quad[2]);
         }
+        foreach (var b in kerbBrushes)
+            b.Dispose();
         return true;
     }
 
@@ -400,14 +385,20 @@ public sealed class RadarSource : IDisposable
 
     enum CarKind { Hypercar, Lmp2, Lmp3, Gte, Gt3, Other }
 
+    /// <summary>
+    /// Catégorie à partir de la classe LMU (« Hyper », « LMP2 »…) ou de l'identifiant de voiture
+    /// Assetto Corsa (« ks_ferrari_488_gt3 », « ks_porsche_919_hybrid_2016 »…).
+    /// </summary>
     static CarKind Classify(string cls)
     {
         var c = cls.ToUpperInvariant();
-        if (c.Contains("HYPER") || c.Contains("LMH") || c.Contains("LMDH")) return CarKind.Hypercar;
-        if (c.Contains("LMP2")) return CarKind.Lmp2;
-        if (c.Contains("LMP3")) return CarKind.Lmp3;
-        if (c.Contains("GTE")) return CarKind.Gte;
-        if (c.Contains("GT")) return CarKind.Gt3;
+        static bool Any(string text, params string[] keys) => keys.Any(text.Contains);
+        if (Any(c, "HYPER", "LMH", "LMDH", "LMP1", "919", "TS050", "R18", "499P", "963", "9X8", "GR010", "V-SERIES", "VSERIES"))
+            return CarKind.Hypercar;
+        if (Any(c, "LMP2", "ORECA")) return CarKind.Lmp2;
+        if (Any(c, "LMP3", "JS_P3", "JS P3")) return CarKind.Lmp3;
+        if (Any(c, "GTE", "GTLM", "GT2")) return CarKind.Gte;
+        if (Any(c, "GT3", "GTM", "GT4", "GT")) return CarKind.Gt3;
         return CarKind.Other;
     }
 
@@ -614,7 +605,8 @@ public sealed class RadarSource : IDisposable
         _running = false;
         _thread.Join(1000);
         _track.Save();
-        _reader.Dispose();
+        foreach (var source in _sources)
+            source.Dispose();
         foreach (var f in _fonts.Values)
             f.Dispose();
     }

@@ -23,15 +23,15 @@ public sealed class MainForm : Form
 
         var apply = new Button { Text = "Appliquer", AutoSize = true };
         var calibrate = new Button { Text = "Calibrer la zone", AutoSize = true };
-        var identify = new Button { Text = "Identifier les écrans", AutoSize = true };
+        var installAc = new Button { Text = "Installer l'app Assetto Corsa", AutoSize = true };
 
         _startStop.Click += (_, _) => ToggleRunning();
         apply.Click += (_, _) => ApplySettings();
         calibrate.Click += (_, _) => Calibrate();
-        identify.Click += (_, _) => IdentifyScreens();
+        installAc.Click += (_, _) => InstallAcApp();
 
         var buttons = new FlowLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(4), WrapContents = true };
-        buttons.Controls.AddRange(new Control[] { _startStop, apply, calibrate, identify });
+        buttons.Controls.AddRange(new Control[] { _startStop, apply, calibrate, installAc });
 
         var bottom = new TableLayoutPanel { Dock = DockStyle.Bottom, Height = 150, ColumnCount = 1, RowCount = 2 };
         bottom.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
@@ -116,32 +116,41 @@ public sealed class MainForm : Form
         capture.SetCrop(new Rectangle(_settings.CropX, _settings.CropY, _settings.CropWidth, _settings.CropHeight));
     }
 
-    void IdentifyScreens()
+    void InstallAcApp()
     {
-        foreach (var screen in Screen.AllScreens)
+        var folder = Util.AcInstaller.FindAcFolder();
+        if (folder == null)
         {
-            var label = new Label
+            using var dialog = new FolderBrowserDialog
             {
-                Dock = DockStyle.Fill,
-                Text = ScreenHelper.Describe(screen),
-                ForeColor = Color.White,
-                TextAlign = ContentAlignment.MiddleCenter,
-                Font = new Font("Segoe UI", Math.Clamp(screen.Bounds.Height / 14f, 12, 48), FontStyle.Bold, GraphicsUnit.Pixel),
+                Description = "Dossier d'Assetto Corsa (celui qui contient AssettoCorsa.exe)",
+                UseDescriptionForTitle = true,
             };
-            var f = new Form
+            if (dialog.ShowDialog(this) != DialogResult.OK)
+                return;
+            folder = dialog.SelectedPath;
+            if (!File.Exists(Path.Combine(folder, "AssettoCorsa.exe")))
             {
-                FormBorderStyle = FormBorderStyle.None,
-                StartPosition = FormStartPosition.Manual,
-                Bounds = screen.Bounds,
-                BackColor = Color.FromArgb(0, 90, 170),
-                TopMost = true,
-                ShowInTaskbar = false,
-            };
-            f.Controls.Add(label);
-            var timer = new System.Windows.Forms.Timer { Interval = 3000 };
-            timer.Tick += (_, _) => { timer.Dispose(); f.Close(); f.Dispose(); };
-            timer.Start();
-            f.Show();
+                MessageBox.Show(this, "AssettoCorsa.exe est introuvable dans ce dossier.", "Assetto Corsa",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+        }
+
+        try
+        {
+            var target = Util.AcInstaller.Install(folder);
+            MessageBox.Show(this,
+                "App installée dans :\n" + target + "\n\n" +
+                "Elle nécessite Custom Shaders Patch (Content Manager > Paramètres > Custom Shaders Patch). " +
+                "Elle démarre toute seule avec Assetto Corsa ; rien à ouvrir en jeu.\n\n" +
+                "Dans AviX Mirror, choisissez Mode = Radar.",
+                "Assetto Corsa", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, "Installation impossible : " + ex.Message, "Assetto Corsa",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
