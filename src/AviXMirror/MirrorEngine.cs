@@ -19,7 +19,7 @@ public sealed class MirrorEngine : IDisposable
     IntPtr _captureWindow;
     volatile bool _captureClosed;
     RadarSource? _radar;
-    MirrorForm? _form;
+    MaskForm? _mask;
     MjpegServer? _mjpeg;
     VoCoreUsbOutput? _usb;
 
@@ -46,29 +46,12 @@ public sealed class MirrorEngine : IDisposable
         _settings = settings.Clone();
         Running = true;
 
-        if (_settings.Mode != MirrorMode.Direct)
-        {
-            if (_settings.Output == OutputTarget.VoCoreUsb)
-            {
-                _usb = new VoCoreUsbOutput(Frames, _settings);
-            }
-            else
-            {
-                _form = new MirrorForm(Frames, _settings, () => Status);
-                _form.Show();
-            }
-        }
+        _usb = new VoCoreUsbOutput(Frames, _settings);
 
         if (_settings.Mode == MirrorMode.Radar)
-        {
-            _radar = new RadarSource(Frames, _settings);
-            if (_form != null)
-                _radar.FallbackSize = _form.Size;
-            else if (_usb != null)
-                _radar.FallbackSize = _usb.LogicalSize;
-        }
+            _radar = new RadarSource(Frames, _settings) { FallbackSize = _usb.LogicalSize };
 
-        if (_settings.MjpegPort > 0 && _settings.Mode != MirrorMode.Direct)
+        if (_settings.MjpegPort > 0)
         {
             try
             {
@@ -94,9 +77,9 @@ public sealed class MirrorEngine : IDisposable
         _mjpeg = null;
         _usb?.Dispose();
         _usb = null;
-        _form?.Close();
-        _form?.Dispose();
-        _form = null;
+        _mask?.Close();
+        _mask?.Dispose();
+        _mask = null;
         RestoreGameWindow();
         Frames.Clear();
         Running = false;
@@ -120,8 +103,7 @@ public sealed class MirrorEngine : IDisposable
         var messages = new List<string>();
 
         // Le mode Radar ne touche jamais au jeu : il lit seulement la télémétrie.
-        bool needGame = s.Mode == MirrorMode.Direct ||
-                        (s.Mode == MirrorMode.Capture && (s.ExtendGameWindow || s.Source == CaptureSource.FenetreJeu));
+        bool needGame = s.Mode == MirrorMode.Capture;
         if (needGame)
         {
             _gameWindow = GameWindow.Find(s.GameProcessName);
@@ -147,7 +129,7 @@ public sealed class MirrorEngine : IDisposable
             }
         }
 
-        if (_gameWindow != IntPtr.Zero && (s.Mode == MirrorMode.Direct || (s.ExtendGameWindow && s.Mode == MirrorMode.Capture)))
+        if (_gameWindow != IntPtr.Zero && s.ExtendGameWindow && s.Mode == MirrorMode.Capture)
         {
             RememberGameWindow(_gameWindow);
             GameWindow.Extend(_gameWindow, s);
@@ -156,11 +138,14 @@ public sealed class MirrorEngine : IDisposable
         }
 
         if (s.Mode == MirrorMode.Capture)
+        {
             messages.Add(TickCapture(s));
+            UpdateMask(s);
+        }
         else if (s.Mode == MirrorMode.Radar && _radar != null)
+        {
             messages.Add(_radar.Status);
-        else if (s.Mode == MirrorMode.Direct && _gameWindow != IntPtr.Zero)
-            messages.Add("Mode direct : placez le rétro virtuel de LMU dans la bande étendue.");
+        }
 
         if (_usb != null)
             messages.Add(_usb.Status);
@@ -225,6 +210,25 @@ public sealed class MirrorEngine : IDisposable
             ? $"zone {s.CropWidth}x{s.CropHeight} @ {s.CropX},{s.CropY}"
             : "image entière (utilisez « Calibrer la zone »)";
         return $"Capture {src.Width}x{src.Height} — {zone}";
+    }
+
+    /// <summary>Pose le cache noir sur la zone du rétro, sur l'écran principal.</summary>
+    void UpdateMask(Settings s)
+    {
+        bool show = s.HideMirrorOnScreen && !s.ExtendGameWindow && s.Source == CaptureSource.FenetreJeu &&
+                    _capture != null && _captureWindow != IntPtr.Zero && Native.IsWindow(_captureWindow) &&
+                    !Native.IsIconic(_captureWindow) && s.CropWidth > 0 && s.CropHeight > 0;
+        if (!show)
+        {
+            _mask?.Hide();
+            return;
+        }
+
+        // La capture de fenêtre commence au coin visible de la fenêtre du jeu.
+        var window = Native.GetVisibleBounds(_captureWindow);
+        var bounds = new Rectangle(window.X + s.CropX, window.Y + s.CropY, s.CropWidth, s.CropHeight);
+        _mask ??= new MaskForm();
+        _mask.Cover(bounds);
     }
 
     void ConfigureAndStart(Settings s)

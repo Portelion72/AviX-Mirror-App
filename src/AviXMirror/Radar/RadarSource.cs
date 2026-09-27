@@ -29,7 +29,7 @@ public sealed class RadarSource : IDisposable
     readonly Dictionary<int, Font> _fonts = new();
 
     /// <summary>Taille de rendu quand les réglages indiquent 0 (taille de la fenêtre).</summary>
-    public Size FallbackSize { get; set; } = new(1280, 400);
+    public Size FallbackSize { get; init; } = new(1280, 400);
 
     public string Status { get; private set; } = "Démarrage…";
 
@@ -248,55 +248,144 @@ public sealed class RadarSource : IDisposable
         g.DrawLine(line, road[1], road[2]);
     }
 
+    enum CarKind { Hypercar, Lmp2, Lmp3, Gte, Gt3, Other }
+
+    static CarKind Classify(string cls)
+    {
+        var c = cls.ToUpperInvariant();
+        if (c.Contains("HYPER") || c.Contains("LMH") || c.Contains("LMDH")) return CarKind.Hypercar;
+        if (c.Contains("LMP2")) return CarKind.Lmp2;
+        if (c.Contains("LMP3")) return CarKind.Lmp3;
+        if (c.Contains("GTE")) return CarKind.Gte;
+        if (c.Contains("GT")) return CarKind.Gt3;
+        return CarKind.Other;
+    }
+
+    /// <summary>Largeur et hauteur réelles (m) de la voiture vue de face.</summary>
+    static (double Width, double Height) CarSize(CarKind kind) => kind switch
+    {
+        CarKind.Hypercar => (2.00, 1.07),
+        CarKind.Lmp2 => (1.90, 1.04),
+        CarKind.Lmp3 => (1.84, 1.02),
+        CarKind.Gte => (2.04, 1.20),
+        CarKind.Gt3 => (2.04, 1.25),
+        _ => (1.95, 1.10),
+    };
+
     void DrawCar(Graphics g, int w, float horizon, double focal, in Car car)
     {
+        var kind = Classify(car.Class);
+        var (carWidth, carHeight) = CarSize(kind);
+
         double z = Math.Max(1.0, car.Lz - 2.0); // face avant de la voiture suiveuse
         double scale = focal / z;
         float cx = (float)(w / 2.0 - car.Lx * scale);
-        float width = (float)(1.95 * scale);
+        float width = (float)(carWidth * scale);
         float bottom = (float)(horizon - (car.Ly - 0.8) * scale);
-        float top = (float)(horizon - (car.Ly - 0.8 + 1.05) * scale);
+        float top = (float)(horizon - (car.Ly - 0.8 + carHeight) * scale);
         float height = bottom - top;
         if (width < 2 || height < 2)
             return;
 
-        var body = new RectangleF(cx - width / 2, top, width, height);
+        // Coordonnées normalisées : u de -0,5 (gauche) à 0,5 (droite), v de 0 (sol) à 1 (toit).
+        PointF P(double u, double v) => new(cx + (float)(u * width), bottom - (float)(v * height));
+        PointF[] Poly(params double[] uv)
+        {
+            var pts = new PointF[uv.Length / 2];
+            for (int i = 0; i < pts.Length; i++)
+                pts[i] = P(uv[i * 2], uv[i * 2 + 1]);
+            return pts;
+        }
+        RectangleF R(double u1, double v1, double u2, double v2)
+        {
+            var a = P(u1, v2);
+            var b = P(u2, v1);
+            return RectangleF.FromLTRB(a.X, a.Y, b.X, b.Y);
+        }
+
         var color = ClassColor(car.Class);
+        var box = new RectangleF(cx - width / 2, top, width, height);
+        float gap = (float)(car.Lz - 4.6);
+        using var outline = new Pen(gap < 10 ? Color.FromArgb(255, 60, 40) : Color.FromArgb(170, 0, 0, 0),
+            gap < 10 ? Math.Max(2f, width * 0.025f) : 1f) { LineJoin = LineJoin.Round };
+        using var bodyBrush = new LinearGradientBrush(box, Light(color, 0.25f), Dark(color, 0.5f), LinearGradientMode.Vertical);
+        using var glass = new SolidBrush(Color.FromArgb(230, 14, 17, 24));
+        using var black = new SolidBrush(Color.FromArgb(240, 12, 12, 14));
+        using var light = new SolidBrush(car.Headlights ? Color.FromArgb(255, 255, 250, 215) : Color.FromArgb(220, 185, 185, 175));
+        using var glow = new SolidBrush(Color.FromArgb(55, 255, 250, 200));
 
-        using (var path = RoundedRect(body, Math.Max(2f, width * 0.12f)))
-        using (var brush = new LinearGradientBrush(body, color, Dark(color, 0.45f), LinearGradientMode.Vertical))
+        bool prototype = kind is CarKind.Hypercar or CarKind.Lmp2 or CarKind.Lmp3;
+        if (prototype)
         {
-            g.FillPath(brush, path);
-            float gap = (float)(car.Lz - 4.6);
-            var outline = gap < 10 ? Color.FromArgb(255, 60, 40) : Color.FromArgb(160, 0, 0, 0);
-            using var pen = new Pen(outline, gap < 10 ? Math.Max(2f, width * 0.03f) : 1f);
-            g.DrawPath(pen, path);
+            // Proto : ailes avant bombées, nez bas, bulle de cockpit étroite au centre.
+            double hump = kind == CarKind.Hypercar ? 0.62 : kind == CarKind.Lmp2 ? 0.56 : 0.52;
+            double cab = kind == CarKind.Lmp3 ? 0.13 : 0.12;
+            var body = Poly(
+                -0.50, 0.04, -0.50, 0.34, -0.47, hump - 0.06, -0.38, hump, -0.26, hump - 0.02,
+                -0.19, 0.40, -cab - 0.03, 0.44, -cab + 0.02, 0.93, cab - 0.02, 0.93, cab + 0.03, 0.44,
+                0.19, 0.40, 0.26, hump - 0.02, 0.38, hump, 0.47, hump - 0.06, 0.50, 0.34, 0.50, 0.04);
+            g.FillPolygon(bodyBrush, body);
+            g.FillPolygon(glass, Poly(-cab + 0.005, 0.56, -cab + 0.035, 0.87, cab - 0.035, 0.87, cab - 0.005, 0.56));
+            g.FillRectangle(black, R(-0.50, 0.0, 0.50, 0.07));   // lame avant
+            g.FillRectangle(black, R(-0.13, 0.12, 0.13, 0.26));  // entrée d'air du nez
+            g.DrawPolygon(outline, body);
+
+            switch (kind)
+            {
+                case CarKind.Hypercar:
+                    // Signature lumineuse : fines barres LED inclinées + lame centrale.
+                    foreach (var side in new[] { -1.0, 1.0 })
+                    {
+                        var bar = Poly(side * 0.46, hump - 0.14, side * 0.30, hump - 0.10,
+                                       side * 0.30, hump - 0.15, side * 0.46, hump - 0.19);
+                        if (car.Headlights) g.FillEllipse(glow, R(side * 0.5 - 0.1, hump - 0.3, side * 0.5 + 0.1, hump));
+                        g.FillPolygon(light, bar);
+                    }
+                    g.FillRectangle(light, R(-0.10, 0.30, 0.10, 0.33));
+                    break;
+                case CarKind.Lmp2:
+                    // Deux petits phares rectangulaires dans chaque aile.
+                    foreach (var side in new[] { -1.0, 1.0 })
+                    {
+                        if (car.Headlights) g.FillEllipse(glow, R(side * 0.37 - 0.12, 0.28, side * 0.37 + 0.12, 0.58));
+                        g.FillRectangle(light, R(side * 0.44 - 0.05, 0.40, side * 0.44 + 0.02, 0.47));
+                        g.FillRectangle(light, R(side * 0.33 - 0.03, 0.40, side * 0.33 + 0.04, 0.47));
+                    }
+                    break;
+                default:
+                    // LMP3 : un phare rond par aile.
+                    foreach (var side in new[] { -1.0, 1.0 })
+                    {
+                        if (car.Headlights) g.FillEllipse(glow, R(side * 0.37 - 0.12, 0.26, side * 0.37 + 0.12, 0.56));
+                        g.FillEllipse(light, R(side * 0.37 - 0.05, 0.36, side * 0.37 + 0.05, 0.47));
+                    }
+                    break;
+            }
         }
+        else
+        {
+            // GT : silhouette de voiture de route, large pare-brise, calandre, rétroviseurs.
+            double roof = kind == CarKind.Gte ? 0.95 : 0.97;
+            var body = Poly(
+                -0.50, 0.04, -0.50, 0.44, -0.45, 0.55, -0.39, 0.58, -0.27, roof, 0.27, roof,
+                0.39, 0.58, 0.45, 0.55, 0.50, 0.44, 0.50, 0.04);
+            g.FillPolygon(bodyBrush, body);
+            g.FillPolygon(glass, Poly(-0.35, 0.61, -0.24, roof - 0.06, 0.24, roof - 0.06, 0.35, 0.61));
+            g.FillRectangle(black, R(-0.50, 0.0, 0.50, 0.07));   // lame avant
+            if (kind == CarKind.Gte)
+                g.FillRectangle(black, R(-0.16, 0.14, 0.16, 0.28)); // calandre plus petite
+            else
+                g.FillPolygon(black, Poly(-0.24, 0.12, 0.24, 0.12, 0.20, 0.33, -0.20, 0.33)); // grande calandre GT3
+            g.FillRectangle(bodyBrush, R(-0.57, 0.59, -0.42, 0.66));  // rétroviseurs
+            g.FillRectangle(bodyBrush, R(0.42, 0.59, 0.57, 0.66));
+            g.DrawPolygon(outline, body);
 
-        // Pare-brise
-        var glass = new[]
-        {
-            new PointF(cx - width * 0.30f, top + height * 0.08f),
-            new PointF(cx + width * 0.30f, top + height * 0.08f),
-            new PointF(cx + width * 0.40f, top + height * 0.45f),
-            new PointF(cx - width * 0.40f, top + height * 0.45f),
-        };
-        using (var glassBrush = new SolidBrush(Color.FromArgb(200, 15, 18, 24)))
-            g.FillPolygon(glassBrush, glass);
-
-        // Phares
-        var lightColor = car.Headlights ? Color.FromArgb(255, 255, 250, 210) : Color.FromArgb(200, 170, 170, 160);
-        float lw = width * 0.2f, lh = height * 0.16f, ly = top + height * 0.58f;
-        using (var light = new SolidBrush(lightColor))
-        {
-            g.FillEllipse(light, cx - width * 0.46f, ly, lw, lh);
-            g.FillEllipse(light, cx + width * 0.26f, ly, lw, lh);
-        }
-        if (car.Headlights)
-        {
-            using var glow = new SolidBrush(Color.FromArgb(60, 255, 250, 200));
-            g.FillEllipse(glow, cx - width * 0.55f, ly - lh, lw * 1.8f, lh * 3);
-            g.FillEllipse(glow, cx + width * 0.18f, ly - lh, lw * 1.8f, lh * 3);
+            foreach (var side in new[] { -1.0, 1.0 })
+            {
+                if (car.Headlights) g.FillEllipse(glow, R(side * 0.37 - 0.14, 0.26, side * 0.37 + 0.14, 0.56));
+                var lamp = Poly(side * 0.46, 0.46, side * 0.28, 0.44, side * 0.29, 0.38, side * 0.46, 0.38);
+                g.FillPolygon(light, lamp);
+            }
         }
 
         // Étiquette
@@ -342,15 +431,18 @@ public sealed class RadarSource : IDisposable
         return font;
     }
 
-    static Color ClassColor(string cls)
+    static Color ClassColor(string cls) => Classify(cls) switch
     {
-        var c = cls.ToUpperInvariant();
-        if (c.Contains("HYPER") || c.Contains("LMH") || c.Contains("LMDH")) return Color.FromArgb(215, 35, 45);
-        if (c.Contains("LMP2")) return Color.FromArgb(35, 105, 225);
-        if (c.Contains("LMP3")) return Color.FromArgb(145, 70, 200);
-        if (c.Contains("GT")) return Color.FromArgb(30, 165, 80);
-        return Color.FromArgb(200, 140, 40);
-    }
+        CarKind.Hypercar => Color.FromArgb(215, 35, 45),
+        CarKind.Lmp2 => Color.FromArgb(35, 105, 225),
+        CarKind.Lmp3 => Color.FromArgb(145, 70, 200),
+        CarKind.Gte => Color.FromArgb(235, 130, 20),
+        CarKind.Gt3 => Color.FromArgb(30, 165, 80),
+        _ => Color.FromArgb(160, 160, 160),
+    };
+
+    static Color Light(Color c, float f) =>
+        Color.FromArgb(c.A, c.R + (int)((255 - c.R) * f), c.G + (int)((255 - c.G) * f), c.B + (int)((255 - c.B) * f));
 
     static Color Dark(Color c, float f) =>
         Color.FromArgb(c.A, (int)(c.R * f), (int)(c.G * f), (int)(c.B * f));

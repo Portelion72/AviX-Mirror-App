@@ -10,16 +10,6 @@ public enum MirrorMode
     Capture,
     /// <summary>Rétroviseur synthétique dessiné à partir de la télémétrie (aucune capture).</summary>
     Radar,
-    /// <summary>Aucune fenêtre : le jeu dessine lui-même sur le VoCore (nécessite le pilote d'écran VoCore).</summary>
-    Direct,
-}
-
-public enum OutputTarget
-{
-    /// <summary>Envoi direct au VoCore en USB (comme SimHub), sans pilote d'écran.</summary>
-    VoCoreUsb,
-    /// <summary>Fenêtre plein écran sur un écran Windows.</summary>
-    EcranWindows,
 }
 
 public enum CaptureSource
@@ -48,8 +38,7 @@ public sealed class Settings
 
     [Category("1. Général"), DisplayName("Mode")]
     [Description("Capture : recopie le rétro virtuel du jeu sur le VoCore.\n" +
-                 "Radar : rétro synthétique dessiné depuis la télémétrie (plugin rF2 Shared Memory).\n" +
-                 "Direct : le jeu est étendu sur le VoCore (nécessite le pilote d'écran VoCore, déconseillé avec Easy Anti-Cheat).")]
+                 "Radar : rétro synthétique dessiné depuis la télémétrie (plugin rF2 Shared Memory).")]
     public MirrorMode Mode { get; set; } = MirrorMode.Capture;
 
     [Category("1. Général"), DisplayName("Démarrage automatique")]
@@ -65,12 +54,6 @@ public sealed class Settings
     public int GameStartDelaySeconds { get; set; } = 30;
 
     // ---------- Sortie (VoCore) ----------
-
-    [Category("2. Sortie VoCore"), DisplayName("Sortie")]
-    [Description("VoCoreUsb : l'image est envoyée directement au VoCore en USB, comme SimHub. Aucun pilote d'écran, " +
-                 "compatible Easy Anti-Cheat. Fermez SimHub (ou désactivez-y le VoCore) pendant l'utilisation.\n" +
-                 "EcranWindows : fenêtre plein écran sur un écran Windows.")]
-    public OutputTarget Output { get; set; } = OutputTarget.VoCoreUsb;
 
     [Category("2. Sortie VoCore"), DisplayName("VoCore USB : VID")]
     [Description("Identifiant fabricant USB (hexadécimal). VoCore = C872.")]
@@ -91,11 +74,6 @@ public sealed class Settings
     [Category("2. Sortie VoCore"), DisplayName("VoCore USB : luminosité")]
     [Description("1 à 255. 0 = ne pas modifier.")]
     public int VoCoreBrightness { get; set; }
-
-    [Category("2. Sortie VoCore"), DisplayName("Écran de sortie")]
-    [Description("Écran Windows utilisé si Sortie = EcranWindows.")]
-    [TypeConverter(typeof(ScreenNameConverter))]
-    public string OutputScreen { get; set; } = "";
 
     [Category("2. Sortie VoCore"), DisplayName("Rotation")]
     [Description("Rotation de l'image si l'écran est monté à l'envers ou en portrait.")]
@@ -147,11 +125,15 @@ public sealed class Settings
 
     // ---------- Fenêtre du jeu ----------
 
-    [Category("4. Fenêtre du jeu"), DisplayName("Étendre la fenêtre de LMU")]
-    [Description("Agrandit la fenêtre de LMU (mode fenêtré/sans bordure) au-delà de l'écran principal.\n" +
-                 "La bande supplémentaire tombe sur le VoCore ou hors de l'écran : on y place le rétro virtuel " +
-                 "dans l'éditeur de HUD, il n'est donc plus visible sur l'écran principal.")]
-    public bool ExtendGameWindow { get; set; } = true;
+    [Category("4. Fenêtre du jeu"), DisplayName("Masquer le rétro sur l'écran")]
+    [Description("Pose un cache noir sur la zone du rétro virtuel, sur l'écran principal. La capture n'est pas " +
+                 "affectée : elle lit la fenêtre du jeu, pas l'écran. Placez un petit rétro dans un coin (ex. en haut, sur le toit).")]
+    public bool HideMirrorOnScreen { get; set; } = true;
+
+    [Category("4. Fenêtre du jeu"), DisplayName("Étendre la fenêtre de LMU (expérimental)")]
+    [Description("Agrandit la fenêtre de LMU au-delà de l'écran pour y cacher le rétro. " +
+                 "ATTENTION : l'image du jeu est déformée si LMU ne rend pas à la taille de la fenêtre.")]
+    public bool ExtendGameWindow { get; set; }
 
     [Category("4. Fenêtre du jeu"), DisplayName("Hauteur de la bande (px)")]
     [Description("Hauteur ajoutée à la fenêtre du jeu, où se place le rétro virtuel (hors de l'écran).")]
@@ -190,6 +172,11 @@ public sealed class Settings
 
     // ---------- Persistance ----------
 
+    const int CurrentVersion = 2;
+
+    [Browsable(false)]
+    public int SettingsVersion { get; set; }
+
     static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
@@ -204,13 +191,25 @@ public sealed class Settings
         try
         {
             if (File.Exists(FilePath))
-                return JsonSerializer.Deserialize<Settings>(File.ReadAllText(FilePath), JsonOptions) ?? new Settings();
+            {
+                // Le mode « Direct » a été retiré en v2.
+                var json = File.ReadAllText(FilePath).Replace("\"Direct\"", "\"Capture\"");
+                var loaded = JsonSerializer.Deserialize<Settings>(json, JsonOptions) ?? new Settings();
+                if (loaded.SettingsVersion < 2)
+                {
+                    // v2 : l'extension de fenêtre déformait le jeu, elle est désactivée au profit du cache.
+                    loaded.ExtendGameWindow = false;
+                    loaded.HideMirrorOnScreen = true;
+                    loaded.SettingsVersion = CurrentVersion;
+                }
+                return loaded;
+            }
         }
         catch
         {
             // Fichier corrompu : on repart des valeurs par défaut.
         }
-        return new Settings();
+        return new Settings { SettingsVersion = CurrentVersion };
     }
 
     public void Save()
