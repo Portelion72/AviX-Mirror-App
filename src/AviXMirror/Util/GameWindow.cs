@@ -42,7 +42,9 @@ public static class GameWindow
     }
 
     /// <summary>
-    /// Passe la fenêtre en style sans bordure et l'agrandit pour couvrir l'écran du jeu plus la bande.
+    /// Agrandit la fenêtre pour que sa zone de rendu couvre l'écran du jeu plus la bande, sans toucher
+    /// à son style, puis signale la fin d'un redimensionnement (comme un étirement à la souris) pour
+    /// que le jeu recalcule la taille de son rendu au lieu d'étirer l'image.
     /// Retourne vrai si la fenêtre a été modifiée.
     /// </summary>
     public static bool Extend(IntPtr hwnd, Settings s)
@@ -51,34 +53,28 @@ public static class GameWindow
             return false;
 
         var target = TargetRect(s);
-        bool changed = false;
+        if (GetClientScreenRect(hwnd) == target)
+            return false;
 
         long style = Native.GetWindowLongPtr(hwnd, Native.GWL_STYLE).ToInt64();
-        long wantedStyle = (style & ~(Native.WS_CAPTION | Native.WS_THICKFRAME | Native.WS_SYSMENU |
-                                      Native.WS_MINIMIZEBOX | Native.WS_MAXIMIZEBOX)) | Native.WS_POPUP;
-        if (wantedStyle != style)
-        {
-            Native.SetWindowLongPtr(hwnd, Native.GWL_STYLE, new IntPtr(wantedStyle));
-            changed = true;
-        }
-
         long ex = Native.GetWindowLongPtr(hwnd, Native.GWL_EXSTYLE).ToInt64();
-        long wantedEx = ex & ~(Native.WS_EX_DLGMODALFRAME | Native.WS_EX_WINDOWEDGE |
-                               Native.WS_EX_CLIENTEDGE | Native.WS_EX_STATICEDGE);
-        if (wantedEx != ex)
-        {
-            Native.SetWindowLongPtr(hwnd, Native.GWL_EXSTYLE, new IntPtr(wantedEx));
-            changed = true;
-        }
+        var frame = new Native.RECT { Left = target.Left, Top = target.Top, Right = target.Right, Bottom = target.Bottom };
+        Native.AdjustWindowRectEx(ref frame, (uint)style, false, (uint)ex);
 
-        Native.GetWindowRect(hwnd, out var r);
-        if (changed || r.ToRectangle() != target)
-        {
-            Native.SetWindowPos(hwnd, IntPtr.Zero, target.X, target.Y, target.Width, target.Height,
-                Native.SWP_NOZORDER | Native.SWP_NOACTIVATE | Native.SWP_NOOWNERZORDER | Native.SWP_FRAMECHANGED);
-            changed = true;
-        }
-        return changed;
+        Native.SetWindowPos(hwnd, IntPtr.Zero, frame.Left, frame.Top, frame.Right - frame.Left, frame.Bottom - frame.Top,
+            Native.SWP_NOZORDER | Native.SWP_NOACTIVATE | Native.SWP_NOOWNERZORDER);
+        Native.PostMessage(hwnd, Native.WM_EXITSIZEMOVE, IntPtr.Zero, IntPtr.Zero);
+        return true;
+    }
+
+    /// <summary>Zone de rendu de la fenêtre, en coordonnées écran.</summary>
+    public static Rectangle GetClientScreenRect(IntPtr hwnd)
+    {
+        if (!Native.GetClientRect(hwnd, out var c))
+            return Rectangle.Empty;
+        var origin = new Point(0, 0);
+        Native.ClientToScreen(hwnd, ref origin);
+        return new Rectangle(origin.X, origin.Y, c.Right - c.Left, c.Bottom - c.Top);
     }
 
     public static Rectangle GetRect(IntPtr hwnd) =>

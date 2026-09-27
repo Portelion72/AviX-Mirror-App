@@ -25,6 +25,8 @@ public sealed class MirrorEngine : IDisposable
 
     IntPtr _gameWindow;
     IntPtr _gameSeenWindow;
+    IntPtr _extendWindow;
+    int _extendAttempts;
     readonly Stopwatch _gameSeen = new();
     OriginalWindowState? _original;
 
@@ -81,6 +83,7 @@ public sealed class MirrorEngine : IDisposable
         _mask?.Dispose();
         _mask = null;
         RestoreGameWindow();
+        _extendWindow = IntPtr.Zero;
         Frames.Clear();
         Running = false;
         Status = "Arrêté.";
@@ -132,9 +135,18 @@ public sealed class MirrorEngine : IDisposable
         if (_gameWindow != IntPtr.Zero && s.ExtendGameWindow && s.Mode == MirrorMode.Capture)
         {
             RememberGameWindow(_gameWindow);
-            GameWindow.Extend(_gameWindow, s);
-            var r = GameWindow.GetRect(_gameWindow);
-            messages.Add($"Fenêtre LMU : {r.Width}x{r.Height} @ {r.X},{r.Y}");
+            if (_extendWindow != _gameWindow)
+            {
+                _extendWindow = _gameWindow;
+                _extendAttempts = 0;
+            }
+            // Limite les essais : un jeu qui refuse la taille ne doit pas être redimensionné en boucle.
+            if (_extendAttempts < 3 && GameWindow.Extend(_gameWindow, s))
+                _extendAttempts++;
+            if (_extendAttempts >= 3 && GameWindow.GetClientScreenRect(_gameWindow) != GameWindow.TargetRect(s))
+                messages.Add("LMU refuse la taille demandée : désactivez « Étendre la fenêtre ».");
+            var r = GameWindow.GetClientScreenRect(_gameWindow);
+            messages.Add($"Zone de rendu LMU : {r.Width}x{r.Height} @ {r.X},{r.Y}");
         }
 
         if (s.Mode == MirrorMode.Capture)

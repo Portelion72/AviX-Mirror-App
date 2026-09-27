@@ -17,6 +17,7 @@ public sealed class RadarSource : IDisposable
 
     readonly FrameBuffer _output;
     readonly RF2ScoringReader _reader = new();
+    readonly TrackMap _track = new();
     readonly Thread _thread;
     volatile bool _running = true;
     volatile Settings _settings;
@@ -101,10 +102,13 @@ public sealed class RadarSource : IDisposable
         {
             _lastET = scoring.ScoringInfo.CurrentET;
             _sinceUpdate.Restart();
+            _track.Update(scoring);
         }
         _scoring = scoring;
         _hasData = true;
-        Status = n == 0 ? "LMU connecté — pas de session en cours." : $"LMU connecté — {n} voitures.";
+        Status = n == 0
+            ? "LMU connecté — pas de session en cours."
+            : $"LMU connecté — {n} voitures — tracé du circuit connu à {_track.Coverage:P0}.";
     }
 
     struct Car
@@ -155,6 +159,13 @@ public sealed class RadarSource : IDisposable
             return;
         var pv = WorldVelocity(player);
         var pp = new RF2Vec3 { X = player.Pos.X + pv.X * dt, Y = player.Pos.Y + pv.Y * dt, Z = player.Pos.Z + pv.Z * dt };
+
+        double fov = Math.Clamp(s.RadarFov, 20, 150) * Math.PI / 180;
+        double focal = w / 2.0 / Math.Tan(fov / 2);
+        var view = new View(player.Ori, pp, s.RadarInvertLateral, w, h, horizon, focal);
+        double playerLapDist = player.LapDist - player.LocalVel.Z * dt; // +z = arrière
+        if (!DrawTrack(g, view, playerLapDist, s.RadarRange))
+            DrawStaticRoad(g, w, h, horizon);
 
         var behind = new List<Car>();
         bool warnLeft = false, warnRight = false;
@@ -210,9 +221,6 @@ public sealed class RadarSource : IDisposable
             });
         }
 
-        double fov = Math.Clamp(s.RadarFov, 20, 150) * Math.PI / 180;
-        double focal = w / 2.0 / Math.Tan(fov / 2);
-
         foreach (var car in behind.OrderByDescending(c => c.Lz))
             DrawCar(g, w, horizon, focal, car);
 
@@ -232,10 +240,14 @@ public sealed class RadarSource : IDisposable
                    Color.FromArgb(20, 26, 36), Color.FromArgb(58, 70, 86), LinearGradientMode.Vertical))
             g.FillRectangle(sky, 0, 0, w, horizon + 1);
 
-        using (var ground = new LinearGradientBrush(new RectangleF(0, horizon, w, h - horizon),
-                   Color.FromArgb(38, 40, 42), Color.FromArgb(18, 18, 20), LinearGradientMode.Vertical))
-            g.FillRectangle(ground, 0, horizon, w, h - horizon);
+        using var ground = new LinearGradientBrush(new RectangleF(0, horizon, w, h - horizon + 1),
+            Color.FromArgb(34, 44, 36), Color.FromArgb(16, 26, 18), LinearGradientMode.Vertical);
+        g.FillRectangle(ground, 0, horizon, w, h - horizon);
+    }
 
+    /// <summary>Route droite de secours tant que le tracé du circuit n'est pas connu.</summary>
+    static void DrawStaticRoad(Graphics g, int w, int h, float horizon)
+    {
         var road = new[]
         {
             new PointF(w * 0.47f, horizon), new PointF(w * 0.53f, horizon),
@@ -247,6 +259,144 @@ public sealed class RadarSource : IDisposable
         g.DrawLine(line, road[0], road[3]);
         g.DrawLine(line, road[1], road[2]);
     }
+
+    /// <summary>Caméra du rétro : repère local du joueur et projection en perspective.</summary>
+    readonly struct View
+    {
+        public const double Near = 1.2;
+        readonly RF2Vec3[] _ori;
+        readonly RF2Vec3 _eye;
+        readonly bool _invert;
+        public readonly int W, H;
+        public readonly float Horizon;
+        public readonly double Focal;
+
+        public View(RF2Vec3[] ori, RF2Vec3 eye, bool invert, int w, int h, float horizon, double focal)
+        {
+            _ori = ori; _eye = eye; _invert = invert; W = w; H = h; Horizon = horizon; Focal = focal;
+        }
+
+        /// <summary>Monde -> repère local (x = gauche, y = haut, z = arrière).</summary>
+        public (double X, double Y, double Z) ToLocal(double x, double y, double z)
+        {
+            double dx = x - _eye.X, dy = y - _eye.Y, dz = z - _eye.Z;
+            double lx = _ori[0].X * dx + _ori[1].X * dy + _ori[2].X * dz;
+            double ly = _ori[0].Y * dx + _ori[1].Y * dy + _ori[2].Y * dz;
+            double lz = _ori[0].Z * dx + _ori[1].Z * dy + _ori[2].Z * dz;
+            return (_invert ? -lx : lx, ly, lz);
+        }
+
+        /// <summary>Projette un point au sol (repère local) sur l'image du rétro.</summary>
+        public PointF Project((double X, double Y, double Z) p)
+        {
+            double scale = Focal / Math.Max(p.Z, Near);
+            return new PointF((float)(W / 2.0 - p.X * scale), (float)(Horizon - (p.Y - 0.8) * scale));
+        }
+    }
+
+    struct RoadPoint
+    {
+        public bool Valid;
+        public (double X, double Y, double Z) Left, Right, KerbLeft, KerbRight;
+        public int Index;
+    }
+
+    /// <summary>
+    /// Dessine la piste derrière le joueur en suivant le tracé appris : elle tourne dans les virages
+    /// et suit le relief. Retourne faux si le tracé n'est pas encore connu à cet endroit.
+    /// </summary>
+    bool DrawTrack(Graphics g, in View view, double playerLapDist, double range)
+    {
+        if (!_track.HasData)
+            return false;
+
+        int steps = (int)((range + 40) / TrackMap.BinSize);
+        var points = new RoadPoint[steps + 4];
+        int valid = 0;
+        for (int k = 0; k < points.Length; k++)
+        {
+            // On part un peu devant le joueur pour couvrir le bas de l'image.
+            double lapDist = playerLapDist + (3 - k) * TrackMap.BinSize;
+            if (!_track.TryGetPoint(lapDist, out var c, out var dir, out var hw))
+                continue;
+            double len = Math.Sqrt(dir.X * dir.X + dir.Z * dir.Z);
+            if (len < 1e-3)
+                continue;
+            // Perpendiculaire horizontale à la piste (le signe importe peu : les bords sont symétriques).
+            double px = -dir.Z / len, pz = dir.X / len;
+            points[k] = new RoadPoint
+            {
+                Valid = true,
+                Left = view.ToLocal(c.X + px * hw, c.Y, c.Z + pz * hw),
+                Right = view.ToLocal(c.X - px * hw, c.Y, c.Z - pz * hw),
+                KerbLeft = view.ToLocal(c.X + px * (hw + 0.9), c.Y, c.Z + pz * (hw + 0.9)),
+                KerbRight = view.ToLocal(c.X - px * (hw + 0.9), c.Y, c.Z - pz * (hw + 0.9)),
+                Index = (int)Math.Floor(lapDist / TrackMap.BinSize),
+            };
+            valid++;
+        }
+        if (valid < 6)
+            return false;
+
+        var asphalt = Color.FromArgb(58, 60, 64);
+        var fog = Color.FromArgb(58, 70, 86);
+        using var brush = new SolidBrush(asphalt);
+        using var kerbRed = new SolidBrush(Color.FromArgb(200, 40, 40));
+        using var kerbWhite = new SolidBrush(Color.FromArgb(225, 225, 225));
+        using var line = new Pen(Color.FromArgb(220, 235, 235, 235), 1.5f);
+
+        // Du plus loin au plus proche.
+        for (int k = points.Length - 1; k > 0; k--)
+        {
+            ref readonly var far = ref points[k];
+            ref readonly var near = ref points[k - 1];
+            if (!far.Valid || !near.Valid)
+                continue;
+            if (!Clip(far.Left, near.Left, out var fl, out var nl) || !Clip(far.Right, near.Right, out var fr, out var nr))
+                continue;
+
+            double dist = Math.Max(0, Math.Min(fl.Z, fr.Z));
+            double t = Math.Clamp(dist / (range + 40), 0, 1) * 0.7;
+            brush.Color = Mix(asphalt, fog, t);
+
+            var quad = new[] { view.Project(fl), view.Project(fr), view.Project(nr), view.Project(nl) };
+            g.FillPolygon(brush, quad);
+
+            // Vibreurs rouge/blanc sur les bords, lignes blanches de bord de piste.
+            if (dist < 60 && Clip(far.KerbLeft, near.KerbLeft, out var fkl, out var nkl) &&
+                Clip(far.KerbRight, near.KerbRight, out var fkr, out var nkr))
+            {
+                var kerb = (far.Index & 1) == 0 ? kerbRed : kerbWhite;
+                g.FillPolygon(kerb, new[] { view.Project(fkl), view.Project(fl), view.Project(nl), view.Project(nkl) });
+                g.FillPolygon(kerb, new[] { view.Project(fr), view.Project(fkr), view.Project(nkr), view.Project(nr) });
+            }
+            line.Width = (float)Math.Clamp(view.Focal / Math.Max(dist, 1) * 0.12, 1, 4);
+            g.DrawLine(line, quad[0], quad[3]);
+            g.DrawLine(line, quad[1], quad[2]);
+        }
+        return true;
+    }
+
+    /// <summary>Coupe un segment au plan proche de la caméra (les points derrière elle ne se projettent pas).</summary>
+    static bool Clip((double X, double Y, double Z) a, (double X, double Y, double Z) b,
+        out (double X, double Y, double Z) ca, out (double X, double Y, double Z) cb)
+    {
+        ca = a; cb = b;
+        const double near = View.Near;
+        if (a.Z < near && b.Z < near)
+            return false;
+        if (a.Z < near)
+            ca = Lerp(a, b, (near - a.Z) / (b.Z - a.Z));
+        else if (b.Z < near)
+            cb = Lerp(b, a, (near - b.Z) / (a.Z - b.Z));
+        return true;
+    }
+
+    static (double X, double Y, double Z) Lerp((double X, double Y, double Z) a, (double X, double Y, double Z) b, double t) =>
+        (a.X + (b.X - a.X) * t, a.Y + (b.Y - a.Y) * t, a.Z + (b.Z - a.Z) * t);
+
+    static Color Mix(Color a, Color b, double t) => Color.FromArgb(
+        (int)(a.R + (b.R - a.R) * t), (int)(a.G + (b.G - a.G) * t), (int)(a.B + (b.B - a.B) * t));
 
     enum CarKind { Hypercar, Lmp2, Lmp3, Gte, Gt3, Other }
 
@@ -463,6 +613,7 @@ public sealed class RadarSource : IDisposable
     {
         _running = false;
         _thread.Join(1000);
+        _track.Save();
         _reader.Dispose();
         foreach (var f in _fonts.Values)
             f.Dispose();

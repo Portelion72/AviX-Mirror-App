@@ -62,6 +62,14 @@ Les réglages sont enregistrés dans `AviXMirror.settings.json`, dans le même d
 | GTE | orange | voiture de route, petite calandre, rétroviseurs |
 | GT3 | vert | voiture de route plus haute, grande calandre trapézoïdale, rétroviseurs |
 
+**La piste suit le circuit.** LMU ne fournit pas le tracé du circuit : AviX Mirror l'apprend
+en direct à partir des positions de toutes les voitures (centre et largeur de la piste tous les 2 m).
+Le statut indique la part du circuit déjà connue ; en course, quelques minutes suffisent. Le tracé
+est ensuite **mémorisé par circuit** (`%LOCALAPPDATA%\AviXMirror\circuits`) et disponible
+immédiatement aux sessions suivantes. La piste du rétro tourne alors dans les virages et suit le
+relief, avec vibreurs rouge/blanc et lignes de bord ; tant que l'endroit n'est pas connu, une route
+droite s'affiche.
+
 Phares allumés : halo lumineux. Contour rouge : voiture à moins de 10 m. Bandeau orange sur un
 bord : voiture à côté de vous. Si les voitures apparaissent du mauvais côté, activez
 *Inverser gauche/droite*.
@@ -77,8 +85,20 @@ bord : voiture à côté de vous. Si les voitures apparaissent du mauvais côté
    n'est pas affectée, car elle lit la fenêtre du jeu et non l'écran.
 5. Si l'image est à l'envers, réglez *Rotation* = `Rotation180`.
 
-*Étendre la fenêtre de LMU* reste disponible (expérimental) mais **déforme l'image du jeu** si LMU
-ne rend pas à la taille de la fenêtre : laissez-le désactivé.
+### Sans aucun rétro visible sur l'écran (expérimental)
+
+Pour que le rétro virtuel ne soit pas du tout affiché, il faut que LMU le dessine **hors de
+l'écran** : *Étendre la fenêtre de LMU* = `True` agrandit la zone de rendu du jeu d'une bande (400 px
+par défaut) au-dessus de l'écran, sans changer son style, puis lui signale la fin du
+redimensionnement pour qu'il recalcule son rendu. Placez ensuite le rétro virtuel dans cette bande
+(visible dans **Calibrer la zone**).
+
+- Si l'image du jeu reste **déformée**, LMU n'accepte pas cette taille : désactivez l'option
+  (l'appli abandonne d'elle-même après 3 essais). Essayez en mode **Fenêtré** plutôt que
+  *Sans bordure*.
+- Même sans déformation, le centre de la vue est décalé vers le haut de la moitié de la bande :
+  compensez avec la position du siège / l'inclinaison de la vue dans LMU, ou réduisez la bande à la
+  hauteur du rétro virtuel.
 
 ## Flux MJPEG (optionnel)
 
