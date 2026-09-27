@@ -18,9 +18,9 @@ Motorsport s'affiche par-dessus l'image :
 
 - **Flèche au-dessus de chaque voiture derrière**, colorée selon l'écart en temps : vert au-delà
   d'1 s, orange entre 0,5 et 1 s, rouge en dessous.
-- **Échelle de distance à gauche et de temps à droite**, découpées en 10 graduations régulières à
-  l'écran ; chaque graduation indique la distance (m) ou le temps (s, selon votre vitesse)
-  correspondant à cette hauteur de l'image. Un repère coloré montre chaque voiture sur les échelles.
+- **Échelle de distance à gauche et de temps à droite**, fixes, sur toute la hauteur de l'écran et
+  découpées en 10 graduations égales (par défaut 0–100 m par pas de 10 m et 0–2 s par pas de 0,2 s,
+  réglables). Un repère coloré montre l'écart de chaque voiture sur les deux échelles.
 
 En Caméra AC, l'ATH utilise exactement le point de vue de la caméra. En Capture LMU, le point de vue du
 rétro virtuel du jeu est approché : ajustez *9. ATH caméra de recul* (champ de vision, hauteur, position)

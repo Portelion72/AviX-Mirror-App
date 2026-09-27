@@ -9,15 +9,15 @@ public readonly record struct HudTarget(double Lx, double Ly, double Lz, double 
 
 /// <summary>
 /// ATH façon caméra de recul Bosch Motorsport : flèche colorée au-dessus de chaque voiture derrière
-/// (couleur selon l'écart en temps), échelle de distance à gauche et de temps à droite, alignées sur
-/// la perspective de l'image, avec un repère pour chaque voiture.
+/// (couleur selon l'écart en temps), échelles fixes de distance à gauche et de temps à droite sur toute
+/// la hauteur de l'écran, avec un repère pour chaque voiture.
 /// </summary>
 public static class HudRenderer
 {
     const double CarLength = 4.6;
 
     /// <param name="project">Repère local du joueur -> point de l'image (null si derrière la caméra).</param>
-    /// <param name="groundY">Hauteur du sol dans le repère local (pour l'échelle).</param>
+    /// <param name="groundY">Hauteur du sol dans le repère local (inutilisé depuis les échelles fixes).</param>
     /// <param name="speed">Vitesse du joueur (m/s), pour l'échelle de temps.</param>
     public static void Draw(Graphics g, int w, int h, Func<double, double, double, PointF?> project, double groundY,
         IEnumerable<HudTarget> targets, double speed, Settings s)
@@ -27,28 +27,22 @@ public static class HudRenderer
         g.SmoothingMode = SmoothingMode.AntiAlias;
         g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
 
-        var list = targets.Where(t => t.Lz > 3 && t.Lz < s.RadarRange).OrderByDescending(t => t.Lz).ToList();
         float unit = h / 400f; // tailles pensées pour un écran de 400 px de haut
         float band = 96 * unit;
 
-        // Position à l'écran d'un point du sol à une distance donnée derrière (null si derrière la caméra).
-        double? RawY(double distance) => project(0, groundY, distance)?.Y;
-        double? YOf(double distance) => RawY(distance) is double y && y > 0 && y < h ? y : null;
-
-        // Échelles : de la distance la plus proche visible (bas de l'image) jusqu'à la portée, découpées
-        // en 10 intervalles égaux à l'écran ; chaque graduation indique sa distance (gauche) et son temps (droite).
-        var ticks = new List<(float Y, double Distance)>();
-        float yTop = 0, yBottom = h;
-        if (s.HudShowScales && ComputeScale(RawY, h, s.RadarRange, out yTop, out yBottom, out var distanceAt))
+        // Échelles fixes sur toute la hauteur de l'écran, 10 graduations égales : distance à gauche
+        // (0 en bas -> HudScaleDistance en haut) et écart en temps à droite (0 -> HudScaleTime).
+        bool scales = s.HudShowScales;
+        double maxD = Math.Max(1, s.HudScaleDistance), maxT = Math.Max(0.1, s.HudScaleTime);
+        float yTop = 3 * unit, yBottom = h - 3 * unit;
+        var list = targets.Where(t => t.Lz > 3 && t.Lz < Math.Max(s.RadarRange, maxD + CarLength)).OrderByDescending(t => t.Lz).ToList();
+        float YAt(double fraction) => yBottom - (float)Math.Clamp(fraction, 0, 1) * (yBottom - yTop);
+        if (scales)
         {
-            for (int i = 1; i <= 10; i++)
-            {
-                float y = yBottom - i * (yBottom - yTop) / 10f;
-                ticks.Add((y, distanceAt(y)));
-            }
-            DrawScale(g, 0, band, yTop, yBottom, unit, ticks.Select(t => (t.Y, $"{t.Distance:0} m")), left: true);
-            if (speed > 5)
-                DrawScale(g, w - band, band, yTop, yBottom, unit, ticks.Select(t => (t.Y, $"{t.Distance / speed:0.0} s")), left: false);
+            var dTicks = Enumerable.Range(0, 11).Select(i => (YAt(i / 10.0), i == 0 ? "" : $"{maxD * i / 10:0.#} m"));
+            var tTicks = Enumerable.Range(0, 11).Select(i => (YAt(i / 10.0), i == 0 ? "" : $"{maxT * i / 10:0.0#} s"));
+            DrawScale(g, 0, band, yTop, yBottom, unit, dTicks, left: true);
+            DrawScale(g, w - band, band, yTop, yBottom, unit, tTicks, left: false);
         }
 
         foreach (var t in list)
@@ -57,12 +51,11 @@ public static class HudRenderer
             double gapS = speed > 1 ? gapM / speed : double.PositiveInfinity;
             var color = GapColor(gapS);
 
-            // Repères sur les deux échelles.
-            if (ticks.Count > 0 && YOf(t.Lz - CarLength / 2) is double y && y >= yTop && y <= yBottom)
-            {
-                DrawMarker(g, band, (float)y, unit, color, pointRight: true);
-                DrawMarker(g, w - band, (float)y, unit, color, pointRight: false);
-            }
+            // Repères sur les deux échelles (distance à gauche, temps à droite).
+            if (scales && gapM <= maxD)
+                DrawMarker(g, band, YAt(gapM / maxD), unit, color, pointRight: true);
+            if (scales && gapS <= maxT)
+                DrawMarker(g, w - band, YAt(gapS / maxT), unit, color, pointRight: false);
 
             // Flèche au-dessus de la voiture (pointe vers le bas), sans texte.
             var top = project(t.Lx, t.Ly + 1.4, t.Lz - CarLength / 2);
@@ -71,52 +64,6 @@ public static class HudRenderer
             float size = (float)Math.Clamp(900 / t.Lz, 14, 56) * unit;
             DrawArrow(g, p.X, p.Y - 4 * unit, size, color);
         }
-    }
-
-    /// <summary>
-    /// Bornes verticales de l'échelle et fonction inverse « hauteur à l'écran -> distance » (par dichotomie,
-    /// la hauteur diminuant quand la distance augmente).
-    /// </summary>
-    internal static bool ComputeScale(Func<double, double?> rawY, int h, double range, out float yTop, out float yBottom,
-        out Func<float, double> distanceAt)
-    {
-        yTop = 0; yBottom = h; distanceAt = _ => 0;
-        if (rawY(range) is not double far)
-            return false;
-
-        // Première distance visible par la caméra (la caméra peut être derrière la voiture).
-        double dMin = 0.6;
-        while (dMin < range && rawY(dMin) is null)
-            dMin += 0.25;
-        if (rawY(dMin) is not double nearest)
-            return false;
-
-        // Hauteur -> distance par dichotomie (la hauteur diminue quand la distance augmente).
-        double Solve(double y, double lo)
-        {
-            double hi = range;
-            for (int i = 0; i < 40; i++)
-            {
-                double mid = (lo + hi) / 2;
-                if (rawY(mid) is double ym && ym > y) lo = mid; else hi = mid;
-            }
-            return (lo + hi) / 2;
-        }
-
-        // Si le sol le plus proche est sous l'image, l'échelle commence au bas de l'image.
-        if (nearest > h - 2)
-        {
-            dMin = Solve(h - 2, dMin);
-            nearest = h - 2;
-        }
-        double start = dMin;
-
-        yBottom = (float)Math.Min(h - 2, nearest);
-        yTop = (float)Math.Max(2, far);
-        if (yBottom - yTop < 40)
-            return false;
-        distanceAt = y => Solve(y, start);
-        return true;
     }
 
     /// <summary>Vert au-delà d'1 s, orange de 0,5 à 1 s, rouge en dessous.</summary>
@@ -128,10 +75,10 @@ public static class HudRenderer
     static void DrawScale(Graphics g, float x, float width, float yTop, float yBottom, float unit,
         IEnumerable<(float Y, string Label)> ticks, bool left)
     {
-        using (var bg = new LinearGradientBrush(new RectangleF(x, 0, width, yBottom + 1),
+        using (var bg = new LinearGradientBrush(new RectangleF(x, 0, width, yBottom + yTop + 1),
                    left ? Color.FromArgb(170, 0, 0, 0) : Color.FromArgb(0, 0, 0, 0),
                    left ? Color.FromArgb(0, 0, 0, 0) : Color.FromArgb(170, 0, 0, 0), LinearGradientMode.Horizontal))
-            g.FillRectangle(bg, x, 0, width, yBottom);
+            g.FillRectangle(bg, x, 0, width, yBottom + yTop);
 
         float edge = left ? x + 5 * unit : x + width - 5 * unit;
         using var spine = new Pen(Color.FromArgb(230, 235, 235, 235), 3 * unit);
@@ -145,12 +92,12 @@ public static class HudRenderer
             g.DrawLine(tick, edge, y, left ? edge + len : edge - len, y);
             var size = g.MeasureString(label, font);
             float cx = left ? edge + len + 3 * unit + size.Width / 2 : edge - len - 3 * unit - size.Width / 2;
-            DrawOutlinedText(g, label, font, new PointF(cx, y), Color.FromArgb(245, 245, 245), bottomAnchored: false);
+            if (label.Length == 0)
+                continue;
+            // Libellé gardé dans l'écran (graduation du haut).
+            float ly = Math.Max(y, yTop + size.Height / 2);
+            DrawOutlinedText(g, label, font, new PointF(cx, ly), Color.FromArgb(245, 245, 245), bottomAnchored: false);
         }
-
-        using var titleFont = new Font(Ui.Theme.FontName, 12 * unit, FontStyle.Bold, GraphicsUnit.Pixel);
-        DrawOutlinedText(g, left ? "DIST." : "TEMPS", titleFont, new PointF(x + width / 2, Math.Max(10 * unit, yTop - 12 * unit)),
-            Ui.Theme.Accent, bottomAnchored: false);
     }
 
     static void DrawMarker(Graphics g, float x, float y, float unit, Color color, bool pointRight)

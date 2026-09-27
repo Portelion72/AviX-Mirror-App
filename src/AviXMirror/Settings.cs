@@ -280,6 +280,14 @@ public sealed class Settings
     [Category("9. ATH caméra de recul"), DisplayName("Échelles distance / temps")]
     public bool HudShowScales { get; set; } = true;
 
+    [Category("9. ATH caméra de recul"), DisplayName("Échelle de distance : maximum (m)")]
+    [Description("Haut de l'échelle de gauche (0 m en bas), découpée en 10 graduations égales.")]
+    public double HudScaleDistance { get; set; } = 100;
+
+    [Category("9. ATH caméra de recul"), DisplayName("Échelle de temps : maximum (s)")]
+    [Description("Haut de l'échelle de droite (0 s en bas), découpée en 10 graduations égales.")]
+    public double HudScaleTime { get; set; } = 2;
+
     [Category("9. ATH caméra de recul"), DisplayName("Capture LMU : champ de vision vertical (°)")]
     [Description("Point de vue approché du rétro virtuel de LMU, pour placer les flèches sur les voitures. À ajuster si elles sont décalées.")]
     public double HudCaptureFov { get; set; } = 14;
