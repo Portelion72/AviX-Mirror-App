@@ -62,9 +62,15 @@ public sealed class HudOverlay : IDisposable
                 double lz = ori[0].Z * dx + ori[1].Z * dy + ori[2].Z * dz;
                 if (world.InvertLateral)
                     lx = -lx;
-                if (Math.Abs(ly) > 15)
+                // Autre portion de piste (pont, ligne droite parallèle) : ignorée.
+                if (Math.Abs(ly) > 15 || Math.Abs(lx) > 20)
                     continue;
                 var rv = v.Velocity;
+                // Voiture roulant dans l'autre sens (portion de piste en sens inverse) : ignorée.
+                double vForward = ori[0].Z * rv.X + ori[1].Z * rv.Y + ori[2].Z * rv.Z;
+                double pForward = ori[0].Z * pv.X + ori[1].Z * pv.Y + ori[2].Z * pv.Z;
+                if (speed > 5 && vForward * pForward < 0 && Math.Abs(vForward) > 5)
+                    continue;
                 double relZ = ori[0].Z * (rv.X - pv.X) + ori[1].Z * (rv.Y - pv.Y) + ori[2].Z * (rv.Z - pv.Z);
                 targets.Add(new HudTarget(lx, ly, lz, -relZ * 3.6));
             }

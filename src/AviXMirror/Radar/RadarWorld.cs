@@ -45,6 +45,9 @@ public sealed class RadarWorld
     /// <summary>Horloge du jeu : change à chaque nouveau relevé.</summary>
     public double Time;
 
+    /// <summary>Faux quand le joueur n'est pas au volant (menus, écran de surveillance du garage).</summary>
+    public bool InRealtime = true;
+
     public List<RadarVehicle> Vehicles = new();
     public RadarVehicle? Player;
 

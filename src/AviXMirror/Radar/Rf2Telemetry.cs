@@ -40,6 +40,7 @@ public sealed class Rf2Telemetry : IRadarTelemetry
             TrackName = RF2ScoringReader.DecodeString(info.TrackName),
             TrackLength = info.LapDist,
             Time = info.CurrentET,
+            InRealtime = info.InRealtime != 0,
             InvertLateral = settings.RadarInvertLateral,
         };
 

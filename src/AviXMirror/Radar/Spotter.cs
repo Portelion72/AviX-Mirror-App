@@ -4,8 +4,9 @@ namespace AviXMirror.Radar;
 
 /// <summary>
 /// Spotter à LEDs : calcule, 20 fois par seconde, la couleur de chaque LED des deux barrettes
-/// (voiture qui arrive = jaune → orange de plus en plus rempli ; voiture à côté = rouge ;
-/// pris en sandwich = rouge clignotant). Fonctionne dans tous les modes (radar, caméra, capture).
+/// (voiture qui arrive = barrette de plus en plus remplie, jaune → orange ou couleur de sa catégorie ;
+/// voiture à côté = rouge ou couleur de sa catégorie ; pris en sandwich = rouge clignotant ;
+/// dive bomb = clignotement rapide). Fonctionne dans tous les modes (radar, caméra, capture).
 /// </summary>
 public sealed class Spotter : IDisposable
 {
@@ -33,6 +34,9 @@ public sealed class Spotter : IDisposable
     }
 
     public void UpdateSettings(Settings settings) => _settings = settings;
+
+    /// <summary>Vrai quand le joueur n'est pas au volant (pause, bureau) : LEDs éteintes.</summary>
+    public bool Suspended { get; set; }
 
     void Run()
     {
@@ -79,13 +83,23 @@ public sealed class Spotter : IDisposable
         Array.Fill(left, Color.Black);
         Array.Fill(right, Color.Black);
 
-        var world = ReadWorld(s);
-        bool blinkOn = (_clock.ElapsedMilliseconds / 125) % 2 == 0; // 4 Hz
-        return world == null ? (left, right) : ComputeSides(world, s, n, blinkOn);
+        var world = Suspended ? null : ReadWorld(s);
+        long ms = _clock.ElapsedMilliseconds;
+        bool blinkOn = (ms / 125) % 2 == 0;     // 4 Hz : sandwich
+        bool fastOn = (ms / 50) % 2 == 0;       // 10 Hz : dive bomb
+        return world == null ? (left, right) : ComputeSides(world, s, n, blinkOn, fastOn);
+    }
+
+    sealed class SideState
+    {
+        public bool Overlap, DiveBomb;
+        public CarKind OverlapKind = CarKind.Other;
+        public double Approach;
+        public CarKind ApproachKind = CarKind.Other;
     }
 
     /// <summary>Couleurs de chaque côté (de l'arrière vers l'avant) pour un état de course donné.</summary>
-    public static (Color[] Left, Color[] Right) ComputeSides(RadarWorld world, Settings s, int n, bool blinkOn)
+    public static (Color[] Left, Color[] Right) ComputeSides(RadarWorld world, Settings s, int n, bool blinkOn, bool fastOn)
     {
         var left = new Color[n];
         var right = new Color[n];
@@ -96,8 +110,8 @@ public sealed class Spotter : IDisposable
             return (left, right);
 
         var ori = player.Orientation;
-        bool overlapLeft = false, overlapRight = false;
-        double approachLeft = 0, approachRight = 0;
+        var pv = player.Velocity;
+        var sides = (Left: new SideState(), Right: new SideState());
         double warn = Math.Max(OverlapHalfLength + 1, s.LedWarnDistance);
 
         foreach (var v in world.Vehicles)
@@ -111,44 +125,99 @@ public sealed class Spotter : IDisposable
             double lz = ori[0].Z * dx + ori[1].Z * dy + ori[2].Z * dz;
             if (world.InvertLateral)
                 lx = -lx;
-            if (Math.Abs(ly) > 15 || Math.Abs(lx) < MinLateral || Math.Abs(lx) > MaxLateral)
+            if (Math.Abs(ly) > 15 || Math.Abs(lx) > MaxLateral)
                 continue;
 
-            bool isLeft = lx > 0;
+            var side = lx > 0 ? sides.Left : sides.Right;
+            var kind = CarClasses.Classify(v.Class);
+
+            // Dive bomb : voiture qui arrive très vite de derrière, déjà décalée d'un côté, et qui sera
+            // à notre hauteur dans moins de « LedDiveBombTime » secondes.
+            if (s.LedDiveBomb && lz > OverlapHalfLength && lz < 40 && Math.Abs(lx) >= 0.5)
+            {
+                var vv = v.Velocity;
+                double closing = -(ori[0].Z * (vv.X - pv.X) + ori[1].Z * (vv.Y - pv.Y) + ori[2].Z * (vv.Z - pv.Z));
+                if (closing * 3.6 >= s.LedDiveBombSpeed && (lz - OverlapHalfLength) / closing <= s.LedDiveBombTime)
+                    side.DiveBomb = true;
+            }
+
+            if (Math.Abs(lx) < MinLateral)
+                continue;
             if (Math.Abs(lz) <= OverlapHalfLength)
             {
-                if (isLeft) overlapLeft = true; else overlapRight = true;
+                if (!side.Overlap)
+                    side.OverlapKind = kind;
+                side.Overlap = true;
             }
             else if (lz > OverlapHalfLength && lz < warn)
             {
                 double level = 1 - (lz - OverlapHalfLength) / (warn - OverlapHalfLength);
-                if (isLeft) approachLeft = Math.Max(approachLeft, level); else approachRight = Math.Max(approachRight, level);
+                if (level > side.Approach)
+                {
+                    side.Approach = level;
+                    side.ApproachKind = kind;
+                }
             }
         }
 
-        bool sandwich = overlapLeft && overlapRight;
-        Fill(left, overlapLeft, approachLeft, sandwich, blinkOn);
-        Fill(right, overlapRight, approachRight, sandwich, blinkOn);
+        bool sandwich = sides.Left.Overlap && sides.Right.Overlap;
+        Fill(left, sides.Left, s, sandwich, blinkOn, fastOn);
+        Fill(right, sides.Right, s, sandwich, blinkOn, fastOn);
         return (left, right);
     }
 
-    static void Fill(Color[] side, bool overlap, double approach, bool sandwich, bool blinkOn)
+    static void Fill(Color[] leds, SideState side, Settings s, bool sandwich, bool blinkOn, bool fastOn)
     {
-        int n = side.Length;
-        if (overlap)
+        var red = Color.FromArgb(255, 0, 0);
+        if (sandwich)
         {
-            var red = sandwich && !blinkOn ? Color.Black : Color.FromArgb(255, 0, 0);
-            Array.Fill(side, red);
+            Array.Fill(leds, blinkOn ? red : Color.Black);
             return;
         }
-        if (approach <= 0)
+        if (side.Overlap)
+        {
+            Array.Fill(leds, s.LedClassColors ? ClassColor(s, side.OverlapKind) : red);
+            return;
+        }
+        if (side.DiveBomb)
+        {
+            Array.Fill(leds, fastOn ? ParseColor(s.LedDiveBombColor, red) : Color.Black);
+            return;
+        }
+        if (side.Approach <= 0)
             return;
 
-        // Remplissage de l'arrière vers l'avant, du jaune vers l'orange quand la voiture se rapproche.
-        int lit = Math.Clamp((int)Math.Ceiling(approach * n), 1, n);
-        var color = Color.FromArgb(255, (int)(200 - 110 * approach), 0);
+        // Remplissage de l'arrière vers l'avant quand la voiture se rapproche.
+        int n = leds.Length;
+        int lit = Math.Clamp((int)Math.Ceiling(side.Approach * n), 1, n);
+        var color = s.LedClassColors
+            ? ClassColor(s, side.ApproachKind)
+            : Color.FromArgb(255, (int)(200 - 110 * side.Approach), 0);
         for (int i = 0; i < lit; i++)
-            side[i] = color;
+            leds[i] = color;
+    }
+
+    /// <summary>Couleur des LEDs pour une catégorie de voiture (réglable dans l'onglet LEDs).</summary>
+    public static Color ClassColor(Settings s, CarKind kind) => kind switch
+    {
+        CarKind.Hypercar => ParseColor(s.LedColorHypercar, Color.Red),
+        CarKind.Lmp2 => ParseColor(s.LedColorLmp2, Color.Blue),
+        CarKind.Lmp3 => ParseColor(s.LedColorLmp3, Color.Purple),
+        CarKind.Gte => ParseColor(s.LedColorGte, Color.Orange),
+        CarKind.Gt3 => ParseColor(s.LedColorGt3, Color.Lime),
+        _ => ParseColor(s.LedColorOther, Color.Yellow),
+    };
+
+    static Color ParseColor(string? hex, Color fallback)
+    {
+        try
+        {
+            return string.IsNullOrWhiteSpace(hex) ? fallback : ColorTranslator.FromHtml(hex.Trim());
+        }
+        catch
+        {
+            return fallback;
+        }
     }
 
     RadarWorld? ReadWorld(Settings s)

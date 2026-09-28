@@ -51,6 +51,12 @@ public static class HudRenderer
             double gapS = speed > 1 ? gapM / speed : double.PositiveInfinity;
             var color = GapColor(gapS);
 
+            // Seules les voitures visibles dans l'image ont une flèche et des repères : une voiture hors
+            // champ (autre portion de piste, voie des stands…) ne doit rien afficher sur les échelles.
+            var top = project(t.Lx, t.Ly + 1.4, t.Lz - CarLength / 2);
+            if (top is not { } p || p.X < 0 || p.X > w || p.Y < -0.25f * h || p.Y > h)
+                continue;
+
             // Repères sur les deux échelles (distance à gauche, temps à droite).
             if (scales && gapM <= maxD)
                 DrawMarker(g, band, YAt(gapM / maxD), unit, color, pointRight: true);
@@ -58,9 +64,6 @@ public static class HudRenderer
                 DrawMarker(g, w - band, YAt(gapS / maxT), unit, color, pointRight: false);
 
             // Flèche au-dessus de la voiture (pointe vers le bas), sans texte.
-            var top = project(t.Lx, t.Ly + 1.4, t.Lz - CarLength / 2);
-            if (top is not { } p)
-                continue;
             float size = (float)(Math.Clamp(900 / t.Lz, 14, 56) * Math.Clamp(s.HudArrowSize, 20, 400) / 100) * unit;
             DrawArrow(g, p.X, p.Y - 4 * unit, size, color);
         }

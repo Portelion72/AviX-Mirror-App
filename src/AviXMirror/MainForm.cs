@@ -6,7 +6,8 @@ namespace AviXMirror;
 public sealed class MainForm : Form
 {
     readonly MirrorEngine _engine = new();
-    readonly PropertyGrid _grid = new() { Dock = DockStyle.Fill, PropertySort = PropertySort.Categorized, ToolbarVisible = false };
+    readonly PropertyGrid _grid = new() { Dock = DockStyle.Fill, PropertySort = PropertySort.NoSort, ToolbarVisible = false };
+    readonly TabStrip _tabs = new() { Dock = DockStyle.Fill };
     readonly HeaderBar _header = new();
     readonly FlatButton _startStop = new() { Text = "Démarrer", Primary = true, Height = 52, Dock = DockStyle.Fill };
     readonly FlatButton _calibrate = new() { Text = "Calibrer la zone du rétro", Dock = DockStyle.Fill };
@@ -34,6 +35,9 @@ public sealed class MainForm : Form
         _preview = new MirrorPreview(_engine.Frames, () => _engine.LedSides) { Dock = DockStyle.Fill };
 
         _grid.SelectedObject = _settings.Clone();
+        _tabs.SetTabs(Tabs.All);
+        _tabs.SelectedChanged += ShowTab;
+        ShowTab(Tabs.General);
         StyleGrid();
         _grid.PropertyValueChanged += (_, e) => OnPropertyChanged(e);
 
@@ -80,6 +84,42 @@ public sealed class MainForm : Form
                 WindowState = FormWindowState.Minimized;
             }
         };
+
+        // Extinction ou mise en veille du PC : l'écran VoCore et les LEDs sont éteints.
+        Microsoft.Win32.SystemEvents.SessionEnding += OnSessionEnding;
+        Microsoft.Win32.SystemEvents.PowerModeChanged += OnPowerModeChanged;
+    }
+
+    bool _resumeAfterSleep;
+
+    void OnSessionEnding(object? sender, Microsoft.Win32.SessionEndingEventArgs e)
+    {
+        if (InvokeRequired)
+            Invoke(() => _engine.Stop());
+        else
+            _engine.Stop();
+    }
+
+    void OnPowerModeChanged(object? sender, Microsoft.Win32.PowerModeChangedEventArgs e)
+    {
+        void Apply()
+        {
+            if (e.Mode == Microsoft.Win32.PowerModes.Suspend && _engine.Running)
+            {
+                _resumeAfterSleep = true;
+                _engine.Stop();
+            }
+            else if (e.Mode == Microsoft.Win32.PowerModes.Resume && _resumeAfterSleep)
+            {
+                _resumeAfterSleep = false;
+                _engine.Start(_settings);
+            }
+            RefreshStatus();
+        }
+        if (InvokeRequired)
+            Invoke(Apply);
+        else
+            Apply();
     }
 
     protected override void OnHandleCreated(EventArgs e)
@@ -153,7 +193,7 @@ public sealed class MainForm : Form
         var column = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4, BackColor = Theme.Background };
         column.RowStyles.Add(new RowStyle(SizeType.Absolute, 26));
         column.RowStyles.Add(new RowStyle(SizeType.Absolute, 230));
-        column.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
+        column.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
         column.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
         column.Controls.Add(new SectionLabel("Aperçu VoCore") { Dock = DockStyle.Fill, Margin = new Padding(0) });
@@ -162,7 +202,8 @@ public sealed class MainForm : Form
         previewCard.Controls.Add(_preview);
         column.Controls.Add(previewCard);
 
-        column.Controls.Add(new SectionLabel("Réglages") { Dock = DockStyle.Fill, Margin = new Padding(0, 8, 0, 0) });
+        _tabs.Margin = new Padding(0, 10, 0, 0);
+        column.Controls.Add(_tabs);
         var gridCard = new Card { Dock = DockStyle.Fill, Margin = new Padding(0), Padding = new Padding(2) };
         gridCard.Controls.Add(_grid);
         column.Controls.Add(gridCard);
@@ -191,6 +232,14 @@ public sealed class MainForm : Form
 
     Settings EditedSettings() => (Settings)_grid.SelectedObject;
 
+    /// <summary>Affiche seulement les réglages de l'onglet choisi.</summary>
+    void ShowTab(string tab)
+    {
+        _grid.BrowsableAttributes = new System.ComponentModel.AttributeCollection(
+            new System.ComponentModel.CategoryAttribute(tab), System.ComponentModel.BrowsableAttribute.Yes);
+        _grid.Refresh();
+    }
+
     void OnPropertyChanged(PropertyValueChangedEventArgs e)
     {
         var edited = EditedSettings();
@@ -213,6 +262,13 @@ public sealed class MainForm : Form
     {
         foreach (var (m, tile) in _tiles)
             tile.Selected = m == mode;
+        // Ouvre l'onglet de réglages du mode choisi.
+        _tabs.Selected = mode switch
+        {
+            MirrorMode.Capture => Tabs.Capture,
+            MirrorMode.Radar => Tabs.Radar,
+            _ => Tabs.Camera,
+        };
         // Seuls les boutons utiles au mode choisi sont affichés.
         _calibrate.Visible = mode == MirrorMode.Capture;
         _installAc.Visible = mode != MirrorMode.Capture;
@@ -273,17 +329,34 @@ public sealed class MainForm : Form
         }
 
         var current = new Rectangle(_settings.CropX, _settings.CropY, _settings.CropWidth, _settings.CropHeight);
-        using var form = new CalibrationForm(capture, _engine.Frames, current);
-        var result = form.ShowDialog(this);
+        var margins = new Padding(Math.Max(0, _settings.MaskMarginLeft), Math.Max(0, _settings.MaskMarginTop),
+            Math.Max(0, _settings.MaskMarginRight), Math.Max(0, _settings.MaskMarginBottom));
+        DialogResult result;
+        List<MaskSample> samples;
+        Rectangle sel;
+        _engine.Calibrating = true;
+        try
+        {
+            using var form = new CalibrationForm(capture, _engine.Frames, current, margins, _settings.MaskSamples);
+            result = form.ShowDialog(this);
+            sel = form.Selection;
+            samples = form.Samples;
+        }
+        finally
+        {
+            _engine.Calibrating = false;
+        }
         if (result == DialogResult.OK)
         {
-            var sel = form.Selection;
             var edited = EditedSettings();
             edited.CropX = sel.X;
             edited.CropY = sel.Y;
             edited.CropWidth = sel.Width;
             edited.CropHeight = sel.Height;
+            edited.MaskSamples = samples;
+            _settings.MaskSamples = samples.Select(x => new MaskSample { Side = x.Side, Position = x.Position, Distance = x.Distance }).ToList();
             _grid.Refresh();
+            _engine.UpdateLive(edited);
         }
         // Applique la nouvelle zone (ou restaure l'ancienne si annulé).
         _settings.CropX = EditedSettings().CropX;
@@ -335,6 +408,8 @@ public sealed class MainForm : Form
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
         _statusTimer.Stop();
+        Microsoft.Win32.SystemEvents.SessionEnding -= OnSessionEnding;
+        Microsoft.Win32.SystemEvents.PowerModeChanged -= OnPowerModeChanged;
         _engine.Dispose();
         base.OnFormClosing(e);
     }

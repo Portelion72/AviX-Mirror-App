@@ -110,7 +110,32 @@ public sealed class VoCoreUsbOutput : IDisposable
             }
         }
         LedsOff();
+        ScreenOff();
         Close();
+    }
+
+    /// <summary>
+    /// Écran totalement éteint (arrêt de l'application, extinction ou mise en veille du PC) :
+    /// image noire, rétroéclairage à 0 et dalle en veille. Il se rallume au prochain démarrage.
+    /// </summary>
+    void ScreenOff()
+    {
+        if (_handle == IntPtr.Zero)
+            return;
+        try
+        {
+            if (_pixels.Length > 0)
+            {
+                Array.Clear(_pixels);
+                SendFrame();
+            }
+            SendCommand(new byte[] { 0x00, 0x51, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00 }); // rétroéclairage à 0
+            SendCommand(new byte[] { 0x00, 0x28, 0x00, 0x00, 0x00, 0x00 });             // dalle éteinte
+        }
+        catch
+        {
+            // Écran débranché : rien à éteindre.
+        }
     }
 
     bool TryOpen()
@@ -154,8 +179,9 @@ public sealed class VoCoreUsbOutput : IDisposable
                 : _nativeSize;
 
             SendCommand(new byte[] { 0x00, 0x29, 0x00, 0x00, 0x00, 0x00 }); // sortie de veille
-            if (s.VoCoreBrightness is > 0 and <= 255)
-                SendCommand(new byte[] { 0x00, 0x51, 0x02, 0x00, 0x00, 0x00, (byte)s.VoCoreBrightness, 0x00 });
+            // Toujours réglé : l'écran a pu être éteint (rétroéclairage à 0) à la dernière fermeture.
+            byte brightness = (byte)(s.VoCoreBrightness is > 0 and <= 255 ? s.VoCoreBrightness : 255);
+            SendCommand(new byte[] { 0x00, 0x51, 0x02, 0x00, 0x00, 0x00, brightness, 0x00 });
 
             _ledsInitialized = false;
             _ledsDirty = _leds.Length > 0;
@@ -514,6 +540,7 @@ public sealed class VoCoreUsbOutput : IDisposable
         _frameReady.Set();
         _thread.Join(2000);
         LedsOff();
+        ScreenOff();
         Close();
         if (_context != IntPtr.Zero)
         {

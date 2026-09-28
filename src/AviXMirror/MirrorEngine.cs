@@ -12,7 +12,9 @@ namespace AviXMirror;
 /// </summary>
 public sealed class MirrorEngine : IDisposable
 {
-    readonly System.Windows.Forms.Timer _watchdog = new() { Interval = 1000 };
+    readonly System.Windows.Forms.Timer _watchdog = new() { Interval = 250 };
+    readonly System.Windows.Forms.Timer _standbyTimer = new() { Interval = 33 };
+    readonly Stopwatch _standbyClock = Stopwatch.StartNew();
 
     Settings _settings = new();
     WgcCapture? _capture;
@@ -24,6 +26,33 @@ public sealed class MirrorEngine : IDisposable
     AcCameraSource? _acCamera;
     Spotter? _spotter;
     Hud.HudOverlay? _hud;
+    GameActivity? _activity;
+    GameState _state = GameState.NoGame;
+    bool _stateShown;
+
+    /// <summary>État du jeu (au volant, pause, bureau…), qui décide de l'écran de veille.</summary>
+    public GameState State => _state;
+
+    Action<Bitmap>? _hudPostProcess;
+    Size? _upscale;
+    bool _calibrating;
+
+    /// <summary>
+    /// Vrai pendant la calibration : l'image brute du jeu reste affichée (sans ATH ni écran de veille),
+    /// même si le jeu est en pause.
+    /// </summary>
+    public bool Calibrating
+    {
+        get => _calibrating;
+        set
+        {
+            _calibrating = value;
+            Frames.PostProcess = value ? null : _hudPostProcess;
+            Frames.UpscaleTo = value ? null : _upscale;
+            if (Running)
+                UpdateState(_settings);
+        }
+    }
 
     /// <summary>Couleurs des LEDs du spotter (gauche, droite) pour l'aperçu, ou vides.</summary>
     public (Color[] Left, Color[] Right) LedSides => _spotter?.Sides ?? (Array.Empty<Color>(), Array.Empty<Color>());
@@ -40,6 +69,7 @@ public sealed class MirrorEngine : IDisposable
     public MirrorEngine()
     {
         _watchdog.Tick += (_, _) => Tick();
+        _standbyTimer.Tick += (_, _) => DrawStandby();
     }
 
     public void Start(Settings settings)
@@ -50,19 +80,24 @@ public sealed class MirrorEngine : IDisposable
 
         _usb = new VoCoreUsbOutput(Frames, _settings);
 
-        // Écran d'accueil AVIX_3D sur le VoCore en attendant les premières images.
         var size = _usb.LogicalSize;
-        Frames.Write(size.Width, size.Height, bmp => Ui.Splash.Draw(bmp, "En attente du jeu…"));
+        _activity = new GameActivity();
+        _state = GameState.NoGame;
+        _stateShown = false;
 
         // ATH par-dessus les images des modes caméra et capture (le radar dessine le sien).
         if (_settings.Mode is MirrorMode.CameraAssettoCorsa or MirrorMode.Capture)
         {
             _hud = new Hud.HudOverlay(_settings, _settings.Mode);
             var hud = _hud;
-            Frames.PostProcess = bmp => hud.Draw(bmp);
+            _hudPostProcess = bmp => hud.Draw(bmp);
+            Frames.PostProcess = _hudPostProcess;
             // Capture LMU : ATH dessiné en pleine résolution de l'écran, par-dessus l'image agrandie.
             if (_settings.Mode == MirrorMode.Capture)
+            {
+                _upscale = size;
                 Frames.UpscaleTo = size;
+            }
         }
 
         if (_settings.LedsEnabled)
@@ -100,9 +135,16 @@ public sealed class MirrorEngine : IDisposable
     public void Stop()
     {
         _watchdog.Stop();
+        _standbyTimer.Stop();
+        Frames.Held = false;
+        _activity?.Dispose();
+        _activity = null;
         StopCapture();
         Frames.PostProcess = null;
         Frames.UpscaleTo = null;
+        _hudPostProcess = null;
+        _upscale = null;
+        _calibrating = false;
         _hud?.Dispose();
         _hud = null;
         _spotter?.Dispose();
@@ -136,6 +178,15 @@ public sealed class MirrorEngine : IDisposable
 
         var s = _settings;
         var messages = new List<string>();
+
+        UpdateState(s);
+        messages.Add(_state switch
+        {
+            GameState.Paused => "Jeu en pause ou dans les menus : écran de veille AVIX.",
+            GameState.Desktop => "Jeu en arrière-plan : logo AVIX sur le VoCore.",
+            GameState.NoGame => "En attente du jeu : écran de veille AVIX.",
+            _ => "",
+        });
 
         // Seul le mode Capture a besoin de la fenêtre du jeu ; Radar et Caméra AC lisent la télémétrie.
         if (s.Mode == MirrorMode.Capture)
@@ -225,7 +276,7 @@ public sealed class MirrorEngine : IDisposable
     /// <summary>Pose le cache sur la zone du rétro (plus ses marges), sur l'écran principal.</summary>
     void UpdateMask(Settings s)
     {
-        bool show = s.HideMirrorOnScreen && _capture != null && _captureWindow != IntPtr.Zero && Native.IsWindow(_captureWindow) &&
+        bool show = s.HideMirrorOnScreen && _state == GameState.Active && _capture != null && _captureWindow != IntPtr.Zero && Native.IsWindow(_captureWindow) &&
                     !Native.IsIconic(_captureWindow) && s.CropWidth > 0 && s.CropHeight > 0;
         if (!show)
         {
@@ -241,6 +292,7 @@ public sealed class MirrorEngine : IDisposable
             s.CropWidth + left + right, s.CropHeight + top + bottom);
         _mask ??= new MaskForm();
         _mask.MatchColor = s.MaskMatchColor;
+        _mask.Samples = s.MaskSamples;
         _mask.Cover(bounds);
     }
 
@@ -253,9 +305,60 @@ public sealed class MirrorEngine : IDisposable
         capture.Start();
     }
 
+    /// <summary>
+    /// Au volant : image du jeu. Pause ou jeu absent : animation AVIX. Bureau : logo AVIX fixe.
+    /// Hors du volant, le cache sur l'écran principal est retiré et les LEDs sont éteintes.
+    /// </summary>
+    void UpdateState(Settings s)
+    {
+        var state = _calibrating ? GameState.Active : _activity?.Update(s) ?? GameState.NoGame;
+        bool changed = state != _state || !_stateShown;
+        _state = state;
+        _stateShown = true;
+
+        bool standby = state != GameState.Active;
+        Frames.Held = standby;
+        if (_spotter != null)
+            _spotter.Suspended = standby;
+        if (!changed)
+            return;
+
+        if (state is GameState.Paused or GameState.NoGame)
+        {
+            _standbyTimer.Start();
+            DrawStandby();
+        }
+        else
+        {
+            _standbyTimer.Stop();
+            if (state == GameState.Desktop)
+                DrawStandby();
+        }
+    }
+
+    void DrawStandby()
+    {
+        if (!Running || _usb == null)
+            return;
+        var size = _usb.LogicalSize;
+        switch (_state)
+        {
+            case GameState.Desktop:
+                Frames.WriteStandby(size.Width, size.Height, bmp => Ui.Splash.Draw(bmp, ""));
+                break;
+            case GameState.Paused:
+            case GameState.NoGame:
+                double t = _standbyClock.Elapsed.TotalSeconds;
+                string message = _state == GameState.Paused ? "Pause" : "En attente du jeu…";
+                Frames.WriteStandby(size.Width, size.Height, bmp => Ui.Splash.DrawAnimated(bmp, t, message));
+                break;
+        }
+    }
+
     public void Dispose()
     {
         Stop();
+        _standbyTimer.Dispose();
         _watchdog.Dispose();
         Frames.Dispose();
     }

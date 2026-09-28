@@ -324,3 +324,117 @@ public sealed class MirrorPreview : Control
         base.Dispose(disposing);
     }
 }
+
+/// <summary>Barre d'onglets aux couleurs AVIX : onglet actif souligné de la couleur d'accent.</summary>
+public sealed class TabStrip : PaintedControl
+{
+    readonly List<string> _tabs = new();
+    int _selected;
+    int _hover = -1;
+
+    /// <summary>Déclenché quand l'utilisateur choisit un onglet.</summary>
+    public event Action<string>? SelectedChanged;
+
+    public TabStrip()
+    {
+        Cursor = Cursors.Hand;
+        Height = 38;
+    }
+
+    public void SetTabs(IEnumerable<string> tabs)
+    {
+        _tabs.Clear();
+        _tabs.AddRange(tabs);
+        _selected = Math.Clamp(_selected, 0, Math.Max(0, _tabs.Count - 1));
+        Invalidate();
+    }
+
+    public string Selected
+    {
+        get => _tabs.Count > 0 ? _tabs[_selected] : "";
+        set
+        {
+            int i = _tabs.IndexOf(value);
+            if (i < 0 || i == _selected)
+                return;
+            _selected = i;
+            Invalidate();
+            SelectedChanged?.Invoke(value);
+        }
+    }
+
+    RectangleF TabRect(Graphics g, int index, Font font)
+    {
+        float x = 0;
+        for (int i = 0; i < _tabs.Count; i++)
+        {
+            float w = TextRenderer.MeasureText(g, _tabs[i].ToUpperInvariant(), font).Width + 24;
+            if (i == index)
+                return new RectangleF(x, 0, w, Height);
+            x += w + 2;
+        }
+        return RectangleF.Empty;
+    }
+
+    int HitTest(Point p)
+    {
+        using var g = CreateGraphics();
+        using var font = Theme.Font(9.5f, FontStyle.Bold);
+        for (int i = 0; i < _tabs.Count; i++)
+            if (TabRect(g, i, font).Contains(p))
+                return i;
+        return -1;
+    }
+
+    protected override void OnMouseMove(MouseEventArgs e)
+    {
+        int hover = HitTest(e.Location);
+        if (hover != _hover)
+        {
+            _hover = hover;
+            Invalidate();
+        }
+        base.OnMouseMove(e);
+    }
+
+    protected override void OnMouseLeave(EventArgs e)
+    {
+        _hover = -1;
+        base.OnMouseLeave(e);
+    }
+
+    protected override void OnMouseClick(MouseEventArgs e)
+    {
+        int i = HitTest(e.Location);
+        if (i >= 0)
+            Selected = _tabs[i];
+        base.OnMouseClick(e);
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        var g = e.Graphics;
+        Theme.Smooth(g);
+        using var font = Theme.Font(9.5f, FontStyle.Bold);
+        using (var line = new Pen(Theme.Border))
+            g.DrawLine(line, 0, Height - 1, Width, Height - 1);
+        for (int i = 0; i < _tabs.Count; i++)
+        {
+            var r = TabRect(g, i, font);
+            bool active = i == _selected;
+            if (active || i == _hover)
+            {
+                using var path = Theme.RoundedRect(new RectangleF(r.X, r.Y + 2, r.Width, r.Height + 8), 8);
+                using var fill = new SolidBrush(active ? Theme.SurfaceRaised : Theme.Blend(Theme.Background, Theme.SurfaceRaised, 0.6f));
+                g.FillPath(fill, path);
+            }
+            if (active)
+            {
+                using var accent = new SolidBrush(Theme.Accent);
+                g.FillRectangle(accent, r.X + 8, r.Bottom - 3, r.Width - 16, 3);
+            }
+            TextRenderer.DrawText(g, _tabs[i].ToUpperInvariant(), font, Rectangle.Round(r),
+                active ? Theme.Text : Theme.TextMuted, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+        }
+    }
+}

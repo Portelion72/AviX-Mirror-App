@@ -59,7 +59,7 @@ public sealed class AcTelemetry : IRadarTelemetry
             _lastPacket = packet;
             _sincePacket.Restart();
         }
-        else if (_sincePacket.Elapsed.TotalSeconds > 3)
+        else if (_sincePacket.Elapsed.TotalSeconds > 1.5)
         {
             // AC fermé ou en pause : la mémoire reste mais n'évolue plus.
             status = "Assetto Corsa : pas de nouvelles données (jeu en pause ou fermé).";

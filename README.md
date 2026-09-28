@@ -7,9 +7,24 @@ affiché sur l'écran principal**.
 ## Interface
 
 Fenêtre sombre aux couleurs d'AVIX_3D : choix du mode par tuiles, gros bouton **DÉMARRER**, aperçu en
-direct de l'image envoyée au VoCore, état détaillé et réglages avancés. La **couleur d'accent** et la
-**police** se changent dans *8. Apparence* (effet immédiat). Au démarrage, le VoCore affiche un écran
-d'accueil AVIX_3D en attendant les images du jeu.
+direct de l'image envoyée au VoCore, état détaillé et **réglages rangés par onglets** (Général, Capture LMU,
+Radar, Caméra AC, ATH, LEDs, Écran VoCore, Apparence) ; choisir un mode ouvre son onglet. La **couleur
+d'accent** et la **police** se changent dans l'onglet *Apparence* (effet immédiat).
+
+## Écran de veille et extinction
+
+Le VoCore n'affiche l'image du jeu que lorsque vous êtes réellement au volant :
+
+| Situation | VoCore | Cache sur l'écran principal | LEDs |
+|-----------|--------|-----------------------------|------|
+| Au volant | rétro | posé | spotter |
+| Jeu en pause ou dans les menus (télémétrie arrêtée) | animation AVIX | retiré | éteintes |
+| Retour sur le bureau (autre fenêtre au premier plan) | logo AVIX fixe | retiré | éteintes |
+| Jeu non lancé | animation AVIX | — | éteintes |
+| Arrêt d'AviX Mirror, extinction ou mise en veille du PC | **écran totalement éteint** | — | éteintes |
+
+Après une mise en veille, le rétro redémarre tout seul au réveil. Pour Assetto Corsa, la détection de
+la pause demande la dernière version de l'app Lua : recliquez **Installer l'app Assetto Corsa**.
 
 ## ATH façon caméra de recul (Bosch)
 
@@ -23,7 +38,7 @@ Motorsport s'affiche par-dessus l'image :
   réglables), affichées en miroir (réglage « Échelles en miroir »). Un repère coloré montre l'écart de chaque voiture sur les deux échelles.
 
 En Caméra AC, l'ATH utilise exactement le point de vue de la caméra. En Capture LMU, le point de vue du
-rétro virtuel du jeu est approché : ajustez *6. ATH caméra de recul* (champ de vision, hauteur, position)
+rétro virtuel du jeu est approché : ajustez l'onglet *ATH* (champ de vision, hauteur, position)
 si les flèches sont décalées, et *Inverser gauche/droite des flèches* si elles sont du mauvais côté.
 
 ## LEDs spotter (WS2812B sur la carte MPro)
@@ -35,17 +50,20 @@ cf. [Vonger/V7B_WS2812B](https://github.com/Vonger/V7B_WS2812B)).
 
 | Situation | LEDs du côté concerné |
 |-----------|------------------------|
-| Voiture qui arrive derrière, à moins de 25 m | jaune → orange, de plus en plus de LEDs allumées |
-| Voiture à côté de vous | toutes rouges |
+| Voiture qui arrive derrière, à moins de 25 m | de plus en plus de LEDs allumées, **couleur de sa catégorie** (Hypercar rouge, LMP2 bleu, LMP3 violet, GTE orange, GT3 vert) |
+| Voiture à côté de vous | toutes allumées, couleur de sa catégorie |
+| **Dive bomb** : voiture qui arrive très vite de derrière, déjà décalée d'un côté | **clignotement rapide** de ce côté, avant qu'elle ne soit à votre hauteur |
 | Voitures des deux côtés (sandwich) | rouge clignotant des deux côtés |
+
+Les couleurs par catégorie se changent dans l'onglet *LEDs* (ou se désactivent : jaune → orange quand
+une voiture arrive, rouge à côté). Le dive bomb se déclenche quand une voiture arrive avec au moins
+30 km/h d'écart et sera à votre hauteur en moins d'1 s (réglable).
 
 Fonctionne dans tous les modes (Radar, Caméra AC, Capture), avec LMU et Assetto Corsa. Au branchement,
 les LEDs s'allument une par une dans l'ordre de la chaîne (couleur AVIX) : vérifiez que la droite
 s'allume en premier, et utilisez *Inverser le sens* si une barrette se remplit à l'envers. Réglages
-dans *7. LEDs spotter* (luminosité, distance d'alerte, ordre de câblage, protocole). L'aperçu de la
+dans l'onglet *LEDs* (luminosité, distance d'alerte, ordre de câblage, protocole). L'aperçu de la
 fenêtre montre l'état des LEDs de chaque côté du rétro.
-
-Quand aucun jeu ne tourne, le VoCore affiche la page de veille avec le logo AVIX.
 
 ## Compatible Easy Anti-Cheat
 
@@ -113,7 +131,7 @@ Lamborghini SC63, Isotta Fraschini Tipo 6, Glickenhaus 007, Vanwall 680, Aston M
 Oreca 07, Ligier JS P325, Ginetta G61, Duqueine D09, Ferrari 296 / 488, Porsche 911, BMW M4,
 Aston Martin Vantage, Lexus RC F, McLaren 720S, Corvette, Ford Mustang, Lamborghini Huracán,
 Mercedes-AMG. La voiture est reconnue par son nom dans LMU ; sinon la silhouette de sa catégorie est
-utilisée. Réglage : *4. Radar › Face avant par voiture (LMU)*. Les formes sont décrites dans
+utilisée. Réglage : onglet *Radar › Face avant par voiture (LMU)*. Les formes sont décrites dans
 `src/AviXMirror/Radar/CarFronts.txt`.
 
 ![Faces avant LMU](docs/radar-faces-lmu.png)
@@ -168,7 +186,7 @@ L'image est partagée directement sur la carte graphique avec AviX Mirror, qui l
 miroir et l'envoie au VoCore. **Rien n'est affiché sur l'écran du jeu.**
 
 - Après une mise à jour d'AviX Mirror, recliquez **Installer l'app Assetto Corsa** (nouvelle version de l'app).
-- Réglages (catégorie *5. Caméra Assetto Corsa*) : champ de vision, recul et hauteur de la caméra,
+- Réglages (onglet *Caméra AC*) : champ de vision, recul et hauteur de la caméra,
   résolution, images par seconde (30 par défaut), effet miroir, **exposition** et **gamma** (1 = neutre). Les réglages s'appliquent en direct pendant que vous roulez ;
   « Enregistrer les réglages » les conserve.
 - Chaque image est un rendu supplémentaire de la scène : comptez une légère baisse de FPS, comme
@@ -186,12 +204,18 @@ miroir et l'envoie au VoCore. **Rien n'est affiché sur l'écran du jeu.**
 2. **AviX Mirror** : mode **Capture LMU**, puis **Démarrer** (*Cacher le rétro du jeu* est activé par défaut).
 3. Après le délai de 30 s qui suit le lancement de LMU, cliquez **Calibrer la zone**. Un cadre au
    format du VoCore (1280 × 400) couvre l'image : déplacez-le sur le rétro et réduisez-le par ses
-   coins (le format est conservé), puis **Valider**.
+   coins (le format est conservé), puis **Valider**. Comme dans Word, le cadre **s'aimante sur des
+   repères** (ligne pointillée) : bords du rétro virtuel détectés dans l'image, milieu entre deux bords
+   (pour centrer le cadre sur le rétro), bords et milieu de l'image. Maintenez **Alt** pour placer
+   librement.
 4. Le rétro s'affiche sur le VoCore. Un cache le recouvre sur l'écran principal ; la capture
-   n'est pas affectée, car elle lit la fenêtre du jeu et non l'écran. Le cache prend la couleur de
-   l'image juste sous son bord (*Cache : couleur du décor*) et peut déborder de la zone de capture
-   (*Cache : marge à gauche / droite / en haut / en bas*, dans *3. Capture LMU*).
-5. Si l'image est à l'envers, réglez *Rotation* = `Rotation180`.
+   n'est pas affectée, car elle lit la fenêtre du jeu et non l'écran. Le cache peut déborder de la zone
+   de capture (*Cache : marge à gauche / droite / en haut / en bas*, onglet *Capture LMU*).
+5. **Couleur du cache** : il reprend la couleur du décor lue en des **points de couleur** autour de lui
+   (par défaut un point, 1 px au-dessus du milieu). Ajoutez-en autant que vous voulez dans **Calibrer
+   la zone** : double-clic autour du cadre pour ajouter un point, glisser pour le déplacer, clic droit
+   pour le supprimer. Avec plusieurs points, le cache se remplit d'un dégradé entre leurs couleurs.
+6. Si l'image est à l'envers, réglez *Rotation* = `Rotation180`.
 
 ## Dépannage
 

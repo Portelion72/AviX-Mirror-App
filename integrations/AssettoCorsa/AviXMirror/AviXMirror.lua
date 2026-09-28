@@ -268,7 +268,10 @@ function script.update(dt)
   mem.carsCount = count
   mem.playerIndex = 0 -- la voiture du joueur est toujours la n° 0 dans AC
   mem.trackLength = sim.trackLengthM
-  mem.packetId = mem.packetId + 1
+  -- En pause ou dans le menu, le compteur s'arrête : AviX Mirror affiche alors son écran de veille.
+  if not (sim.isPaused or sim.isInMainMenu) then
+    mem.packetId = mem.packetId + 1
+  end
   exported = count
 end
 

@@ -29,9 +29,17 @@ public sealed class FrameBuffer : IDisposable
 
     public long Sequence => Interlocked.Read(ref _sequence);
 
+    /// <summary>
+    /// Vrai pendant l'écran de veille (jeu en pause, bureau…) : les images du jeu sont ignorées,
+    /// seules celles de <see cref="WriteStandby"/> sont affichées.
+    /// </summary>
+    public bool Held { get; set; }
+
     /// <summary>Écrit une nouvelle image de taille donnée via <paramref name="fill"/>.</summary>
     public void Write(int width, int height, Action<Bitmap> fill)
     {
+        if (Held)
+            return;
         lock (_lock)
         {
             var outSize = OutputSize(width, height);
@@ -62,6 +70,22 @@ public sealed class FrameBuffer : IDisposable
                 g.DrawImage(_source, new Rectangle(0, 0, outSize.Width, outSize.Height), 0, 0, width, height, GraphicsUnit.Pixel, attributes);
             }
             try { PostProcess?.Invoke(_bitmap); } catch { /* l'ATH ne doit jamais bloquer l'image */ }
+            _sequence++;
+        }
+        Updated?.Invoke();
+    }
+
+    /// <summary>Image de l'écran de veille : affichée même quand le tampon est retenu, sans ATH.</summary>
+    public void WriteStandby(int width, int height, Action<Bitmap> fill)
+    {
+        lock (_lock)
+        {
+            if (_bitmap == null || _bitmap.Width != width || _bitmap.Height != height)
+            {
+                _bitmap?.Dispose();
+                _bitmap = new Bitmap(width, height, PixelFormat.Format32bppRgb);
+            }
+            fill(_bitmap);
             _sequence++;
         }
         Updated?.Invoke();
