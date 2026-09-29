@@ -11,6 +11,11 @@ direct de l'image envoyée au VoCore, état détaillé et **réglages rangés pa
 Radar, Caméra AC, ATH, LEDs, Écran VoCore, Apparence) ; choisir un mode ouvre son onglet. La **couleur
 d'accent** et la **police** se changent dans l'onglet *Apparence* (effet immédiat).
 
+Au premier démarrage, un **tutoriel de prise en main** illustré explique chaque étape (branchement du
+VoCore, choix du mode, Radar, Assetto Corsa, Capture LMU, ATH et LEDs, veille et mises à jour) ; on peut
+y choisir son mode et installer l'app Assetto Corsa directement. Il se rouvre avec le bouton
+**Tutoriel de prise en main**.
+
 ## Écran de veille et extinction
 
 Le VoCore n'affiche l'image du jeu que lorsque vous êtes réellement au volant :

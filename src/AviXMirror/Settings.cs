@@ -93,6 +93,10 @@ public sealed class Settings
     [Description("Démarre le rétroviseur dès l'ouverture de l'application.")]
     public bool AutoStart { get; set; }
 
+    [Browsable(false)]
+    [Category(Tabs.General), DisplayName("Tutoriel au démarrage")]
+    public bool ShowTutorial { get; set; } = true;
+
     [Category(Tabs.General), DisplayName("Vérifier les mises à jour")]
     [Description("Au démarrage puis toutes les 6 heures, un bandeau signale une nouvelle version d'AviX Mirror.")]
     public bool CheckUpdates { get; set; } = true;

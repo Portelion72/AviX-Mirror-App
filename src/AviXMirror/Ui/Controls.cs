@@ -42,6 +42,13 @@ public sealed class FlatButton : PaintedControl
 
     protected override void OnTextChanged(EventArgs e) { base.OnTextChanged(e); Invalidate(); }
 
+    /// <summary>Clic simulé (raccourcis clavier).</summary>
+    public void PerformClick()
+    {
+        if (Visible && Enabled)
+            OnClick(EventArgs.Empty);
+    }
+
     protected override void OnPaint(PaintEventArgs e)
     {
         var g = e.Graphics;

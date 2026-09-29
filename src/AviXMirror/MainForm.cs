@@ -91,6 +91,10 @@ public sealed class MainForm : Form
                 ToggleRunning();
                 WindowState = FormWindowState.Minimized;
             }
+            else if (_settings.ShowTutorial)
+            {
+                ShowTutorial();
+            }
             _updateTimer.Start();
             await CheckForUpdatesAsync();
         };
@@ -101,6 +105,20 @@ public sealed class MainForm : Form
     }
 
     bool _resumeAfterSleep;
+
+    /// <summary>Tutoriel de prise en main (premier démarrage, ou bouton « Tutoriel »).</summary>
+    void ShowTutorial()
+    {
+        using var form = new TutorialForm(EditedSettings().Mode, _settings.ShowTutorial,
+            mode => SelectMode(mode, restart: true), InstallAcApp);
+        form.ShowDialog(this);
+        // « Afficher au démarrage » : enregistré tout de suite, sans toucher aux autres réglages en cours.
+        EditedSettings().ShowTutorial = form.ShowAtStartup;
+        _settings.ShowTutorial = form.ShowAtStartup;
+        var saved = Settings.Load();
+        saved.ShowTutorial = form.ShowAtStartup;
+        saved.Save();
+    }
 
     async Task CheckForUpdatesAsync()
     {
@@ -221,6 +239,9 @@ public sealed class MainForm : Form
         var save = new FlatButton { Text = "Enregistrer les réglages" };
         save.Click += (_, _) => ApplySettings();
         Add(save, 38);
+        var tutorial = new FlatButton { Text = "Tutoriel de prise en main" };
+        tutorial.Click += (_, _) => ShowTutorial();
+        Add(tutorial, 38);
         _installAc.Click += (_, _) => InstallAcApp();
         // Même emplacement pour les deux boutons : un seul est visible selon le mode.
         var modeAction = new Panel { BackColor = Theme.Background };
