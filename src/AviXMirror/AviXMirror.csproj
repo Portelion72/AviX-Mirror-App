@@ -16,7 +16,7 @@
     <Authors>AVIX_3D</Authors>
     <Copyright>© 2026 AVIX_3D (avix3d.com) — tous droits réservés</Copyright>
     <!-- Remplacée à la publication d'une release par le numéro saisi (ex. v1.2.0 -> 1.2.0). -->
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
