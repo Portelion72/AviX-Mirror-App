@@ -16,6 +16,9 @@ public sealed class MainForm : Form
     readonly Dictionary<MirrorMode, ModeTile> _tiles = new();
     readonly System.Windows.Forms.Timer _statusTimer = new() { Interval = 500 };
     readonly MirrorPreview _preview;
+    readonly FlatButton _updateBanner = new() { Primary = true, Dock = DockStyle.Top, Height = 40, Visible = false };
+    readonly System.Windows.Forms.Timer _updateTimer = new() { Interval = 6 * 3600 * 1000 };
+    Util.UpdateInfo? _update;
     Settings _settings;
 
     public MainForm()
@@ -58,7 +61,7 @@ public sealed class MainForm : Form
         {
             Dock = DockStyle.Bottom,
             Height = 30,
-            Text = $"avix3d.com   ·   AVIX_3D Mirror {Application.ProductVersion.Split('+')[0]}   ·   Le Mans Ultimate · Assetto Corsa",
+            Text = $"avix3d.com   ·   AVIX_3D Mirror {Util.UpdateChecker.CurrentVersion.ToString(3)}   ·   © {DateTime.Now.Year} AVIX_3D — tous droits réservés",
             TextAlign = ContentAlignment.MiddleCenter,
             ForeColor = Theme.TextMuted,
             BackColor = Theme.Background,
@@ -67,7 +70,12 @@ public sealed class MainForm : Form
 
         Controls.Add(body);
         Controls.Add(footer);
+        Controls.Add(_updateBanner);
         Controls.Add(_header);
+
+        // Nouvelle version : bandeau en haut de la fenêtre, vérifié au démarrage puis toutes les 6 h.
+        _updateBanner.Click += (_, _) => OpenUpdatePage();
+        _updateTimer.Tick += async (_, _) => await CheckForUpdatesAsync();
 
         _startStop.Click += (_, _) => ToggleRunning();
         _calibrate.Click += (_, _) => Calibrate();
@@ -76,13 +84,15 @@ public sealed class MainForm : Form
         SelectMode(_settings.Mode, restart: false);
         RefreshStatus();
 
-        Shown += (_, _) =>
+        Shown += async (_, _) =>
         {
             if (_settings.AutoStart)
             {
                 ToggleRunning();
                 WindowState = FormWindowState.Minimized;
             }
+            _updateTimer.Start();
+            await CheckForUpdatesAsync();
         };
 
         // Extinction ou mise en veille du PC : l'écran VoCore et les LEDs sont éteints.
@@ -91,6 +101,58 @@ public sealed class MainForm : Form
     }
 
     bool _resumeAfterSleep;
+
+    async Task CheckForUpdatesAsync()
+    {
+        if (!EditedSettings().CheckUpdates)
+            return;
+        var update = await Util.UpdateChecker.CheckAsync();
+        if (update == null || IsDisposed)
+            return;
+        bool isNew = _update?.Version != update.Version;
+        _update = update;
+        _updateBanner.Text = $"Nouvelle version {update.Tag} disponible (vous avez la {Util.UpdateChecker.CurrentVersion.ToString(3)}) — cliquez pour la télécharger";
+        _updateBanner.Visible = true;
+        if (isNew && WindowState == FormWindowState.Minimized)
+            FlashTaskbar();
+    }
+
+    void OpenUpdatePage()
+    {
+        var url = _update?.Url ?? Util.UpdateChecker.ReleasesPage;
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, "Impossible d'ouvrir le navigateur : " + ex.Message + "\n\n" + url, "Mise à jour",
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+    }
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    struct FlashInfo
+    {
+        public uint Size;
+        public IntPtr Hwnd;
+        public uint Flags, Count, Timeout;
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    static extern bool FlashWindowEx(ref FlashInfo info);
+
+    /// <summary>Fait clignoter l'icône de la barre des tâches (application réduite).</summary>
+    void FlashTaskbar()
+    {
+        var info = new FlashInfo
+        {
+            Size = (uint)System.Runtime.InteropServices.Marshal.SizeOf<FlashInfo>(),
+            Hwnd = Handle,
+            Flags = 0x3 | 0xC, // FLASHW_ALL | FLASHW_TIMERNOFG : jusqu'à ce que la fenêtre soit ouverte
+        };
+        FlashWindowEx(ref info);
+    }
 
     void OnSessionEnding(object? sender, Microsoft.Win32.SessionEndingEventArgs e)
     {
@@ -408,6 +470,7 @@ public sealed class MainForm : Form
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
         _statusTimer.Stop();
+        _updateTimer.Stop();
         Microsoft.Win32.SystemEvents.SessionEnding -= OnSessionEnding;
         Microsoft.Win32.SystemEvents.PowerModeChanged -= OnPowerModeChanged;
         _engine.Dispose();

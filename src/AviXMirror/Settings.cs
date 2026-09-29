@@ -93,6 +93,10 @@ public sealed class Settings
     [Description("Démarre le rétroviseur dès l'ouverture de l'application.")]
     public bool AutoStart { get; set; }
 
+    [Category(Tabs.General), DisplayName("Vérifier les mises à jour")]
+    [Description("Au démarrage puis toutes les 6 heures, un bandeau signale une nouvelle version d'AviX Mirror.")]
+    public bool CheckUpdates { get; set; } = true;
+
     [Browsable(false)] // réglage expert, modifiable dans le fichier de réglages
     [Category(Tabs.General), DisplayName("Processus du jeu")]
     [Description("Nom du processus de Le Mans Ultimate (sans .exe).")]

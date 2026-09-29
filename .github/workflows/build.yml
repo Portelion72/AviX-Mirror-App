@@ -25,18 +25,30 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
+      - name: Numéro de version
+        id: version
+        shell: pwsh
+        run: |
+          $tag = ''
+          if ('${{ github.ref }}'.StartsWith('refs/tags/v')) { $tag = '${{ github.ref_name }}' }
+          if ('${{ github.event_name }}' -eq 'workflow_dispatch' -and '${{ inputs.release }}' -ne '') { $tag = '${{ inputs.release }}' }
+          $version = $tag.TrimStart('v', 'V')
+          "value=$version" >> $env:GITHUB_OUTPUT
+
       - name: Publish (exe unique, autonome)
-        run: >
-          dotnet publish src/AviXMirror/AviXMirror.csproj
-          -c Release -r win-x64 --self-contained true
-          -p:PublishSingleFile=true
-          -p:IncludeNativeLibrariesForSelfExtract=true
-          -p:DebugType=none
-          -o publish
+        shell: pwsh
+        run: |
+          $extra = @()
+          if ('${{ steps.version.outputs.value }}' -ne '') { $extra += '-p:Version=${{ steps.version.outputs.value }}' }
+          dotnet publish src/AviXMirror/AviXMirror.csproj -c Release -r win-x64 --self-contained true `
+            -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=none `
+            -o publish @extra
 
       - name: Copier la notice et l'app Assetto Corsa
         run: |
           Copy-Item README.md publish/LISEZMOI.md
+          Copy-Item LICENSE publish/LICENCE.txt
+          Copy-Item THIRD-PARTY-NOTICES.md publish/
           New-Item -ItemType Directory -Force publish/AssettoCorsa-app-CSP | Out-Null
           Copy-Item -Recurse integrations/AssettoCorsa/AviXMirror publish/AssettoCorsa-app-CSP/
 

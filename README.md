@@ -230,6 +230,22 @@ miroir et l'envoie au VoCore. **Rien n'est affiché sur l'écran du jeu.**
 | Radar : « En attente de LMU » | Le plugin rF2 Shared Memory Map n'est pas activé. |
 | Le cache est décalé | Refaites **Calibrer la zone** après avoir placé le rétro dans le HUD. |
 
+## Mises à jour
+
+Au démarrage puis toutes les 6 heures, AviX Mirror vérifie s'il existe une nouvelle version sur la page
+[Releases](https://github.com/Portelion72/AviX-Mirror-App/releases/latest). Si c'est le cas, un
+**bandeau** apparaît en haut de la fenêtre (et l'icône clignote dans la barre des tâches si elle est
+réduite) : un clic ouvre la page de téléchargement. Aucune donnée n'est envoyée. Désactivable dans
+l'onglet *Général* (*Vérifier les mises à jour*).
+
+## Licence
+
+© 2026 AVIX_3D — **tous droits réservés**. AviX Mirror est un logiciel propriétaire : seul le
+téléchargement des versions officielles pour un usage personnel et non commercial est autorisé.
+Toute copie, modification, redistribution ou utilisation commerciale du code ou du programme est
+interdite sans accord écrit d'AVIX_3D. Voir [`LICENSE`](LICENSE) ; composants tiers :
+[`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md).
+
 ## Structure du code
 
 ```

@@ -1,0 +1,60 @@
+AviX Mirror — Licence propriétaire / Proprietary licence
+Copyright (c) 2026 AVIX_3D (avix3d.com). Tous droits réservés. All rights reserved.
+
+──────────────────────────────── FRANÇAIS ────────────────────────────────
+
+1. PROPRIÉTÉ
+   Le logiciel « AviX Mirror », son code source, l'app Lua pour Assetto Corsa, les dessins
+   (faces avant des voitures, écrans de veille), les logos et la documentation (ensemble,
+   « le Logiciel ») sont la propriété exclusive d'AVIX_3D. Ils sont protégés par le droit
+   d'auteur. Aucun droit n'est cédé en dehors de ceux listés à l'article 2.
+
+2. CE QUI EST AUTORISÉ
+   Télécharger les versions officielles publiées par AVIX_3D (page « Releases » du dépôt
+   GitHub officiel) et les utiliser pour un usage personnel et non commercial, sur ses propres
+   ordinateurs.
+
+3. CE QUI EST INTERDIT sans l'accord écrit préalable d'AVIX_3D
+   a) copier ou reproduire le code source, en tout ou en partie ;
+   b) modifier, adapter, traduire le Logiciel ou créer des œuvres dérivées ;
+   c) redistribuer, publier, partager, vendre, louer ou héberger le Logiciel ailleurs, sous forme
+      de code source ou de programme, gratuitement ou non ;
+   d) décompiler, désassembler ou faire de l'ingénierie inverse, sauf dans les cas où la loi
+      l'autorise expressément malgré cette interdiction ;
+   e) toute utilisation commerciale ;
+   f) retirer ou modifier les mentions de droits d'auteur, utiliser le nom ou le logo AVIX /
+      AVIX_3D.
+
+4. CODE VISIBLE
+   Le fait que le code source soit consultable en ligne ne constitue pas une licence : le
+   consulter n'autorise aucune des utilisations interdites à l'article 3.
+
+5. COMPOSANTS TIERS
+   Le Logiciel utilise des composants tiers soumis à leur propre licence, qui prévaut pour ces
+   seuls composants (voir THIRD-PARTY-NOTICES.md), notamment libusb (GNU LGPL 2.1), fourni sous
+   forme de bibliothèque séparée et remplaçable.
+
+6. ABSENCE DE GARANTIE
+   Le Logiciel est fourni « tel quel », sans aucune garantie. AVIX_3D ne pourra être tenu
+   responsable d'aucun dommage lié à son utilisation, dans les limites permises par la loi.
+
+7. RÉSILIATION
+   Toute violation de cette licence met fin immédiatement au droit d'utiliser le Logiciel.
+
+8. DROIT APPLICABLE
+   Cette licence est soumise au droit français.
+
+Demandes d'autorisation : avix3d.com
+
+──────────────────────────────── ENGLISH ────────────────────────────────
+
+AviX Mirror (software, source code, Assetto Corsa Lua app, artwork, logos and documentation) is
+the exclusive property of AVIX_3D and is protected by copyright. You may download the official
+releases published by AVIX_3D and use them for personal, non-commercial purposes on your own
+computers. Without prior written permission from AVIX_3D you may NOT copy or reproduce the source
+code, modify it or create derivative works, redistribute, publish, sell, rent or host it
+elsewhere, reverse engineer it (except where the law expressly allows it), use it commercially,
+or remove copyright notices or use the AVIX / AVIX_3D name or logo. Being able to view the source
+code online does not grant any licence. Third-party components remain under their own licences
+(see THIRD-PARTY-NOTICES.md). The software is provided "as is", without warranty of any kind.
+Any breach terminates your right to use it. This licence is governed by French law.
