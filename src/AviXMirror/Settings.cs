@@ -108,7 +108,7 @@ public sealed class Settings
 
     [Category(Tabs.General), DisplayName("Délai après lancement du jeu (s)")]
     [Description("Mode Capture : attente avant de capturer la fenêtre de LMU, pour laisser Easy Anti-Cheat démarrer tranquillement.")]
-    public int GameStartDelaySeconds { get; set; } = 30;
+    public int GameStartDelaySeconds { get; set; } = 10;
 
     [Browsable(false)] // réglage expert, modifiable dans le fichier de réglages
     [Category(Tabs.General), DisplayName("Processus d'Assetto Corsa")]
@@ -118,7 +118,7 @@ public sealed class Settings
 
     [Category(Tabs.Screen), DisplayName("Luminosité")]
     [Description("1 à 255 (0 = maximum).")]
-    public int VoCoreBrightness { get; set; } = 255;
+    public int VoCoreBrightness { get; set; } = 0;
 
     [Category(Tabs.Screen), DisplayName("Rotation")]
     [Description("Rotation de l'image si l'écran est monté à l'envers ou en portrait.")]
@@ -159,17 +159,17 @@ public sealed class Settings
     // ---------- Capture LMU ----------
 
     [Category(Tabs.Capture), DisplayName("Zone X")]
-    public int CropX { get; set; }
+    public int CropX { get; set; } = 788;
 
     [Category(Tabs.Capture), DisplayName("Zone Y")]
-    public int CropY { get; set; }
+    public int CropY { get; set; } = 42;
 
     [Category(Tabs.Capture), DisplayName("Zone largeur")]
     [Description("0 = image entière. Utiliser le bouton « Calibrer la zone » pour la sélectionner à la souris.")]
-    public int CropWidth { get; set; }
+    public int CropWidth { get; set; } = 346;
 
     [Category(Tabs.Capture), DisplayName("Zone hauteur")]
-    public int CropHeight { get; set; }
+    public int CropHeight { get; set; } = 108;
 
     [Category(Tabs.Capture), DisplayName("Cacher le rétro du jeu")]
     [Description("Pose un cache sur le rétro virtuel de LMU, sur l'écran principal. La capture n'est pas " +
@@ -185,20 +185,27 @@ public sealed class Settings
     [Description("Points lus autour du cache pour reprendre la couleur du décor. Avec plusieurs points, le cache " +
                  "fait un dégradé entre leurs couleurs. Ajoutez-les, déplacez-les (clic gauche) ou supprimez-les " +
                  "(clic droit) directement dans « Calibrer la zone », ou ici.")]
-    public List<MaskSample> MaskSamples { get; set; } = new() { new MaskSample() };
+    public List<MaskSample> MaskSamples { get; set; } = new()
+    {
+        new MaskSample { Side = MaskSide.Gauche, Position = 26, Distance = 1 },
+        new MaskSample { Side = MaskSide.Gauche, Position = 75, Distance = 1 },
+        new MaskSample { Side = MaskSide.Droite, Position = 38.1, Distance = 1 },
+        new MaskSample { Side = MaskSide.Droite, Position = 75, Distance = 1 },
+        new MaskSample { Side = MaskSide.Bas, Position = 50, Distance = 3 },
+    };
 
     [Category(Tabs.Capture), DisplayName("Cache : marge à gauche (px)")]
     [Description("Agrandit le cache au-delà de la zone de capture (cadre du rétro, bord flou…). N'agrandit pas la capture.")]
-    public int MaskMarginLeft { get; set; }
+    public int MaskMarginLeft { get; set; } = 240;
 
     [Category(Tabs.Capture), DisplayName("Cache : marge à droite (px)")]
-    public int MaskMarginRight { get; set; }
+    public int MaskMarginRight { get; set; } = 240;
 
     [Category(Tabs.Capture), DisplayName("Cache : marge en haut (px)")]
-    public int MaskMarginTop { get; set; }
+    public int MaskMarginTop { get; set; } = 10;
 
     [Category(Tabs.Capture), DisplayName("Cache : marge en bas (px)")]
-    public int MaskMarginBottom { get; set; }
+    public int MaskMarginBottom { get; set; } = 10;
 
     // ---------- Radar ----------
 
@@ -257,11 +264,11 @@ public sealed class Settings
 
     [Category(Tabs.Camera), DisplayName("Exposition")]
     [Description("Correction de l'exposition automatique : 1 = neutre, 1,5 = plus clair, 0,7 = plus sombre. S'applique en direct.")]
-    public double AcCamExposure { get; set; } = 1.0;
+    public double AcCamExposure { get; set; } = 0.7;
 
     [Category(Tabs.Camera), DisplayName("Gamma")]
     [Description("Éclaircit les zones sombres sans brûler les zones claires : 1 = inchangé, 1.5 à 2.2 = ombres plus claires. S'applique en direct.")]
-    public double AcCamGamma { get; set; } = 1.0;
+    public double AcCamGamma { get; set; } = 2.2;
 
     // ---------- ATH ----------
 
@@ -271,18 +278,18 @@ public sealed class Settings
 
     [Category(Tabs.Hud), DisplayName("Taille des flèches (%)")]
     [Description("100 = taille normale ; de 20 à 400 %. Les flèches restent plus grosses sur les voitures proches.")]
-    public double HudArrowSize { get; set; } = 100;
+    public double HudArrowSize { get; set; } = 200;
 
     [Category(Tabs.Hud), DisplayName("Inverser gauche/droite des flèches")]
     [Description("Modes caméra et capture : à activer si les flèches apparaissent du mauvais côté des voitures.")]
-    public bool HudInvertSide { get; set; }
+    public bool HudInvertSide { get; set; } = true;
 
     [Category(Tabs.Hud), DisplayName("Échelles distance / temps")]
     public bool HudShowScales { get; set; } = true;
 
     [Category(Tabs.Hud), DisplayName("Échelles en miroir")]
     [Description("Retourne les graduations et les chiffres des deux échelles (effet miroir).")]
-    public bool HudMirrorScales { get; set; } = true;
+    public bool HudMirrorScales { get; set; } = false;
 
     [Category(Tabs.Hud), DisplayName("Échelle de distance : maximum (m)")]
     [Description("Haut de l'échelle de gauche (0 m en bas), découpée en 10 graduations égales.")]
@@ -313,22 +320,22 @@ public sealed class Settings
 
     [Category(Tabs.Leds), DisplayName("Ordre de câblage")]
     [Description("DroiteGauche : la barrette droite est la première de la chaîne, puis la gauche.")]
-    public LedChainOrder LedOrder { get; set; } = LedChainOrder.DroiteGauche;
+    public LedChainOrder LedOrder { get; set; } = LedChainOrder.GaucheDroite;
 
     [Category(Tabs.Leds), DisplayName("Inverser le sens (droite)")]
     [Description("Active si les LEDs de droite se remplissent dans le mauvais sens.")]
-    public bool LedInvertRight { get; set; }
+    public bool LedInvertRight { get; set; } = true;
 
     [Category(Tabs.Leds), DisplayName("Inverser le sens (gauche)")]
-    public bool LedInvertLeft { get; set; }
+    public bool LedInvertLeft { get; set; } = true;
 
     [Category(Tabs.Leds), DisplayName("Luminosité")]
     [Description("0 à 255.")]
-    public int LedBrightness { get; set; } = 140;
+    public int LedBrightness { get; set; } = 80;
 
     [Category(Tabs.Leds), DisplayName("Distance d'alerte (m)")]
     [Description("Une voiture qui arrive sur un côté est signalée à partir de cette distance derrière vous.")]
-    public double LedWarnDistance { get; set; } = 25;
+    public double LedWarnDistance { get; set; } = 20;
 
     [Category(Tabs.Leds), DisplayName("Protocole")]
     [Description("Is31Compatible : protocole standard des LEDs VoCore (celui de SimHub). Complet : firmware « 512 LEDs ».")]
@@ -340,19 +347,19 @@ public sealed class Settings
     public bool LedClassColors { get; set; } = true;
 
     [Category(Tabs.Leds), DisplayName("Couleur Hypercar")]
-    public string LedColorHypercar { get; set; } = "#FF1E1E";
+    public string LedColorHypercar { get; set; } = "#F52727";
 
     [Category(Tabs.Leds), DisplayName("Couleur LMP2")]
-    public string LedColorLmp2 { get; set; } = "#1E5AFF";
+    public string LedColorLmp2 { get; set; } = "#2768F5";
 
     [Category(Tabs.Leds), DisplayName("Couleur LMP3")]
-    public string LedColorLmp3 { get; set; } = "#A040FF";
+    public string LedColorLmp3 { get; set; } = "#7D27F5";
 
     [Category(Tabs.Leds), DisplayName("Couleur GTE")]
-    public string LedColorGte { get; set; } = "#FF7800";
+    public string LedColorGte { get; set; } = "#F5C827";
 
     [Category(Tabs.Leds), DisplayName("Couleur GT3")]
-    public string LedColorGt3 { get; set; } = "#00C850";
+    public string LedColorGt3 { get; set; } = "#38F527";
 
     [Category(Tabs.Leds), DisplayName("Couleur autres voitures")]
     public string LedColorOther { get; set; } = "#FFB400";

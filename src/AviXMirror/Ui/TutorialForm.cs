@@ -56,7 +56,7 @@ public sealed class TutorialForm : Form
                 "installé par SimHub : pas de second écran Windows.\n\n" +
                 "• Fermez SimHub (ou désactivez-y le VoCore) : un seul logiciel à la fois peut piloter l'écran.\n" +
                 "• Désinstallez le pilote « écran » VoCore s'il est installé : il provoque l'erreur Easy Anti-Cheat 30007.\n" +
-                "• Les 2 barrettes de LEDs (droite puis gauche) s'allument une à une au branchement : c'est le test de câblage.",
+                "• Les 2 barrettes de LEDs s'allument une à une au branchement : c'est le test de câblage.",
                 DrawVoCore),
             new("2. Choisir le mode",
                 "Trois façons d'afficher ce qui est derrière vous. Cliquez sur un mode pour le choisir " +
@@ -80,7 +80,7 @@ public sealed class TutorialForm : Form
             new("5. Mode Capture LMU",
                 "La vraie image du rétro virtuel de LMU, recopiée sur le VoCore et cachée sur l'écran principal.\n\n" +
                 "• LMU en « Fenêtré » ou « Sans bordure », rétro virtuel placé dans un coin.\n" +
-                "• Démarrez, attendez 30 s (Easy Anti-Cheat), puis « Calibrer la zone » : le cadre s'aimante sur les " +
+                "• Démarrez, attendez quelques secondes (Easy Anti-Cheat), puis « Calibrer la zone » : le cadre s'aimante sur les " +
                 "bords du rétro (Alt pour placer librement).\n" +
                 "• Points de couleur du cache : double-clic autour du cadre pour en ajouter, glisser pour déplacer, clic droit pour supprimer.",
                 DrawCapture),

@@ -40,7 +40,7 @@ Motorsport s'affiche par-dessus l'image :
   d'1 s, orange entre 0,5 et 1 s, rouge en dessous. Taille réglable (*Taille des flèches (%)*).
 - **Échelle de distance à gauche et de temps à droite**, fixes, sur toute la hauteur de l'écran et
   découpées en 10 graduations égales (par défaut 0–100 m par pas de 10 m et 0–2 s par pas de 0,2 s,
-  réglables), affichées en miroir (réglage « Échelles en miroir »). Un repère coloré montre l'écart de chaque voiture sur les deux échelles.
+  réglables), à l'endroit par défaut (réglage « Échelles en miroir » pour les retourner). Un repère coloré montre l'écart de chaque voiture sur les deux échelles.
 
 En Caméra AC, l'ATH utilise exactement le point de vue de la caméra. En Capture LMU, le point de vue du
 rétro virtuel du jeu est approché : ajustez l'onglet *ATH* (champ de vision, hauteur, position)
@@ -49,7 +49,7 @@ si les flèches sont décalées, et *Inverser gauche/droite des flèches* si ell
 ## LEDs spotter (WS2812B sur la carte MPro)
 
 Deux barrettes de 8 LEDs WS2812B, une de chaque côté de l'écran, branchées en série sur la carte MPro
-du VoCore (droite puis gauche). AviX Mirror les pilote par le même câble USB que l'image, avec le
+du VoCore (ordre et sens de chaque barrette réglables). AviX Mirror les pilote par le même câble USB que l'image, avec le
 protocole I2C de VoCore (contrôleur de LEDs à l'adresse `0x74`, compatible IS31FL3731,
 cf. [Vonger/V7B_WS2812B](https://github.com/Vonger/V7B_WS2812B)).
 
@@ -77,7 +77,7 @@ fenêtre montre l'état des LEDs de chaque côté du rétro.
   d’« écran Windows » du VoCore est **à désinstaller** : c’est la cause la plus probable de l’erreur
   Easy Anti-Cheat **30007** (« Driver Signature Enforcement »).
 - AviX Mirror ne lit ni n'écrit jamais la mémoire du jeu et n'injecte rien. En mode Capture, il
-  attend **30 s** après l'apparition de LMU (réglable) avant de capturer sa fenêtre, pour laisser
+  attend **10 s** après l'apparition de LMU (réglable) avant de capturer sa fenêtre, pour laisser
   Easy Anti-Cheat démarrer.
 - Le mode **Radar** ne touche pas du tout au jeu : il lit seulement la télémétrie partagée,
   comme SimHub ou CrewChief.
@@ -192,7 +192,7 @@ miroir et l'envoie au VoCore. **Rien n'est affiché sur l'écran du jeu.**
 
 - Après une mise à jour d'AviX Mirror, recliquez **Installer l'app Assetto Corsa** (nouvelle version de l'app).
 - Réglages (onglet *Caméra AC*) : champ de vision, recul et hauteur de la caméra,
-  résolution, images par seconde (30 par défaut), effet miroir, **exposition** et **gamma** (1 = neutre). Les réglages s'appliquent en direct pendant que vous roulez ;
+  résolution, images par seconde (30 par défaut), effet miroir, **exposition** et **gamma** (par défaut 0,7 et 2,2). Les réglages s'appliquent en direct pendant que vous roulez ;
   « Enregistrer les réglages » les conserve.
 - Chaque image est un rendu supplémentaire de la scène : comptez une légère baisse de FPS, comme
   avec un rétroviseur en jeu. Baissez *Images par seconde* si besoin.
@@ -207,7 +207,7 @@ miroir et l'envoie au VoCore. **Rien n'est affiché sur l'écran du jeu.**
 1. **LMU** : *Paramètres > Affichage* → **Fenêtré** ou **Sans bordure** (pas le plein écran exclusif).
    Dans l'éditeur de HUD, placez le **rétro virtuel** dans un coin où il gêne peu (par exemple en haut, sur le toit).
 2. **AviX Mirror** : mode **Capture LMU**, puis **Démarrer** (*Cacher le rétro du jeu* est activé par défaut).
-3. Après le délai de 30 s qui suit le lancement de LMU, cliquez **Calibrer la zone**. Un cadre au
+3. Après le délai de 10 s qui suit le lancement de LMU, cliquez **Calibrer la zone**. Un cadre au
    format du VoCore (1280 × 400) couvre l'image : déplacez-le sur le rétro et réduisez-le par ses
    coins (le format est conservé), puis **Valider**. Comme dans Word, le cadre **s'aimante sur des
    repères** (ligne pointillée) : bords du rétro virtuel détectés dans l'image, milieu entre deux bords
@@ -217,7 +217,7 @@ miroir et l'envoie au VoCore. **Rien n'est affiché sur l'écran du jeu.**
    n'est pas affectée, car elle lit la fenêtre du jeu et non l'écran. Le cache peut déborder de la zone
    de capture (*Cache : marge à gauche / droite / en haut / en bas*, onglet *Capture LMU*).
 5. **Couleur du cache** : il reprend la couleur du décor lue en des **points de couleur** autour de lui
-   (par défaut un point, 1 px au-dessus du milieu). Ajoutez-en autant que vous voulez dans **Calibrer
+   (par défaut 5 points, sur les côtés et en dessous). Ajoutez-en autant que vous voulez dans **Calibrer
    la zone** : double-clic autour du cadre pour ajouter un point, glisser pour le déplacer, clic droit
    pour le supprimer. Avec plusieurs points, le cache se remplit d'un dégradé entre leurs couleurs.
 6. Si l'image est à l'envers, réglez *Rotation* = `Rotation180`.

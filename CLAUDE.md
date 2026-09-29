@@ -25,7 +25,7 @@ en jeu depuis Claude : le dire clairement dans chaque compte rendu.
 
 - **Easy Anti-Cheat (LMU)** : jamais de lecture/écriture de la mémoire du jeu, pas d'injection, pas
   de pilote non signé (le pilote « écran » VoCore provoquait l'erreur EAC 30007). Sortie vers le
-  VoCore **en USB via libusb** (pas de second écran Windows). Délai de 30 s après le lancement de LMU
+  VoCore **en USB via libusb** (pas de second écran Windows). Délai (10 s par défaut) après le lancement de LMU
   avant de capturer sa fenêtre.
 - CSP 0.1.79 (version de l'utilisateur) : l'app Lua doit tout protéger par `pcall` (membres absents,
   `sharedHandle` indisponible → mode compatibilité par `shot:encode()` DDS).
@@ -60,7 +60,7 @@ en jeu depuis Claude : le dire clairement dans chaque compte rendu.
 - `Hud/` : ATH façon caméra de recul Bosch (flèches au-dessus des voitures, échelles distance/temps
   fixes en 10 graduations, en miroir) sur les 3 modes ; `FrameBuffer.PostProcess` / `UpscaleTo`
   (en capture, l'ATH est dessiné en pleine résolution par-dessus l'image agrandie).
-- `Radar/Spotter.cs` : LEDs WS2812B (2 × 8, droite puis gauche) via I2C de la carte MPro (adresse
+- `Radar/Spotter.cs` : LEDs WS2812B (2 × 8 en série, ordre et sens réglables) via I2C de la carte MPro (adresse
   0x74, mode compatible IS31FL3731) ; couleurs par catégorie, dive bomb (clignotement rapide).
 - `Output/VoCoreUsbOutput.cs` : protocole VoCore (commande 0x40/0xB0 `00 2C len…` puis RGB565 en
   bulk 0x02), rotation rapide, LEDs, **écran éteint** à la fermeture (image noire, rétroéclairage 0,
