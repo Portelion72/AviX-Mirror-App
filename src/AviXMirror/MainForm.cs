@@ -229,9 +229,9 @@ public sealed class MainForm : Form
         }
 
         Add(new SectionLabel("Mode"), 26, new Padding(0));
-        AddTile(MirrorMode.Radar, "Radar", "Vue synthétique des voitures derrière vous, sur le tracé du circuit. LMU et Assetto Corsa.");
+        AddTile(MirrorMode.Radar, "Radar", "Vue synthétique des voitures derrière vous. LMU, AC ; beta : ACC, AMS2, iRacing, F1, rF2.");
         AddTile(MirrorMode.CameraAssettoCorsa, "Caméra Assetto Corsa", "Vraie vue arrière rendue hors écran par l'app CSP.");
-        AddTile(MirrorMode.Capture, "Capture LMU", "Recopie le rétro virtuel de LMU et le cache sur l'écran principal.");
+        AddTile(MirrorMode.Capture, "Capture du rétro", "Recopie le rétro virtuel du jeu (LMU ; autres jeux en beta) et le cache à l'écran.");
 
         Add(new SectionLabel("Contrôle"), 26, new Padding(0, 8, 0, 0));
         Add(_startStop, 52, new Padding(0, 0, 0, 10));

@@ -14,11 +14,17 @@ public enum MirrorMode
     CameraAssettoCorsa,
 }
 
+/// <summary>Jeu suivi (les jeux marqués « beta » sont pris en charge mais peu testés).</summary>
 public enum RadarGame
 {
     Auto,
     LeMansUltimate,
     AssettoCorsa,
+    RFactor2,
+    AssettoCorsaCompetizione,
+    Automobilista2,
+    IRacing,
+    F1,
 }
 
 public enum LedChainOrder
@@ -46,7 +52,7 @@ public static class Tabs
 {
     public const string General = "Général";
     public const string Screen = "Écran VoCore";
-    public const string Capture = "Capture LMU";
+    public const string Capture = "Capture";
     public const string Radar = "Radar";
     public const string Camera = "Caméra AC";
     public const string Hud = "ATH";
@@ -96,6 +102,12 @@ public sealed class Settings
     [Browsable(false)]
     [Category(Tabs.General), DisplayName("Tutoriel au démarrage")]
     public bool ShowTutorial { get; set; } = true;
+
+    [Category(Tabs.General), DisplayName("Jeu")]
+    [Description("Auto : détecte le jeu lancé. Le Mans Ultimate et Assetto Corsa (app Lua CSP) sont complets ; " +
+                 "rFactor 2, Assetto Corsa Competizione, Automobilista 2 / Project CARS 2, iRacing (radar simplifié) " +
+                 "et F1 23/24/25 (télémétrie UDP) sont en beta. Utilisé par tous les modes (radar, ATH, LEDs, capture).")]
+    public RadarGame RadarGame { get; set; } = RadarGame.Auto;
 
     [Category(Tabs.General), DisplayName("Vérifier les mises à jour")]
     [Description("Au démarrage puis toutes les 6 heures, un bandeau signale une nouvelle version d'AviX Mirror.")]
@@ -156,7 +168,7 @@ public sealed class Settings
     [Description("0 = automatique (1280 pour le 7,8\" portrait).")]
     public int VoCoreHeight { get; set; }
 
-    // ---------- Capture LMU ----------
+    // ---------- Capture ----------
 
     [Category(Tabs.Capture), DisplayName("Zone X")]
     public int CropX { get; set; } = 788;
@@ -209,9 +221,6 @@ public sealed class Settings
 
     // ---------- Radar ----------
 
-    [Category(Tabs.Radar), DisplayName("Jeu")]
-    [Description("Auto : détecte Le Mans Ultimate ou Assetto Corsa (app Lua « AviX Mirror » pour CSP requise).")]
-    public RadarGame RadarGame { get; set; } = RadarGame.Auto;
 
     [Category(Tabs.Radar), DisplayName("Portée (m)")]
     public double RadarRange { get; set; } = 80;
@@ -234,6 +243,15 @@ public sealed class Settings
     [Category(Tabs.Radar), DisplayName("Assetto Corsa : inverser gauche/droite")]
     [Description("À activer si, dans Assetto Corsa, les voitures apparaissent du mauvais côté.")]
     public bool AcInvertLateral { get; set; }
+
+    [Category(Tabs.Radar), DisplayName("Jeux beta : inverser gauche/droite")]
+    [Description("rFactor 2 excepté (réglage LMU) : à activer si, dans ACC, AMS2, iRacing ou F1, les voitures apparaissent du mauvais côté.")]
+    public bool BetaInvertLateral { get; set; }
+
+    [Category(Tabs.Radar), DisplayName("F1 : port de télémétrie UDP")]
+    [Description("Port réglé dans F1 (Réglages → Télémétrie, UDP activée, format 2023 ou plus récent). " +
+                 "Un seul logiciel peut l'écouter : dans SimHub, utilisez le renvoi UDP vers un autre port si besoin.")]
+    public int F1UdpPort { get; set; } = 20777;
 
     // ---------- Caméra AC ----------
 
@@ -299,14 +317,14 @@ public sealed class Settings
     [Description("Haut de l'échelle de droite (0 s en bas), découpée en 10 graduations égales.")]
     public double HudScaleTime { get; set; } = 2;
 
-    [Category(Tabs.Hud), DisplayName("Capture LMU : champ de vision vertical (°)")]
+    [Category(Tabs.Hud), DisplayName("Capture : champ de vision vertical (°)")]
     [Description("Point de vue approché du rétro virtuel de LMU, pour placer les flèches sur les voitures. À ajuster si elles sont décalées.")]
     public double HudCaptureFov { get; set; } = 14;
 
-    [Category(Tabs.Hud), DisplayName("Capture LMU : hauteur de l'œil (m)")]
+    [Category(Tabs.Hud), DisplayName("Capture : hauteur de l'œil (m)")]
     public double HudCaptureHeight { get; set; } = 0.9;
 
-    [Category(Tabs.Hud), DisplayName("Capture LMU : position du rétro vers l'avant (m)")]
+    [Category(Tabs.Hud), DisplayName("Capture : position du rétro vers l'avant (m)")]
     public double HudCaptureForward { get; set; } = 0.6;
 
     // ---------- LEDs ----------

@@ -77,20 +77,28 @@ public sealed class TutorialForm : Form
                 "• Après chaque mise à jour d'AviX Mirror, réinstallez-la.",
                 DrawAssetto,
                 () => ActionButton("Installer l'app Assetto Corsa", installAcApp)),
-            new("5. Mode Capture LMU",
-                "La vraie image du rétro virtuel de LMU, recopiée sur le VoCore et cachée sur l'écran principal.\n\n" +
-                "• LMU en « Fenêtré » ou « Sans bordure », rétro virtuel placé dans un coin.\n" +
+            new("5. Autres jeux (beta)",
+                "Choisissez le jeu dans l'onglet Général (« Jeu », ou Auto). Le Radar, l'ATH et les LEDs fonctionnent aussi avec :\n\n" +
+                "• rFactor 2 : plugin « rF2 Shared Memory Map », comme LMU.\n" +
+                "• Assetto Corsa Competizione : rien à configurer.\n" +
+                "• Automobilista 2 / Project CARS 2 : Options → Système → Mémoire partagée = « Project CARS 2 ».\n" +
+                "• iRacing : rien à configurer (radar simplifié : distance exacte, voitures à côté d'après le spotter d'iRacing).\n" +
+                "• F1 23 / 24 / 25 : Réglages → Télémétrie → UDP activée, port 20777.",
+                DrawOtherGames),
+            new("6. Mode Capture du rétro",
+                "La vraie image du rétro virtuel du jeu (LMU ; autres jeux en beta), recopiée sur le VoCore et cachée sur l'écran principal.\n\n" +
+                "• Jeu en « Fenêtré » ou « Sans bordure », rétro virtuel placé dans un coin.\n" +
                 "• Démarrez, attendez quelques secondes (Easy Anti-Cheat), puis « Calibrer la zone » : le cadre s'aimante sur les " +
                 "bords du rétro (Alt pour placer librement).\n" +
                 "• Points de couleur du cache : double-clic autour du cadre pour en ajouter, glisser pour déplacer, clic droit pour supprimer.",
                 DrawCapture),
-            new("6. ATH et LEDs",
+            new("7. ATH et LEDs",
                 "Sur les 3 modes, un ATH façon caméra de recul : flèche au-dessus de chaque voiture (vert > 1 s, " +
                 "orange > 0,5 s, rouge), échelles de distance et de temps sur les côtés.\n\n" +
                 "Les LEDs s'allument quand une voiture arrive (couleur de sa catégorie), restent allumées quand elle " +
                 "est à côté, et clignotent très vite en cas de dive bomb. Tout se règle dans les onglets ATH et LEDs.",
                 DrawHudLeds),
-            new("7. Veille, extinction et mises à jour",
+            new("8. Veille, extinction et mises à jour",
                 "• Jeu en pause ou dans les menus : animation AVIX sur le VoCore, cache retiré, LEDs éteintes.\n" +
                 "• Retour sur le bureau : logo AVIX.\n" +
                 "• Fermeture d'AviX Mirror, extinction ou veille du PC : l'écran s'éteint complètement.\n" +
@@ -194,7 +202,7 @@ public sealed class TutorialForm : Form
         var panel = new TableLayoutPanel { Height = 46, ColumnCount = 3, BackColor = Theme.Background };
         for (int i = 0; i < 3; i++)
             panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.3f));
-        foreach (var (m, label) in new[] { (MirrorMode.Radar, "Radar"), (MirrorMode.CameraAssettoCorsa, "Caméra Assetto Corsa"), (MirrorMode.Capture, "Capture LMU") })
+        foreach (var (m, label) in new[] { (MirrorMode.Radar, "Radar"), (MirrorMode.CameraAssettoCorsa, "Caméra Assetto Corsa"), (MirrorMode.Capture, "Capture du rétro") })
         {
             var button = new FlatButton { Text = label, Dock = DockStyle.Fill, Margin = new Padding(0, 4, 10, 4) };
             button.Click += (_, _) => choose(m);
@@ -383,6 +391,39 @@ public sealed class TutorialForm : Form
         g.DrawPath(pen, badge);
         TextRenderer.DrawText(g, "Content Manager + Custom Shaders Patch", font, Rectangle.Round(new RectangleF(screen.X, screen.Bottom + 22, 250, 30)),
             Theme.Text, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+    }
+
+    static void DrawOtherGames(Graphics g, RectangleF r)
+    {
+        var games = new[] { "Le Mans Ultimate", "Assetto Corsa", "rFactor 2", "ACC", "Automobilista 2", "Project CARS 2", "iRacing", "F1 23 · 24 · 25" };
+        using var font = Theme.Font(11f, FontStyle.Bold);
+        using var small = Theme.Font(7.5f, FontStyle.Bold);
+        int columns = 4;
+        float gap = 16, w = (r.Width - gap * (columns + 1)) / columns, h = 62;
+        float top = r.Y + (r.Height - (h * 2 + gap)) / 2;
+        for (int i = 0; i < games.Length; i++)
+        {
+            var box = new RectangleF(r.X + gap + (i % columns) * (w + gap), top + (i / columns) * (h + gap), w, h);
+            bool beta = i >= 2;
+            using (var path = Theme.RoundedRect(box, 10))
+            using (var fill = new SolidBrush(Theme.SurfaceRaised))
+            using (var pen = new Pen(beta ? Theme.Border : Theme.Accent, beta ? 1 : 2))
+            {
+                g.FillPath(fill, path);
+                g.DrawPath(pen, path);
+            }
+            TextRenderer.DrawText(g, games[i], font, Rectangle.Round(box), Theme.Text,
+                TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.WordBreak);
+            if (beta)
+            {
+                var tag = new RectangleF(box.Right - 44, box.Y + 6, 38, 16);
+                using var tagPath = Theme.RoundedRect(tag, 6);
+                using var tagFill = new SolidBrush(Theme.Accent);
+                g.FillPath(tagFill, tagPath);
+                TextRenderer.DrawText(g, "BETA", small, Rectangle.Round(tag), Color.Black,
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            }
+        }
     }
 
     static void DrawCapture(Graphics g, RectangleF r)

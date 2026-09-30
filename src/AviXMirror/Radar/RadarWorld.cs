@@ -63,3 +63,10 @@ public interface IRadarTelemetry : IDisposable
     /// <summary>Lit l'état courant. Retourne faux (avec un message) si le jeu ou son plugin ne répond pas.</summary>
     bool TryRead(Settings settings, out RadarWorld? world, out string status);
 }
+
+public static class RadarTelemetryExtensions
+{
+    /// <summary>État de course, ou null si le jeu ne répond pas.</summary>
+    public static RadarWorld? ReadOrNull(this IRadarTelemetry source, Settings settings) =>
+        source.TryRead(settings, out var world, out _) ? world : null;
+}

@@ -17,33 +17,35 @@ public enum GameState
 
 /// <summary>
 /// Détermine si le joueur est réellement en train de rouler : jeu lancé, au premier plan, et
-/// télémétrie qui avance (horloge de LMU, compteur de l'app Assetto Corsa).
+/// télémétrie qui avance (horloge du jeu), pour tous les jeux du catalogue.
 /// </summary>
 public sealed class GameActivity : IDisposable
 {
     const double FrozenSeconds = 1.2; // horloge de LMU arrêtée depuis ce délai = pause
 
-    readonly Rf2Telemetry _rf2 = new();
-    readonly AcTelemetry _ac = new();
+    readonly TelemetrySet _telemetry = new();
     readonly Stopwatch _sinceClock = Stopwatch.StartNew();
     readonly uint _ownProcess = (uint)Environment.ProcessId;
     double _lastClock = double.NaN;
     GameState _last = GameState.NoGame;
 
+    /// <summary>Jeux concernés par le mode : la caméra AC ne suit qu'Assetto Corsa.</summary>
+    static IEnumerable<GameInfo> GamesFor(Settings s) => s.Mode == MirrorMode.CameraAssettoCorsa
+        ? new[] { Games.Get(RadarGame.AssettoCorsa) }
+        : Games.Candidates(s);
+
     public GameState Update(Settings s)
     {
-        bool lmu = s.Mode == MirrorMode.Capture || (s.Mode == MirrorMode.Radar && s.RadarGame != RadarGame.AssettoCorsa);
-        bool ac = s.Mode == MirrorMode.CameraAssettoCorsa || (s.Mode == MirrorMode.Radar && s.RadarGame != RadarGame.LeMansUltimate);
-
-        var games = new HashSet<uint>();
-        if (lmu)
-            AddProcesses(games, s.GameProcessName);
-        if (ac)
-            AddProcesses(games, s.AcProcessName);
-        if (games.Count == 0)
+        var running = GamesFor(s).Where(g => Games.IsRunning(g, s)).ToList();
+        if (running.Count == 0)
             return _last = GameState.NoGame;
 
-        bool live = (lmu && LmuLive(s)) || (ac && _ac.TryRead(s, out var acWorld, out _) && acWorld != null);
+        var ids = new HashSet<uint>();
+        foreach (var game in running)
+            foreach (var name in Games.ProcessesOf(game, s))
+                AddProcesses(ids, name);
+
+        bool live = running.Any(g => Live(g, s));
 
         Native.GetWindowThreadProcessId(Native.GetForegroundWindow(), out uint foreground);
         if (foreground == _ownProcess)
@@ -51,14 +53,16 @@ public sealed class GameActivity : IDisposable
             // Réglages en cours dans AviX Mirror : on ne bascule pas sur le logo du bureau.
             return _last = live ? GameState.Active : (_last == GameState.Desktop ? GameState.Desktop : GameState.Paused);
         }
-        if (!games.Contains(foreground))
+        if (!ids.Contains(foreground))
             return _last = GameState.Desktop;
         return _last = live ? GameState.Active : GameState.Paused;
     }
 
-    bool LmuLive(Settings s)
+    /// <summary>Au volant : télémétrie lisible, joueur en piste et horloge du jeu qui avance.</summary>
+    bool Live(GameInfo game, Settings s)
     {
-        if (!_rf2.TryRead(s, out var world, out _) || world == null || !world.InRealtime || world.Player == null)
+        var world = _telemetry.For(game).ReadOrNull(s);
+        if (world == null || !world.InRealtime || world.Player == null)
             return false;
         if (world.Time != _lastClock)
         {
@@ -81,9 +85,5 @@ public sealed class GameActivity : IDisposable
         }
     }
 
-    public void Dispose()
-    {
-        _rf2.Dispose();
-        _ac.Dispose();
-    }
+    public void Dispose() => _telemetry.Dispose();
 }

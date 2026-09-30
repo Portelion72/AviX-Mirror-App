@@ -191,10 +191,22 @@ public sealed class MirrorEngine : IDisposable
         // Seul le mode Capture a besoin de la fenêtre du jeu ; Radar et Caméra AC lisent la télémétrie.
         if (s.Mode == MirrorMode.Capture)
         {
-            _gameWindow = GameWindow.Find(s.GameProcessName);
+            // Fenêtre du jeu choisi (LMU par défaut ; autres jeux en beta, en mode Auto le premier lancé).
+            _gameWindow = IntPtr.Zero;
+            foreach (var game in Games.Active(s))
+            {
+                foreach (var process in Games.ProcessesOf(game, s))
+                {
+                    _gameWindow = GameWindow.Find(process);
+                    if (_gameWindow != IntPtr.Zero)
+                        break;
+                }
+                if (_gameWindow != IntPtr.Zero)
+                    break;
+            }
             if (_gameWindow == IntPtr.Zero)
             {
-                messages.Add("En attente de Le Mans Ultimate…");
+                messages.Add(s.RadarGame == RadarGame.Auto ? "En attente du jeu…" : $"En attente de {Games.Get(s.RadarGame).Name}…");
                 _gameSeenWindow = IntPtr.Zero;
             }
             else
@@ -208,7 +220,7 @@ public sealed class MirrorEngine : IDisposable
                 double wait = s.GameStartDelaySeconds - _gameSeen.Elapsed.TotalSeconds;
                 if (wait > 0)
                 {
-                    messages.Add($"LMU détecté — démarrage dans {Math.Ceiling(wait)} s (laisse Easy Anti-Cheat finir).");
+                    messages.Add($"Jeu détecté — démarrage dans {Math.Ceiling(wait)} s (laisse l'anti-triche finir).");
                     _gameWindow = IntPtr.Zero;
                 }
             }

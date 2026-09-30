@@ -13,7 +13,7 @@ public sealed class Spotter : IDisposable
     const double OverlapHalfLength = 5.0;   // centres à moins de 5 m l'un de l'autre = voitures côte à côte
     const double MinLateral = 1.2, MaxLateral = 9.0;
 
-    readonly IRadarTelemetry[] _sources = { new Rf2Telemetry(), new AcTelemetry() };
+    readonly TelemetrySet _telemetry = new();
     readonly Thread _thread;
     readonly Stopwatch _clock = Stopwatch.StartNew();
     volatile bool _running = true;
@@ -220,25 +220,12 @@ public sealed class Spotter : IDisposable
         }
     }
 
-    RadarWorld? ReadWorld(Settings s)
-    {
-        IEnumerable<IRadarTelemetry> candidates = s.RadarGame switch
-        {
-            RadarGame.LeMansUltimate => _sources.OfType<Rf2Telemetry>(),
-            RadarGame.AssettoCorsa => _sources.OfType<AcTelemetry>(),
-            _ => _sources,
-        };
-        foreach (var source in candidates)
-            if (source.TryRead(s, out var world, out _) && world != null)
-                return world;
-        return null;
-    }
+    RadarWorld? ReadWorld(Settings s) => _telemetry.Read(s, out _);
 
     public void Dispose()
     {
         _running = false;
         _thread.Join(1000);
-        foreach (var source in _sources)
-            source.Dispose();
+        _telemetry.Dispose();
     }
 }

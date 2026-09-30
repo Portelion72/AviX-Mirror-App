@@ -9,7 +9,7 @@ namespace AviXMirror.Hud;
 /// </summary>
 public sealed class HudOverlay : IDisposable
 {
-    readonly IRadarTelemetry[] _sources = { new Rf2Telemetry(), new AcTelemetry() };
+    readonly TelemetrySet _telemetry = new();
     readonly MotionSmoother _smoother = new();
     readonly Stopwatch _clock = Stopwatch.StartNew();
     readonly object _lock = new();
@@ -122,24 +122,14 @@ public sealed class HudOverlay : IDisposable
         };
     }
 
-    RadarWorld? Read(Settings s)
-    {
-        IEnumerable<IRadarTelemetry> candidates = s.RadarGame switch
-        {
-            RadarGame.LeMansUltimate => _sources.OfType<Rf2Telemetry>(),
-            RadarGame.AssettoCorsa => _sources.OfType<AcTelemetry>(),
-            _ => _mode == MirrorMode.CameraAssettoCorsa ? _sources.OfType<AcTelemetry>() : _sources,
-        };
-        foreach (var source in candidates)
-            if (source.TryRead(s, out var world, out _) && world != null)
-                return world;
-        return null;
-    }
+    // La caméra AC ne concerne qu'Assetto Corsa ; la capture suit le réglage « Jeu ».
+    RadarWorld? Read(Settings s) => _mode == MirrorMode.CameraAssettoCorsa
+        ? _telemetry.For(Games.Get(RadarGame.AssettoCorsa)).ReadOrNull(s)
+        : _telemetry.Read(s, out _);
 
     public void Dispose()
     {
         lock (_lock)
-            foreach (var source in _sources)
-                source.Dispose();
+            _telemetry.Dispose();
     }
 }

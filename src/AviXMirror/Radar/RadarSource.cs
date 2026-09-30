@@ -7,7 +7,7 @@ namespace AviXMirror.Radar;
 
 /// <summary>
 /// Rétroviseur synthétique : dessine en perspective les voitures situées derrière le joueur
-/// à partir des positions fournies par le jeu (Le Mans Ultimate ou Assetto Corsa).
+/// à partir des positions fournies par le jeu (voir <see cref="Games"/>).
 /// Aucun rendu du jeu n'est nécessaire, donc rien ne s'affiche sur l'écran principal.
 /// </summary>
 public sealed class RadarSource : IDisposable
@@ -15,8 +15,7 @@ public sealed class RadarSource : IDisposable
     const double MaxExtrapolationSeconds = 0.4;
 
     readonly FrameBuffer _output;
-    readonly IRadarTelemetry[] _sources = { new Rf2Telemetry(), new AcTelemetry() };
-    IRadarTelemetry? _active;
+    readonly TelemetrySet _telemetry = new();
     readonly TrackMap _track = new();
     readonly Thread _thread;
     volatile bool _running = true;
@@ -81,40 +80,28 @@ public sealed class RadarSource : IDisposable
     void Poll()
     {
         var s = _settings;
-        var candidates = s.RadarGame switch
+        var world = _telemetry.Read(s, out var status);
+        if (world == null)
         {
-            RadarGame.LeMansUltimate => _sources.OfType<Rf2Telemetry>().Cast<IRadarTelemetry>(),
-            RadarGame.AssettoCorsa => _sources.OfType<AcTelemetry>(),
-            // Auto : on garde le jeu déjà trouvé, sinon on essaie les autres.
-            _ => _active != null ? _sources.OrderBy(x => x == _active ? 0 : 1) : _sources,
-        };
-
-        var waiting = new List<string>();
-        foreach (var source in candidates)
-        {
-            if (source.TryRead(s, out var world, out var status) && world != null)
-            {
-                _active = source;
-                if (world.Time != _lastET)
-                {
-                    _lastET = world.Time;
-                    _sinceUpdate.Restart();
-                    _smoother.OnSample(world, _clock.Elapsed.TotalSeconds);
-                    _track.Update(world);
-                }
-                _world = world;
-                _hasData = true;
-                Status = world.Vehicles.Count == 0
-                    ? status + " — pas de session en cours."
-                    : $"{status} — tracé du circuit connu à {_track.Coverage:P0}.";
-                return;
-            }
-            waiting.Add(status);
+            _hasData = false;
+            Status = status;
+            return;
         }
 
-        _active = null;
-        _hasData = false;
-        Status = string.Join("\n", waiting);
+        if (world.Time != _lastET)
+        {
+            _lastET = world.Time;
+            _sinceUpdate.Restart();
+            _smoother.OnSample(world, _clock.Elapsed.TotalSeconds);
+            _track.Update(world);
+        }
+        _world = world;
+        _hasData = true;
+        Status = world.Vehicles.Count == 0
+            ? status + " — pas de session en cours."
+            : world.TrackLength > 0
+                ? $"{status} — tracé du circuit connu à {_track.Coverage:P0}."
+                : status;
     }
 
     struct Car
@@ -432,6 +419,7 @@ public sealed class RadarSource : IDisposable
         CarKind.Lmp3 => "lmp3",
         CarKind.Gte => "gte",
         CarKind.Gt3 => "gt3",
+        CarKind.Formula => "formula",
         _ => "",
     };
 
@@ -443,6 +431,7 @@ public sealed class RadarSource : IDisposable
         CarKind.Lmp3 => (1.84, 1.02),
         CarKind.Gte => (2.04, 1.20),
         CarKind.Gt3 => (2.04, 1.25),
+        CarKind.Formula => (1.95, 0.95),
         _ => (1.95, 1.10),
     };
 
@@ -543,6 +532,33 @@ public sealed class RadarSource : IDisposable
                     break;
             }
         }
+        else if (kind == CarKind.Formula)
+        {
+            // Monoplace : roues avant apparentes, aileron avant large, nez étroit, halo et prise d'air.
+            using var tyre = new SolidBrush(Color.FromArgb(245, 18, 18, 20));
+            g.FillRectangle(black, R(-0.50, 0.02, 0.50, 0.10));                   // aileron avant
+            using (var endplate = new SolidBrush(Dark(color, 0.8f)))
+            {
+                g.FillRectangle(endplate, R(-0.50, 0.02, -0.46, 0.22));
+                g.FillRectangle(endplate, R(0.46, 0.02, 0.50, 0.22));
+            }
+            foreach (var side in new[] { -1.0, 1.0 })
+            {
+                using var wheel = RoundedRect(R(side * 0.43 - 0.08, 0.06, side * 0.43 + 0.08, 0.52), (float)(width * 0.03));
+                g.FillPath(tyre, wheel);
+            }
+            var body = Poly(
+                -0.30, 0.10, -0.30, 0.34, -0.16, 0.40, -0.10, 0.62, -0.05, 0.98, 0.05, 0.98,
+                0.10, 0.62, 0.16, 0.40, 0.30, 0.34, 0.30, 0.10);
+            g.FillPolygon(bodyBrush, body);
+            g.DrawPolygon(outline, body);
+            g.FillRectangle(black, R(-0.05, 0.10, 0.05, 0.36));                   // nez
+            g.FillEllipse(glass, R(-0.045, 0.80, 0.045, 0.93));                   // prise d'air
+            using (var halo = new Pen(Color.FromArgb(230, 25, 25, 28), Math.Max(1.5f, width * 0.02f)))
+                g.DrawArc(halo, R(-0.16, 0.50, 0.16, 0.74), 180, 180);             // halo
+            if (car.Headlights)
+                g.FillRectangle(light, R(-0.03, 0.74, 0.03, 0.77));               // feu de pluie
+        }
         else
         {
             // GT : silhouette de voiture de route, large pare-brise, calandre, rétroviseurs.
@@ -622,6 +638,7 @@ public sealed class RadarSource : IDisposable
         CarKind.Lmp3 => Color.FromArgb(145, 70, 200),
         CarKind.Gte => Color.FromArgb(235, 130, 20),
         CarKind.Gt3 => Color.FromArgb(30, 165, 80),
+        CarKind.Formula => Color.FromArgb(0, 185, 210),
         _ => Color.FromArgb(160, 160, 160),
     };
 
@@ -648,8 +665,7 @@ public sealed class RadarSource : IDisposable
         _running = false;
         _thread.Join(1000);
         _track.Save();
-        foreach (var source in _sources)
-            source.Dispose();
+        _telemetry.Dispose();
         foreach (var f in _fonts.Values)
             f.Dispose();
     }

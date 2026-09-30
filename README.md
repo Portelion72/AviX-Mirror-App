@@ -94,7 +94,7 @@ fenêtre montre l'état des LEDs de chaque côté du rétro.
 
 | Mode | Principe |
 |------|----------|
-| **Radar** (recommandé) | Rétro synthétique dessiné depuis la télémétrie : les voitures derrière vous en perspective, avec **la silhouette et la couleur de leur catégorie**, la distance, la vitesse de rapprochement et une alerte de voiture à côté. Ne touche pas au jeu, rien ne s'affiche sur l'écran principal. |
+| **Radar** (recommandé) | Rétro synthétique dessiné depuis la télémétrie (tous les jeux, voir ci-dessous) : les voitures derrière vous en perspective, avec **la silhouette et la couleur de leur catégorie**, la distance, la vitesse de rapprochement et une alerte de voiture à côté. Ne touche pas au jeu, rien ne s'affiche sur l'écran principal. |
 | **Caméra Assetto Corsa** | Vraie vue arrière rendue hors écran par Assetto Corsa (app Lua CSP). Rien ne s'affiche sur l'écran du jeu. |
 | **Capture LMU** | La vraie image du rétro virtuel de LMU, lue dans la fenêtre du jeu et envoyée au VoCore. Un **cache** est posé sur le rétro de l'écran principal. |
 
@@ -114,6 +114,34 @@ Dans tous les cas, l'image part **en USB vers le VoCore**, avec son pilote USB :
 Téléchargez l'artefact `AviXMirror-win-x64` depuis l'onglet **Actions** du dépôt GitHub (ou
 **Releases**). Dézippez-le dans un dossier : **gardez `libusb-1.0.dll` à côté de `AviXMirror.exe`**.
 Les réglages sont enregistrés dans `AviXMirror.settings.json`, dans le même dossier.
+
+## Jeux pris en charge
+
+Le jeu se choisit dans l'onglet *Général* (*Jeu*) ; en **Auto**, AviX Mirror suit le jeu lancé. Le
+Radar, l'ATH, les LEDs du spotter et l'écran de veille fonctionnent avec tous ces jeux ; la Capture du
+rétro virtuel aussi (le jeu doit afficher un rétro virtuel, en fenêtré ou sans bordure).
+
+| Jeu | État | Télémétrie utilisée | À configurer |
+|-----|------|---------------------|--------------|
+| Le Mans Ultimate | complet | plugin rF2 Shared Memory Map | plugin actif (SimHub l'installe) |
+| Assetto Corsa | complet | app Lua AviX Mirror (CSP) | bouton *Installer l'app Assetto Corsa* |
+| rFactor 2 | **beta** | plugin rF2 Shared Memory Map | plugin actif |
+| Assetto Corsa Competizione | **beta** | mémoire partagée officielle | rien |
+| Automobilista 2 / Project CARS 2 | **beta** | mémoire partagée « Project CARS 2 » | *Options → Système → Mémoire partagée* = Project CARS 2 |
+| iRacing | **beta**, radar simplifié | SDK officiel (mémoire partagée) | rien |
+| F1 23 / 24 / 25 | **beta** | télémétrie UDP officielle | *Réglages → Télémétrie* : UDP activée, port 20777, format 2023 ou plus |
+
+Particularités des jeux beta :
+- **ACC** ne donne que la position des adversaires (ni vitesse, ni catégorie) : vitesses estimées,
+  toutes les voitures dessinées en GT3 ; le tracé du circuit s'apprend avec vos propres tours.
+- **AMS2 / PC2** : la catégorie des adversaires n'est pas lue ; vitesses estimées.
+- **iRacing** ne donne pas la position des autres voitures dans le monde : le radar montre la
+  **distance exacte** derrière vous sur une route droite, et place les voitures à votre hauteur à
+  gauche ou à droite d'après le **spotter d'iRacing** (les LEDs fonctionnent donc aussi).
+- **F1** : voitures dessinées en monoplace ; un seul logiciel peut écouter le port UDP (dans SimHub,
+  utilisez le renvoi UDP vers un autre port, ou changez *F1 : port de télémétrie UDP*).
+- Si les voitures apparaissent du mauvais côté dans un jeu beta, activez *Jeux beta : inverser
+  gauche/droite* (onglet *Radar*).
 
 ## Mode Radar
 

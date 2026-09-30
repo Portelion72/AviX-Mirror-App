@@ -8,7 +8,16 @@ public sealed class Rf2Telemetry : IRadarTelemetry
     RadarWorld? _lastWorld;
     string _lastStatus = "";
 
-    public string GameName => "Le Mans Ultimate";
+    /// <summary>Le Mans Ultimate et rFactor 2 utilisent le même plugin : seul le nom affiché change.</summary>
+    public Rf2Telemetry(string gameName = "Le Mans Ultimate", string shortName = "LMU")
+    {
+        GameName = gameName;
+        _short = shortName;
+    }
+
+    readonly string _short;
+
+    public string GameName { get; }
 
     public bool TryRead(Settings settings, out RadarWorld? world, out string status)
     {
@@ -23,14 +32,14 @@ public sealed class Rf2Telemetry : IRadarTelemetry
 
         if (!_reader.TryRead(out var scoring))
         {
-            status = "En attente de LMU (plugin rF2 Shared Memory Map)…";
+            status = $"En attente de {_short} (plugin rF2 Shared Memory Map)…";
             return false;
         }
 
         var info = scoring.ScoringInfo;
         if (info.NumVehicles < 0 || info.NumVehicles > RF2Scoring.MaxVehicles || scoring.Vehicles == null)
         {
-            status = "LMU : données de télémétrie invalides.";
+            status = $"{_short} : données de télémétrie invalides.";
             return false;
         }
 
@@ -78,7 +87,7 @@ public sealed class Rf2Telemetry : IRadarTelemetry
                 world.Player = vehicle;
         }
 
-        status = $"LMU connecté — {world.Vehicles.Count} voitures";
+        status = $"{_short} connecté — {world.Vehicles.Count} voitures";
         _lastVersion = scoring.VersionUpdateEnd;
         _lastWorld = world;
         _lastStatus = status;
