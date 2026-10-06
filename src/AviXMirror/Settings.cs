@@ -22,6 +22,7 @@ public enum RadarGame
     AssettoCorsa,
     RFactor2,
     AssettoCorsaCompetizione,
+    AssettoCorsaEvo,
     Automobilista2,
     IRacing,
     F1,
@@ -105,7 +106,7 @@ public sealed class Settings
 
     [Category(Tabs.General), DisplayName("Jeu")]
     [Description("Auto : détecte le jeu lancé. Le Mans Ultimate et Assetto Corsa (app Lua CSP) sont complets ; " +
-                 "rFactor 2, Assetto Corsa Competizione, Automobilista 2 / Project CARS 2, iRacing (radar simplifié) " +
+                 "rFactor 2, Assetto Corsa Competizione, Assetto Corsa EVO, Automobilista 2 / Project CARS 2, iRacing (radar simplifié) " +
                  "et F1 23/24/25 (télémétrie UDP) sont en beta. Utilisé par tous les modes (radar, ATH, LEDs, capture).")]
     public RadarGame RadarGame { get; set; } = RadarGame.Auto;
 
@@ -245,7 +246,7 @@ public sealed class Settings
     public bool AcInvertLateral { get; set; }
 
     [Category(Tabs.Radar), DisplayName("Jeux beta : inverser gauche/droite")]
-    [Description("rFactor 2 excepté (réglage LMU) : à activer si, dans ACC, AMS2, iRacing ou F1, les voitures apparaissent du mauvais côté.")]
+    [Description("rFactor 2 excepté (réglage LMU) : à activer si, dans ACC, AC EVO, AMS2, iRacing ou F1, les voitures apparaissent du mauvais côté.")]
     public bool BetaInvertLateral { get; set; }
 
     [Category(Tabs.Radar), DisplayName("F1 : port de télémétrie UDP")]

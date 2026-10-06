@@ -229,7 +229,7 @@ public sealed class MainForm : Form
         }
 
         Add(new SectionLabel("Mode"), 26, new Padding(0));
-        AddTile(MirrorMode.Radar, "Radar", "Vue synthétique des voitures derrière vous. LMU, AC ; beta : ACC, AMS2, iRacing, F1, rF2.");
+        AddTile(MirrorMode.Radar, "Radar", "Vue synthétique des voitures derrière vous. LMU, AC ; beta : ACC, AC EVO, AMS2, iRacing, F1, rF2.");
         AddTile(MirrorMode.CameraAssettoCorsa, "Caméra Assetto Corsa", "Vraie vue arrière rendue hors écran par l'app CSP.");
         AddTile(MirrorMode.Capture, "Capture du rétro", "Recopie le rétro virtuel du jeu (LMU ; autres jeux en beta) et le cache à l'écran.");
 

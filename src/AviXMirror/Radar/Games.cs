@@ -17,6 +17,7 @@ public static class Games
         new(RadarGame.AssettoCorsa, "Assetto Corsa", new[] { "acs" }, false, () => new AcTelemetry()),
         new(RadarGame.RFactor2, "rFactor 2", new[] { "rFactor2" }, true, () => new Rf2Telemetry("rFactor 2", "rFactor 2")),
         new(RadarGame.AssettoCorsaCompetizione, "Assetto Corsa Competizione", new[] { "AC2-Win64-Shipping" }, true, () => new AccTelemetry()),
+        new(RadarGame.AssettoCorsaEvo, "Assetto Corsa EVO", new[] { "AssettoCorsaEVO" }, true, () => new AcEvoTelemetry()),
         new(RadarGame.Automobilista2, "Automobilista 2 / Project CARS 2", new[] { "AMS2AVX", "AMS2", "pCARS2AVX", "pCARS2", "pCARS2Gld" }, true, () => new Ams2Telemetry()),
         new(RadarGame.IRacing, "iRacing", new[] { "iRacingSim64DX11", "iRacingSim64" }, true, () => new IRacingTelemetry()),
         new(RadarGame.F1, "F1 23 / 24 / 25", new[] { "F1_23", "F1_24", "F1_25" }, true, () => new F1Telemetry()),

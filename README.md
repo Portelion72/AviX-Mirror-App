@@ -127,6 +127,7 @@ rétro virtuel aussi (le jeu doit afficher un rétro virtuel, en fenêtré ou sa
 | Assetto Corsa | complet | app Lua AviX Mirror (CSP) | bouton *Installer l'app Assetto Corsa* |
 | rFactor 2 | **beta** | plugin rF2 Shared Memory Map | plugin actif |
 | Assetto Corsa Competizione | **beta** | mémoire partagée officielle | rien |
+| Assetto Corsa EVO | **beta** | mémoire partagée officielle (`acevo_pmf_*`) | rien |
 | Automobilista 2 / Project CARS 2 | **beta** | mémoire partagée « Project CARS 2 » | *Options → Système → Mémoire partagée* = Project CARS 2 |
 | iRacing | **beta**, radar simplifié | SDK officiel (mémoire partagée) | rien |
 | F1 23 / 24 / 25 | **beta** | télémétrie UDP officielle | *Réglages → Télémétrie* : UDP activée, port 20777, format 2023 ou plus |
@@ -134,6 +135,8 @@ rétro virtuel aussi (le jeu doit afficher un rétro virtuel, en fenêtré ou sa
 Particularités des jeux beta :
 - **ACC** ne donne que la position des adversaires (ni vitesse, ni catégorie) : vitesses estimées,
   toutes les voitures dessinées en GT3 ; le tracé du circuit s'apprend avec vos propres tours.
+- **AC EVO** : comme ACC, seules les positions des adversaires sont connues (vitesses estimées,
+  catégorie inconnue) ; le tracé s'apprend avec vos propres tours.
 - **AMS2 / PC2** : la catégorie des adversaires n'est pas lue ; vitesses estimées.
 - **iRacing** ne donne pas la position des autres voitures dans le monde : le radar montre la
   **distance exacte** derrière vous sur une route droite, et place les voitures à votre hauteur à

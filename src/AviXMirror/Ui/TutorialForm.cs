@@ -80,7 +80,7 @@ public sealed class TutorialForm : Form
             new("5. Autres jeux (beta)",
                 "Choisissez le jeu dans l'onglet Général (« Jeu », ou Auto). Le Radar, l'ATH et les LEDs fonctionnent aussi avec :\n\n" +
                 "• rFactor 2 : plugin « rF2 Shared Memory Map », comme LMU.\n" +
-                "• Assetto Corsa Competizione : rien à configurer.\n" +
+                "• Assetto Corsa Competizione et Assetto Corsa EVO : rien à configurer.\n" +
                 "• Automobilista 2 / Project CARS 2 : Options → Système → Mémoire partagée = « Project CARS 2 ».\n" +
                 "• iRacing : rien à configurer (radar simplifié : distance exacte, voitures à côté d'après le spotter d'iRacing).\n" +
                 "• F1 23 / 24 / 25 : Réglages → Télémétrie → UDP activée, port 20777.",
@@ -395,7 +395,7 @@ public sealed class TutorialForm : Form
 
     static void DrawOtherGames(Graphics g, RectangleF r)
     {
-        var games = new[] { "Le Mans Ultimate", "Assetto Corsa", "rFactor 2", "ACC", "Automobilista 2", "Project CARS 2", "iRacing", "F1 23 · 24 · 25" };
+        var games = new[] { "Le Mans Ultimate", "Assetto Corsa", "rFactor 2", "ACC", "AC EVO", "Automobilista 2", "iRacing", "F1 23 · 24 · 25" };
         using var font = Theme.Font(11f, FontStyle.Bold);
         using var small = Theme.Font(7.5f, FontStyle.Bold);
         int columns = 4;

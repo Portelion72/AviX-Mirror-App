@@ -59,7 +59,8 @@ en jeu depuis Claude : le dire clairement dans chaque compte rendu.
   `AviXMirror.AC.v1` écrite par l'app Lua, 9104 octets, **disposition identique** au Lua).
 - **Jeux** (`Radar/Games.cs`) : catalogue (processus, télémétrie, beta) ; `TelemetrySet` = une source
   par jeu, lue seulement si le processus tourne (Auto). Beta : rFactor 2 (`Rf2Telemetry`), ACC
-  (`AccTelemetry`, pages `acpmf_*`), AMS2/PC2 (`Ams2Telemetry`, `$pcars2$`, offsets SharedMemory.h
+  (`AccTelemetry`, pages `acpmf_*`), AC EVO (`AcEvoTelemetry`, pages `acevo_pmf_*`, offsets
+  calculés d'après la doc Kunos ACE_SharedFileOut v1), AMS2/PC2 (`Ams2Telemetry`, `$pcars2$`, offsets SharedMemory.h
   v9+), iRacing (`IRacingTelemetry`, SDK, monde « déroulé » sur une ligne + CarLeftRight), F1 23-25
   (`F1Telemetry`, UDP Motion, réception partagée `F1UdpReceiver`). Repère F1 indirect : gauche = −droite.
   Rien n'a été testé en jeu pour ces titres.
@@ -90,7 +91,7 @@ zone de capture au format VoCore → ATH Bosch (flèches, échelles 10 graduatio
 flèches) → ATH net en capture → cache avec marges et couleur du décor → faces avant LMU → rangement
 (retrait MJPEG, extension de fenêtre, capture d'écran entier) → veille/pause/bureau, écran éteint,
 LEDs par catégorie, dive bomb, repères de calibration, onglets, points de couleur → licence
-propriétaire + avis de mise à jour → v1.1.0 → tutoriel de prise en main → v1.2.0 → réglages par défaut du propriétaire → v1.2.1 → jeux beta (rF2, ACC, AMS2/PC2, iRacing, F1).
+propriétaire + avis de mise à jour → v1.1.0 → tutoriel de prise en main → v1.2.0 → réglages par défaut du propriétaire → v1.2.1 → jeux beta (rF2, ACC, AC EVO, AMS2/PC2, iRacing, F1).
 
 ## Git
 
