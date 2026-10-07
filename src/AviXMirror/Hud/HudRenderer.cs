@@ -14,7 +14,9 @@ public readonly record struct HudTarget(double Lx, double Ly, double Lz, double 
 /// </summary>
 public static class HudRenderer
 {
-    const double CarLength = 4.6;
+    public const double CarLength = 4.6;
+    /// <summary>Hauteur de la pointe de la flèche au-dessus de la position de la voiture (m).</summary>
+    public const double ArrowHeight = 1.4;
 
     /// <param name="project">Repère local du joueur -> point de l'image (null si derrière la caméra).</param>
     /// <param name="groundY">Hauteur du sol dans le repère local (inutilisé depuis les échelles fixes).</param>
@@ -53,7 +55,7 @@ public static class HudRenderer
 
             // Seules les voitures visibles dans l'image ont une flèche et des repères : une voiture hors
             // champ (autre portion de piste, voie des stands…) ne doit rien afficher sur les échelles.
-            var top = project(t.Lx, t.Ly + 1.4, t.Lz - CarLength / 2);
+            var top = project(t.Lx, t.Ly + ArrowHeight, t.Lz - CarLength / 2);
             if (top is not { } p || p.X < 0 || p.X > w || p.Y < -0.25f * h || p.Y > h)
                 continue;
 
@@ -124,7 +126,7 @@ public static class HudRenderer
         g.FillPolygon(brush, pts);
     }
 
-    static void DrawArrow(Graphics g, float x, float tipY, float size, Color color)
+    public static void DrawArrow(Graphics g, float x, float tipY, float size, Color color)
     {
         // Chevron plein pointant vers la voiture, contour sombre pour rester lisible sur l'image.
         var pts = new[]

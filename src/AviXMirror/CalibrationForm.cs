@@ -11,6 +11,7 @@ namespace AviXMirror;
 /// de l'image, bords du rétro virtuel détectés dans l'image et milieu entre deux bords.
 /// Les points de couleur du cache se placent autour du cadre (double-clic pour ajouter, glisser
 /// pour déplacer, clic droit pour supprimer).
+/// La forme du cache peut aussi être tracée point par point pour reprendre celle du rétro du jeu (F1…).
 /// </summary>
 public sealed class CalibrationForm : Form
 {
@@ -27,7 +28,7 @@ public sealed class CalibrationForm : Form
     const float SnapPixels = 8;   // distance d'aimantation, en pixels à l'écran
     const float PointRadius = 6;  // rayon d'un point de couleur à l'écran
 
-    enum Drag { None, Move, TopLeft, TopRight, BottomLeft, BottomRight, Sample }
+    enum Drag { None, Move, TopLeft, TopRight, BottomLeft, BottomRight, Sample, ShapePoint }
     Drag _drag;
     int _dragSample = -1;
     PointF _dragOrigin;        // point de la souris au début (pixels image)
@@ -38,6 +39,12 @@ public sealed class CalibrationForm : Form
     readonly Padding _margins;
     readonly List<MaskSample> _samples;
 
+    // Forme libre du cache : sommets en % de la zone de capture.
+    readonly List<MaskPoint> _shape;
+    readonly CheckBox _shapeMode = new() { Text = "Tracer la forme du cache", Appearance = Appearance.Button, AutoSize = true };
+    readonly CheckBox _shapeSmooth = new() { Text = "Forme arrondie", AutoSize = true, Padding = new Padding(0, 6, 0, 0) };
+    int _dragShapePoint = -1;
+
     // Repères d'alignement (pixels image) : ceux qui aimantent les bords, ceux qui aimantent le centre.
     readonly record struct Guide(float Position, bool Vertical, bool CenterOnly);
     List<Guide> _guides = new();
@@ -46,9 +53,14 @@ public sealed class CalibrationForm : Form
 
     public Rectangle Selection => _selection;
     public List<MaskSample> Samples => _samples;
+    public List<MaskPoint> Shape => _shape;
+    public bool ShapeSmooth => _shapeSmooth.Checked;
 
-    public CalibrationForm(WgcCapture capture, FrameBuffer frames, Rectangle current, Padding maskMargins, IEnumerable<MaskSample> samples)
+    public CalibrationForm(WgcCapture capture, FrameBuffer frames, Rectangle current, Padding maskMargins, IEnumerable<MaskSample> samples,
+        IEnumerable<MaskPoint> shape, bool shapeSmooth)
     {
+        _shape = shape.Select(p => new MaskPoint { X = p.X, Y = p.Y }).ToList();
+        _shapeSmooth.Checked = shapeSmooth;
         _capture = capture;
         _frames = frames;
         _selection = current;
@@ -74,17 +86,25 @@ public sealed class CalibrationForm : Form
         var cancel = new Button { Text = "Annuler", DialogResult = DialogResult.Cancel, AutoSize = true };
         var full = new Button { Text = "Taille maximale", AutoSize = true };
         full.Click += (_, _) => { ResetSelection(); _picture.Invalidate(); };
+        var rectangle = new Button { Text = "Cache rectangulaire", AutoSize = true };
+        rectangle.Click += (_, _) => { _shape.Clear(); _picture.Invalidate(); };
         var hint = new Label
         {
-            Text = "Le cadre s'aimante sur les repères (bords du rétro, milieux) — maintenez Alt pour désactiver.   " +
-                   "Points de couleur du cache : double-clic autour du cadre pour ajouter, glisser pour déplacer, clic droit pour supprimer.",
             AutoSize = false,
-            Width = 760,
+            Width = 560,
             Height = 34,
             ForeColor = Ui.Theme.TextMuted,
             Padding = new Padding(0, 2, 12, 0),
         };
-        buttons.Controls.AddRange(new Control[] { ok, cancel, full, hint });
+        void UpdateHint() => hint.Text = _shapeMode.Checked
+            ? "Forme du cache : cliquez le long du bord du rétro pour poser les points (un clic près d'un côté y ajoute un point), " +
+              "glissez pour déplacer, clic droit pour supprimer."
+            : "Le cadre s'aimante sur les repères (Alt pour désactiver). Points de couleur : double-clic autour du cache pour " +
+              "ajouter, glisser pour déplacer, clic droit pour supprimer.";
+        UpdateHint();
+        _shapeMode.CheckedChanged += (_, _) => { UpdateHint(); _picture.Invalidate(); };
+        _shapeSmooth.CheckedChanged += (_, _) => _picture.Invalidate();
+        buttons.Controls.AddRange(new Control[] { ok, cancel, full, rectangle, _shapeSmooth, _shapeMode, hint });
         AcceptButton = ok;
         CancelButton = cancel;
 
@@ -336,9 +356,74 @@ public sealed class CalibrationForm : Form
         return new RectangleF(r.X + _sel.X * k, r.Y + _sel.Y * k, _sel.Width * k, _sel.Height * k);
     }
 
-    /// <summary>Cache (zone + marges), en pixels image.</summary>
-    Rectangle MaskRect() => new(_selection.X - _margins.Left, _selection.Y - _margins.Top,
-        _selection.Width + _margins.Horizontal, _selection.Height + _margins.Vertical);
+    bool HasShape => _shape.Count >= 3;
+
+    /// <summary>Contour du cache en pixels image (forme libre, ou null pour le rectangle).</summary>
+    GraphicsPath? ShapePath() => HasShape ? MaskForm.ShapePath(_shape, _selection, _shapeSmooth.Checked) : null;
+
+    /// <summary>Cache (zone + marges, ou bornes de la forme libre), en pixels image.</summary>
+    Rectangle MaskRect()
+    {
+        using var path = ShapePath();
+        if (path != null)
+            return Rectangle.Ceiling(path.GetBounds());
+        return new(_selection.X - _margins.Left, _selection.Y - _margins.Top,
+            _selection.Width + _margins.Horizontal, _selection.Height + _margins.Vertical);
+    }
+
+    PointF ShapeToImage(MaskPoint p) =>
+        new(_selection.X + (float)(p.X / 100 * _selection.Width), _selection.Y + (float)(p.Y / 100 * _selection.Height));
+
+    MaskPoint ImageToShape(PointF p) => new()
+    {
+        X = Math.Round(_selection.Width > 0 ? (p.X - _selection.X) / _selection.Width * 100 : 0, 2),
+        Y = Math.Round(_selection.Height > 0 ? (p.Y - _selection.Y) / _selection.Height * 100 : 0, 2),
+    };
+
+    int ShapeHit(Point p)
+    {
+        for (int i = _shape.Count - 1; i >= 0; i--)
+        {
+            var s = ToScreen(ShapeToImage(_shape[i]));
+            if (Math.Abs(p.X - s.X) <= PointRadius + 3 && Math.Abs(p.Y - s.Y) <= PointRadius + 3)
+                return i;
+        }
+        return -1;
+    }
+
+    /// <summary>Ajoute un sommet : à la suite tant qu'il y en a moins de 3, sinon sur le côté le plus proche.</summary>
+    void AddShapePoint(PointF imagePoint)
+    {
+        var point = ImageToShape(imagePoint);
+        if (_shape.Count < 3)
+        {
+            _shape.Add(point);
+            return;
+        }
+        int best = 0;
+        double bestDistance = double.MaxValue;
+        for (int i = 0; i < _shape.Count; i++)
+        {
+            var a = ShapeToImage(_shape[i]);
+            var b = ShapeToImage(_shape[(i + 1) % _shape.Count]);
+            double d = SegmentDistance(imagePoint, a, b);
+            if (d < bestDistance)
+            {
+                bestDistance = d;
+                best = i;
+            }
+        }
+        _shape.Insert(best + 1, point);
+    }
+
+    static double SegmentDistance(PointF p, PointF a, PointF b)
+    {
+        double vx = b.X - a.X, vy = b.Y - a.Y;
+        double len = vx * vx + vy * vy;
+        double t = len > 0 ? Math.Clamp(((p.X - a.X) * vx + (p.Y - a.Y) * vy) / len, 0, 1) : 0;
+        double dx = a.X + t * vx - p.X, dy = a.Y + t * vy - p.Y;
+        return Math.Sqrt(dx * dx + dy * dy);
+    }
 
     PointF SampleOnScreen(MaskSample sample) => ToScreen(MaskForm.ScreenPoint(sample, MaskRect()));
 
@@ -376,6 +461,8 @@ public sealed class CalibrationForm : Form
 
     Drag HitTest(Point p)
     {
+        if (_shapeMode.Checked)
+            return ShapeHit(p) >= 0 ? Drag.ShapePoint : Drag.None;
         if (SampleHit(p) >= 0)
             return Drag.Sample;
         var sel = SelectionOnScreen();
@@ -393,6 +480,27 @@ public sealed class CalibrationForm : Form
     {
         if (_image == null)
             return;
+        if (_shapeMode.Checked)
+        {
+            int point = ShapeHit(e.Location);
+            if (e.Button == MouseButtons.Right)
+            {
+                if (point >= 0)
+                    _shape.RemoveAt(point);
+            }
+            else if (e.Button == MouseButtons.Left)
+            {
+                if (point < 0)
+                {
+                    AddShapePoint(ToImage(e.Location));
+                    point = ShapeHit(e.Location);
+                }
+                _drag = point >= 0 ? Drag.ShapePoint : Drag.None;
+                _dragShapePoint = point;
+            }
+            _picture.Invalidate();
+            return;
+        }
         if (e.Button == MouseButtons.Right)
         {
             // Clic droit sur un point : suppression (il en reste toujours au moins un).
@@ -414,7 +522,7 @@ public sealed class CalibrationForm : Form
 
     void OnMouseDoubleClick(object? sender, MouseEventArgs e)
     {
-        if (_image == null || e.Button != MouseButtons.Left || SelectionOnScreen().Contains(e.Location) || SampleHit(e.Location) >= 0)
+        if (_image == null || _shapeMode.Checked || e.Button != MouseButtons.Left || SelectionOnScreen().Contains(e.Location) || SampleHit(e.Location) >= 0)
             return;
         _samples.Add(SampleAt(ToImage(e.Location)));
         _picture.Invalidate();
@@ -431,13 +539,20 @@ public sealed class CalibrationForm : Form
                 Drag.TopLeft or Drag.BottomRight => Cursors.SizeNWSE,
                 Drag.TopRight or Drag.BottomLeft => Cursors.SizeNESW,
                 Drag.Move => Cursors.SizeAll,
-                Drag.Sample => Cursors.Hand,
-                _ => Cursors.Default,
+                Drag.Sample or Drag.ShapePoint => Cursors.Hand,
+                _ => _shapeMode.Checked ? Cursors.Cross : Cursors.Default,
             };
             return;
         }
 
         var p = ToImage(e.Location);
+        if (_drag == Drag.ShapePoint)
+        {
+            if (_dragShapePoint >= 0 && _dragShapePoint < _shape.Count)
+                _shape[_dragShapePoint] = ImageToShape(new PointF(Math.Clamp(p.X, 0, _image.Width), Math.Clamp(p.Y, 0, _image.Height)));
+            _picture.Invalidate();
+            return;
+        }
         if (_drag == Drag.Sample)
         {
             if (_dragSample >= 0 && _dragSample < _samples.Count)
@@ -553,9 +668,36 @@ public sealed class CalibrationForm : Form
             }
         }
 
-        // Contour du cache (zone + marges), s'il est plus grand que la zone.
+        // Contour du cache : forme libre, ou zone + marges si elles l'agrandissent.
         var mask = MaskRect();
-        if (mask != _selection)
+        using (var shapePath = ShapePath())
+        {
+            if (shapePath != null)
+            {
+                using var toScreen = new Matrix(scale, 0, 0, scale, r.X, r.Y);
+                shapePath.Transform(toScreen);
+                using var fill = new SolidBrush(Color.FromArgb(_shapeMode.Checked ? 90 : 50, Ui.Theme.Accent));
+                using var outline = new Pen(Ui.Theme.Accent, 2);
+                g.FillPath(fill, shapePath);
+                g.DrawPath(outline, shapePath);
+            }
+        }
+        if (_shapeMode.Checked)
+        {
+            using var dot = new SolidBrush(Color.White);
+            using var dotPen = new Pen(Ui.Theme.Accent, 2);
+            using var lineDash = new Pen(Color.FromArgb(180, Ui.Theme.Accent), 1) { DashStyle = DashStyle.Dash };
+            var points = _shape.Select(sp => ToScreen(ShapeToImage(sp))).ToArray();
+            if (points.Length == 2)
+                g.DrawLine(lineDash, points[0], points[1]);
+            for (int i = 0; i < points.Length; i++)
+            {
+                var c = new RectangleF(points[i].X - PointRadius, points[i].Y - PointRadius, PointRadius * 2, PointRadius * 2);
+                g.FillEllipse(dot, c);
+                g.DrawEllipse(dotPen, c);
+            }
+        }
+        else if (!HasShape && mask != _selection)
         {
             using var maskPen = new Pen(Color.FromArgb(160, Ui.Theme.Accent), 1) { DashStyle = DashStyle.Dot };
             var tl = ToScreen(new PointF(mask.X, mask.Y));
@@ -587,7 +729,8 @@ public sealed class CalibrationForm : Form
             }
         }
 
-        var text = $"{_selection.Width}x{_selection.Height} @ {_selection.X},{_selection.Y}   ·   {_samples.Count} point(s) de couleur";
+        var text = $"{_selection.Width}x{_selection.Height} @ {_selection.X},{_selection.Y}   ·   {_samples.Count} point(s) de couleur" +
+                   (HasShape ? $"   ·   forme libre ({_shape.Count} points)" : "");
         TextRenderer.DrawText(g, text, Font, new Point((int)sel.X + 4, (int)sel.Y + 4), Ui.Theme.Accent);
     }
 

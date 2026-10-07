@@ -67,6 +67,9 @@ public sealed class MirrorEngine : IDisposable
     public string Status { get; private set; } = "Arrêté.";
     public WgcCapture? Capture => _capture;
 
+    /// <summary>Voitures derrière, dans le repère du joueur, telles que l'ATH les place (null sans ATH ou sans télémétrie).</summary>
+    public List<Hud.HudTarget>? HudTargets() => _hud?.CurrentTargets();
+
     /// <summary>Jeu dont le profil de réglages est appliqué (null : réglages communs).</summary>
     public RadarGame? CurrentGame { get; private set; }
 
@@ -355,13 +358,25 @@ public sealed class MirrorEngine : IDisposable
 
         // La capture de fenêtre commence au coin visible de la fenêtre du jeu.
         var window = Native.GetVisibleBounds(_captureWindow);
+        _mask ??= new MaskForm();
+        _mask.MatchColor = s.MaskMatchColor;
+        _mask.Samples = s.MaskSamples;
+        if (s.MaskShape is { Count: >= 3 } shape)
+        {
+            // Forme libre (rétro F1…) : le cache entoure le contour tracé, sans marges.
+            var zone = new RectangleF(window.X + s.CropX, window.Y + s.CropY, s.CropWidth, s.CropHeight);
+            using var path = MaskForm.ShapePath(shape, zone, s.MaskShapeSmooth);
+            var shapeBounds = Rectangle.Ceiling(path.GetBounds());
+            var outline = shape.Select(p => new PointF(
+                zone.X + (float)(p.X / 100 * zone.Width) - shapeBounds.X,
+                zone.Y + (float)(p.Y / 100 * zone.Height) - shapeBounds.Y)).ToArray();
+            _mask.Cover(shapeBounds, outline, s.MaskShapeSmooth);
+            return;
+        }
         int left = Math.Max(0, s.MaskMarginLeft), right = Math.Max(0, s.MaskMarginRight);
         int top = Math.Max(0, s.MaskMarginTop), bottom = Math.Max(0, s.MaskMarginBottom);
         var bounds = new Rectangle(window.X + s.CropX - left, window.Y + s.CropY - top,
             s.CropWidth + left + right, s.CropHeight + top + bottom);
-        _mask ??= new MaskForm();
-        _mask.MatchColor = s.MaskMatchColor;
-        _mask.Samples = s.MaskSamples;
         _mask.Cover(bounds);
     }
 

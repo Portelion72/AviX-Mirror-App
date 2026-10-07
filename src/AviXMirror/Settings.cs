@@ -86,6 +86,18 @@ public sealed class MaskSample
     public override string ToString() => $"{Side} {Position:0} % ({Distance} px)";
 }
 
+/// <summary>Sommet de la forme du cache, en % de la zone de capture (en dehors de 0..100 : dans les marges).</summary>
+public sealed class MaskPoint
+{
+    [DisplayName("X (%)"), Description("0 = bord gauche de la zone de capture, 100 = bord droit.")]
+    public double X { get; set; }
+
+    [DisplayName("Y (%)"), Description("0 = bord haut de la zone de capture, 100 = bord bas.")]
+    public double Y { get; set; }
+
+    public override string ToString() => $"{X:0.#} ; {Y:0.#}";
+}
+
 public sealed class Settings
 {
     // ---------- Général ----------
@@ -210,8 +222,17 @@ public sealed class Settings
         new MaskSample { Side = MaskSide.Bas, Position = 50, Distance = 3 },
     };
 
+    [Category(Tabs.Capture), DisplayName("Cache : forme")]
+    [Description("Vide = rectangle (zone + marges). Sinon, contour libre qui reprend la forme du rétro du jeu (F1…) : " +
+                 "tracez-le dans « Calibrer la zone » → « Tracer la forme du cache ». Les marges ne servent plus.")]
+    public List<MaskPoint> MaskShape { get; set; } = new();
+
+    [Category(Tabs.Capture), DisplayName("Cache : forme arrondie")]
+    [Description("Vrai : le contour passe en douceur par les points (bords courbes) ; faux : lignes droites.")]
+    public bool MaskShapeSmooth { get; set; }
+
     [Category(Tabs.Capture), DisplayName("Cache : marge à gauche (px)")]
-    [Description("Agrandit le cache au-delà de la zone de capture (cadre du rétro, bord flou…). N'agrandit pas la capture.")]
+    [Description("Agrandit le cache rectangulaire au-delà de la zone de capture (cadre du rétro, bord flou…). N'agrandit pas la capture.")]
     [Gauge(0, 600, 1), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public int MaskMarginLeft { get; set; } = 240;
 
@@ -339,7 +360,8 @@ public sealed class Settings
     public double HudScaleTime { get; set; } = 2;
 
     [Category(Tabs.Hud), DisplayName("Capture : champ de vision vertical (°)")]
-    [Description("Point de vue approché du rétro virtuel de LMU, pour placer les flèches sur les voitures. À ajuster si elles sont décalées.")]
+    [Description("Point de vue du rétro virtuel du jeu, pour placer les flèches sur les voitures (propre à chaque jeu). " +
+                 "Calculé par « Aligner les flèches » avec deux voitures ou plus.")]
     [Gauge(2, 60, 0.5), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public double HudCaptureFov { get; set; } = 14;
 
@@ -353,14 +375,15 @@ public sealed class Settings
 
     [Category(Tabs.Hud), DisplayName("Capture : hauteur de l'horizon (%)")]
     [Description("Hauteur, dans l'image du rétro, du point où la route disparaît à l'horizon (0 = en haut, 100 = en bas). " +
-                 "Si les flèches sont sous les voitures, baissez cette valeur ; au-dessus, augmentez-la. Réglage le plus utile.")]
-    [Gauge(10, 90, 0.5), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
+                 "Si les flèches sont sous les voitures, baissez cette valeur ; au-dessus, augmentez-la. Le plus simple : bouton " +
+                 "« Aligner les flèches », qui le calcule en faisant glisser les flèches sur les voitures.")]
+    [Gauge(0, 100, 0.5), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public double HudCaptureHorizon { get; set; } = 50;
 
     [Category(Tabs.Hud), DisplayName("Capture : centre horizontal (%)")]
     [Description("Position, dans l'image du rétro, de l'axe de votre voiture (50 = milieu). À décaler si les flèches sont " +
-                 "toutes un peu à gauche ou à droite des voitures.")]
-    [Gauge(20, 80, 0.5), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
+                 "toutes un peu à gauche ou à droite des voitures (calculé par « Aligner les flèches »).")]
+    [Gauge(0, 100, 0.5), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public double HudCaptureCenter { get; set; } = 50;
 
     [Category(Tabs.Hud), DisplayName("Capture : repères de réglage")]

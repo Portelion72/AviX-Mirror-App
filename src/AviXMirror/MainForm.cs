@@ -10,7 +10,9 @@ public sealed class MainForm : Form
     readonly TabStrip _tabs = new() { Dock = DockStyle.Fill };
     readonly HeaderBar _header = new();
     readonly FlatButton _startStop = new() { Text = "Démarrer", Primary = true, Height = 52, Dock = DockStyle.Fill };
-    readonly FlatButton _calibrate = new() { Text = "Calibrer la zone du rétro", Dock = DockStyle.Fill };
+    readonly FlatButton _calibrate = new() { Text = "Calibrer la zone", Dock = DockStyle.Fill, Margin = new Padding(0, 0, 4, 0) };
+    readonly FlatButton _alignHud = new() { Text = "Aligner les flèches", Dock = DockStyle.Fill, Margin = new Padding(4, 0, 0, 0) };
+    readonly TableLayoutPanel _captureActions = new() { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Margin = new Padding(0), Padding = new Padding(0) };
     readonly FlatButton _installAc = new() { Text = "Installer l'app Assetto Corsa", Dock = DockStyle.Fill };
     readonly Label _status = new() { Dock = DockStyle.Fill, AutoEllipsis = true };
     readonly Dictionary<MirrorMode, ModeTile> _tiles = new();
@@ -90,6 +92,7 @@ public sealed class MainForm : Form
 
         _startStop.Click += (_, _) => ToggleRunning();
         _calibrate.Click += (_, _) => Calibrate();
+        _alignHud.Click += (_, _) => AlignHud();
         _statusTimer.Tick += (_, _) => RefreshStatus();
         _statusTimer.Start();
         SelectMode(_settings.Mode, restart: false);
@@ -256,7 +259,13 @@ public sealed class MainForm : Form
         // Même emplacement pour les deux boutons : un seul est visible selon le mode.
         var modeAction = new Panel { BackColor = Theme.Background };
         modeAction.Controls.Add(_installAc);
-        modeAction.Controls.Add(_calibrate);
+        _captureActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        _captureActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        _captureActions.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        _captureActions.BackColor = Theme.Background;
+        _captureActions.Controls.Add(_calibrate, 0, 0);
+        _captureActions.Controls.Add(_alignHud, 1, 0);
+        modeAction.Controls.Add(_captureActions);
         Add(modeAction, 38);
 
         Add(new SectionLabel("État"), 26, new Padding(0, 8, 0, 0));
@@ -399,7 +408,7 @@ public sealed class MainForm : Form
             : "Réglages utilisés par tous les jeux. Choisissez un jeu pour lui donner ses propres réglages.";
         foreach (var (m, tile) in _tiles)
             tile.Selected = m == view.Mode;
-        _calibrate.Visible = view.Mode == MirrorMode.Capture;
+        _captureActions.Visible = view.Mode == MirrorMode.Capture;
         _installAc.Visible = view.Mode != MirrorMode.Capture;
     }
 
@@ -467,7 +476,7 @@ public sealed class MainForm : Form
             _ => Tabs.Camera,
         };
         // Seuls les boutons utiles au mode choisi sont affichés.
-        _calibrate.Visible = mode == MirrorMode.Capture;
+        _captureActions.Visible = mode == MirrorMode.Capture;
         _installAc.Visible = mode != MirrorMode.Capture;
 
         var view = (Settings)_grid.SelectedObject;
@@ -530,14 +539,19 @@ public sealed class MainForm : Form
             Math.Max(0, effective.MaskMarginRight), Math.Max(0, effective.MaskMarginBottom));
         DialogResult result;
         List<MaskSample> samples;
+        List<MaskPoint> shape;
+        bool shapeSmooth;
         Rectangle sel;
         _engine.Calibrating = true;
         try
         {
-            using var form = new CalibrationForm(capture, _engine.Frames, current, margins, effective.MaskSamples);
+            using var form = new CalibrationForm(capture, _engine.Frames, current, margins, effective.MaskSamples,
+                effective.MaskShape, effective.MaskShapeSmooth);
             result = form.ShowDialog(this);
             sel = form.Selection;
             samples = form.Samples;
+            shape = form.Shape;
+            shapeSmooth = form.ShapeSmooth;
         }
         finally
         {
@@ -552,10 +566,51 @@ public sealed class MainForm : Form
             _settings.Set(game, nameof(Settings.CropWidth), sel.Width);
             _settings.Set(game, nameof(Settings.CropHeight), sel.Height);
             _settings.Set(game, nameof(Settings.MaskSamples), samples);
+            _settings.Set(game, nameof(Settings.MaskShape), shape);
+            _settings.Set(game, nameof(Settings.MaskShapeSmooth), shapeSmooth);
             _settings.Save();
             RefreshView();
         }
         // Applique la nouvelle zone (ou restaure l'ancienne si annulé).
+        _engine.UpdateLive(_settings);
+    }
+
+    /// <summary>
+    /// Mode Capture : place les flèches de l'ATH sur les voitures en les faisant glisser dans l'image du rétro.
+    /// Horizon, centre et champ de vision s'enregistrent dans le profil du jeu capturé.
+    /// </summary>
+    void AlignHud()
+    {
+        var effective = _engine.Effective;
+        if (!_engine.Running || effective.Mode != MirrorMode.Capture || _engine.Capture == null)
+        {
+            MessageBox.Show(this,
+                "Démarrez d'abord le rétroviseur en mode Capture, avec le jeu lancé.",
+                "Aligner les flèches", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        DialogResult result;
+        double horizon, center, fov;
+        _engine.Calibrating = true;
+        try
+        {
+            using var form = new HudAlignForm(_engine, effective);
+            result = form.ShowDialog(this);
+            (horizon, center, fov) = (form.Horizon, form.Center, form.Fov);
+        }
+        finally
+        {
+            _engine.Calibrating = false;
+        }
+        if (result != DialogResult.OK)
+            return;
+        var game = _engine.CurrentGame;
+        _settings.Set(game, nameof(Settings.HudCaptureHorizon), horizon);
+        _settings.Set(game, nameof(Settings.HudCaptureCenter), center);
+        _settings.Set(game, nameof(Settings.HudCaptureFov), fov);
+        _settings.Save();
+        RefreshView();
         _engine.UpdateLive(_settings);
     }
 

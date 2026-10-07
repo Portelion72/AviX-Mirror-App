@@ -9,6 +9,7 @@ namespace AviXMirror;
 /// Il laisse passer les clics et n'apparaît pas dans la capture (qui lit la fenêtre du jeu).
 /// Il reprend la couleur du décor lue en un ou plusieurs points autour de lui : avec plusieurs
 /// points, il se remplit d'un dégradé entre leurs couleurs pour se fondre dans l'image.
+/// Sa forme est un rectangle ou un contour libre qui reprend celle du rétro du jeu (F1…).
 /// </summary>
 public sealed class MaskForm : Form
 {
@@ -19,6 +20,8 @@ public sealed class MaskForm : Form
     readonly Bitmap _pixel = new(1, 1, PixelFormat.Format32bppRgb);
     readonly List<(double R, double G, double B)> _colors = new();
     Bitmap? _gradient;
+    PointF[]? _shape;
+    bool _shapeSmooth;
 
     /// <summary>Vrai : couleur du décor autour du cache ; faux : noir.</summary>
     public bool MatchColor { get; set; } = true;
@@ -37,6 +40,20 @@ public sealed class MaskForm : Form
         SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint, true);
         _sampler.Tick += (_, _) => SampleColors();
         _sampler.Start();
+    }
+
+    /// <summary>Forme libre du cache : contour en coordonnées de <paramref name="zone"/> (la zone de capture).</summary>
+    public static GraphicsPath ShapePath(IReadOnlyList<MaskPoint> shape, RectangleF zone, bool smooth)
+    {
+        var points = shape.Select(p => new PointF(zone.X + (float)(p.X / 100 * zone.Width), zone.Y + (float)(p.Y / 100 * zone.Height))).ToArray();
+        var path = new GraphicsPath();
+        if (points.Length < 3)
+            path.AddRectangle(zone);
+        else if (smooth)
+            path.AddClosedCurve(points, 0.5f);
+        else
+            path.AddPolygon(points);
+        return path;
     }
 
     /// <summary>Position d'un point de couleur, en pixels écran, autour d'un cache de bornes <paramref name="bounds"/>.</summary>
@@ -217,11 +234,35 @@ public sealed class MaskForm : Form
         Native.SetLayeredWindowAttributes(Handle, 0, 255, Native.LWA_ALPHA);
     }
 
-    /// <summary>Place le cache sur <paramref name="bounds"/> (coordonnées écran) et le garde au premier plan.</summary>
-    public void Cover(Rectangle bounds)
+    /// <summary>
+    /// Place le cache sur <paramref name="bounds"/> (coordonnées écran) et le garde au premier plan.
+    /// <paramref name="shape"/> : contour libre relatif à <paramref name="bounds"/>, ou null pour un rectangle.
+    /// </summary>
+    public void Cover(Rectangle bounds, PointF[]? shape = null, bool smooth = false)
     {
         if (Bounds != bounds)
             Bounds = bounds;
+        bool same = smooth == _shapeSmooth && (shape == null ? _shape == null : _shape != null && shape.SequenceEqual(_shape));
+        if (!same)
+        {
+            _shape = shape;
+            _shapeSmooth = smooth;
+            var old = Region;
+            if (shape == null || shape.Length < 3)
+            {
+                Region = null;
+            }
+            else
+            {
+                using var path = new GraphicsPath();
+                if (smooth)
+                    path.AddClosedCurve(shape, 0.5f);
+                else
+                    path.AddPolygon(shape);
+                Region = new Region(path);
+            }
+            old?.Dispose();
+        }
         if (!Visible)
             Show();
         Native.SetWindowPos(Handle, Native.HWND_TOPMOST, 0, 0, 0, 0,

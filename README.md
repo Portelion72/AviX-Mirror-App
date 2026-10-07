@@ -65,14 +65,20 @@ En Caméra AC, l'ATH utilise exactement le point de vue de la caméra. En Captur
 rétro virtuel du jeu est approché : ajustez l'onglet *ATH* (champ de vision, hauteur, position)
 si les flèches sont décalées, et *Inverser gauche/droite des flèches* si elles sont du mauvais côté.
 
-**Placer les flèches sur les voitures en Capture** (réglages de l'onglet *ATH*, propres à chaque jeu) :
-1. Activez *Capture : repères de réglage* : la ligne d'horizon et des repères au sol (10, 20, 40 et
-   80 m, bords de voie) s'affichent sur le VoCore.
-2. *Capture : hauteur de l'horizon* : amenez la ligne HORIZON là où la route disparaît dans le rétro
-   (flèches sous les voitures → baissez la valeur ; au-dessus → augmentez-la).
-3. *Capture : champ de vision vertical* : resserrez ou écartez les repères jusqu'à ce que la voie suive
-   la route ; *Capture : centre horizontal* si tout est décalé à gauche ou à droite.
-4. Désactivez les repères. Les jauges appliquent chaque valeur en direct pendant le réglage.
+**Placer les flèches sur les voitures en Capture** (tous les jeux ; réglages de l'onglet *ATH*, propres
+à chaque jeu) — le plus simple est le bouton **Aligner les flèches** :
+1. Mode Capture démarré, jeu lancé, roulez avec des voitures derrière vous (ou lancez un replay).
+2. **Aligner les flèches** : l'image du rétro s'affiche avec les flèches. Figez-la (Espace, clic sur une
+   flèche, ou *Figer dans 5 s* pour avoir le temps de revenir en jeu).
+3. Faites glisser une flèche juste au-dessus du toit de sa voiture : l'horizon et le centre sont
+   recalculés et toutes les flèches suivent. Avec une deuxième voiture placée ailleurs dans l'image (plus
+   loin, ou de l'autre côté), le champ de vision est aussi calculé. On peut reprendre le direct et figer
+   d'autres images pour ajouter des points.
+4. **Valider** : les valeurs s'enregistrent dans le profil du jeu capturé.
+
+Réglage à la main : *Capture : repères de réglage* affiche sur le VoCore la ligne d'horizon et des repères
+au sol (10, 20, 40, 80 m) ; ajustez *hauteur de l'horizon* (flèches sous les voitures → baissez), *champ
+de vision vertical* et *centre horizontal*, puis désactivez les repères.
 
 ## LEDs spotter (WS2812B sur la carte MPro)
 
@@ -279,7 +285,11 @@ miroir et l'envoie au VoCore. **Rien n'est affiché sur l'écran du jeu.**
    (par défaut 5 points, sur les côtés et en dessous). Ajoutez-en autant que vous voulez dans **Calibrer
    la zone** : double-clic autour du cadre pour ajouter un point, glisser pour le déplacer, clic droit
    pour le supprimer. Avec plusieurs points, le cache se remplit d'un dégradé entre leurs couleurs.
-6. Si l'image est à l'envers, réglez *Rotation* = `Rotation180`.
+6. **Forme du cache** (rétro de forme spéciale, comme dans F1) : dans **Calibrer la zone**, cliquez sur
+   *Tracer la forme du cache* puis cliquez le long du bord du rétro pour poser les points (un clic près
+   d'un côté y insère un point ; glisser pour déplacer, clic droit pour supprimer). *Forme arrondie*
+   lisse le contour ; *Cache rectangulaire* revient au rectangle. La forme suit la zone si on la déplace.
+7. Si l'image est à l'envers, réglez *Rotation* = `Rotation180`.
 
 ## Dépannage
 

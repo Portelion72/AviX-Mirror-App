@@ -33,54 +33,70 @@ public sealed class HudOverlay : IDisposable
             return;
         lock (_lock)
         {
-            var world = Read(s);
-            var player = world?.Player;
-            if (world == null || player?.Orientation == null)
+            var targets = Targets(s, out double speed);
+            if (targets == null)
                 return;
-
-            double now = _clock.Elapsed.TotalSeconds;
-            if (world.Time != _lastTime)
-            {
-                _lastTime = world.Time;
-                _smoother.OnSample(world, now);
-            }
-
-            var ori = _smoother.Orientation(player, now) ?? player.Orientation;
-            var pp = _smoother.Position(player, now);
-            var pv = player.Velocity;
-            double speed = Math.Sqrt(pv.X * pv.X + pv.Y * pv.Y + pv.Z * pv.Z);
-
-            var targets = new List<HudTarget>();
-            foreach (var v in world.Vehicles)
-            {
-                if (v == player || v.InPits)
-                    continue;
-                var vp = _smoother.Position(v, now);
-                double dx = vp.X - pp.X, dy = vp.Y - pp.Y, dz = vp.Z - pp.Z;
-                double lx = ori[0].X * dx + ori[1].X * dy + ori[2].X * dz;
-                double ly = ori[0].Y * dx + ori[1].Y * dy + ori[2].Y * dz;
-                double lz = ori[0].Z * dx + ori[1].Z * dy + ori[2].Z * dz;
-                if (world.InvertLateral)
-                    lx = -lx;
-                // Autre portion de piste (pont, ligne droite parallèle) : ignorée.
-                if (Math.Abs(ly) > 15 || Math.Abs(lx) > 20)
-                    continue;
-                var rv = v.Velocity;
-                // Voiture roulant dans l'autre sens (portion de piste en sens inverse) : ignorée.
-                double vForward = ori[0].Z * rv.X + ori[1].Z * rv.Y + ori[2].Z * rv.Z;
-                double pForward = ori[0].Z * pv.X + ori[1].Z * pv.Y + ori[2].Z * pv.Z;
-                if (speed > 5 && vForward * pForward < 0 && Math.Abs(vForward) > 5)
-                    continue;
-                double relZ = ori[0].Z * (rv.X - pv.X) + ori[1].Z * (rv.Y - pv.Y) + ori[2].Z * (rv.Z - pv.Z);
-                targets.Add(new HudTarget(lx, ly, lz, -relZ * 3.6));
-            }
-
             var camera = Camera(s, bmp.Width, bmp.Height);
             using var g = Graphics.FromImage(bmp);
             HudRenderer.Draw(g, bmp.Width, bmp.Height, camera, -0.35, targets, speed, s);
             if (_mode == MirrorMode.Capture && s.HudCaptureGuides)
                 DrawGuides(g, bmp.Width, bmp.Height, camera, s);
         }
+    }
+
+    /// <summary>Voitures derrière, à cet instant (pour l'outil « Aligner les flèches »), ou null sans télémétrie.</summary>
+    public List<HudTarget>? CurrentTargets()
+    {
+        lock (_lock)
+            return Targets(_settings, out _);
+    }
+
+    /// <summary>Voitures derrière le joueur, dans son repère local (positions lissées).</summary>
+    List<HudTarget>? Targets(Settings s, out double speed)
+    {
+        speed = 0;
+        var world = Read(s);
+        var player = world?.Player;
+        if (world == null || player?.Orientation == null)
+            return null;
+
+        double now = _clock.Elapsed.TotalSeconds;
+        if (world.Time != _lastTime)
+        {
+            _lastTime = world.Time;
+            _smoother.OnSample(world, now);
+        }
+
+        var ori = _smoother.Orientation(player, now) ?? player.Orientation;
+        var pp = _smoother.Position(player, now);
+        var pv = player.Velocity;
+        speed = Math.Sqrt(pv.X * pv.X + pv.Y * pv.Y + pv.Z * pv.Z);
+
+        var targets = new List<HudTarget>();
+        foreach (var v in world.Vehicles)
+        {
+            if (v == player || v.InPits)
+                continue;
+            var vp = _smoother.Position(v, now);
+            double dx = vp.X - pp.X, dy = vp.Y - pp.Y, dz = vp.Z - pp.Z;
+            double lx = ori[0].X * dx + ori[1].X * dy + ori[2].X * dz;
+            double ly = ori[0].Y * dx + ori[1].Y * dy + ori[2].Y * dz;
+            double lz = ori[0].Z * dx + ori[1].Z * dy + ori[2].Z * dz;
+            if (world.InvertLateral)
+                lx = -lx;
+            // Autre portion de piste (pont, ligne droite parallèle) : ignorée.
+            if (Math.Abs(ly) > 15 || Math.Abs(lx) > 20)
+                continue;
+            var rv = v.Velocity;
+            // Voiture roulant dans l'autre sens (portion de piste en sens inverse) : ignorée.
+            double vForward = ori[0].Z * rv.X + ori[1].Z * rv.Y + ori[2].Z * rv.Z;
+            double pForward = ori[0].Z * pv.X + ori[1].Z * pv.Y + ori[2].Z * pv.Z;
+            if (speed > 5 && vForward * pForward < 0 && Math.Abs(vForward) > 5)
+                continue;
+            double relZ = ori[0].Z * (rv.X - pv.X) + ori[1].Z * (rv.Y - pv.Y) + ori[2].Z * (rv.Z - pv.Z);
+            targets.Add(new HudTarget(lx, ly, lz, -relZ * 3.6));
+        }
+        return targets;
     }
 
     /// <summary>
@@ -123,47 +139,21 @@ public sealed class HudOverlay : IDisposable
 
     /// <summary>
     /// Projection du repère local du joueur vers l'image, avec le point de vue de la caméra :
-    /// caméra AC = réglages exacts de la caméra arrière ; capture LMU = point de vue approché du rétro virtuel.
+    /// caméra AC = réglages exacts de la caméra arrière ; capture = point de vue du rétro virtuel du jeu
+    /// (réglages « Capture » de l'ATH, propres à chaque jeu, ajustables avec « Aligner les flèches »).
     /// </summary>
     Func<double, double, double, PointF?> Camera(Settings s, int w, int h)
     {
-        double back, up, vfovDeg;
-        bool mirror;
-        if (_mode == MirrorMode.CameraAssettoCorsa)
-        {
-            back = s.AcCamBack;
-            up = s.AcCamUp;
-            double width = Math.Clamp(s.AcCamResWidth, 64, 2048), height = Math.Clamp(s.AcCamResHeight, 32, 2048);
-            double hfov = Math.Clamp(s.AcCamFov, 10, 150) * Math.PI / 180;
-            vfovDeg = 2 * Math.Atan(Math.Tan(hfov / 2) * height / width) * 180 / Math.PI;
-            mirror = s.AcCamMirror;
-        }
-        else
-        {
-            back = -s.HudCaptureForward; // le rétro virtuel est devant le centre de la voiture
-            up = s.HudCaptureHeight;
-            vfovDeg = s.HudCaptureFov;
-            mirror = true;
-        }
+        if (_mode != MirrorMode.CameraAssettoCorsa)
+            return HudProjection.ForCapture(s, w, h).Project;
 
-        double focal = h / 2.0 / Math.Tan(Math.Clamp(vfovDeg, 2, 120) * Math.PI / 360);
-        bool invert = s.HudInvertSide;
-        // Capture : le centre optique du rétro virtuel n'est pas forcément au milieu de l'image (selon le jeu).
-        bool capture = _mode != MirrorMode.CameraAssettoCorsa;
-        double cx = capture ? w * Math.Clamp(s.HudCaptureCenter, 0, 100) / 100 : w / 2.0;
-        double cy = capture ? h * Math.Clamp(s.HudCaptureHorizon, 0, 100) / 100 : h / 2.0;
-        return (lx, ly, lz) =>
-        {
-            double dz = lz - back;
-            if (dz < 0.5)
-                return null;
-            // Côté de l'image : symétrique du repère de la voiture (un rétro inverse gauche et droite),
-            // avec un réglage pour inverser si besoin.
-            double side = (mirror ? 1 : -1) * (invert ? -1 : 1);
-            double x = cx + side * lx * focal / dz;
-            double y = cy - (ly - up) * focal / dz;
-            return new PointF((float)x, (float)y);
-        };
+        double width = Math.Clamp(s.AcCamResWidth, 64, 2048), height = Math.Clamp(s.AcCamResHeight, 32, 2048);
+        double hfov = Math.Clamp(s.AcCamFov, 10, 150) * Math.PI / 180;
+        double vfovDeg = 2 * Math.Atan(Math.Tan(hfov / 2) * height / width) * 180 / Math.PI;
+        // Côté de l'image : symétrique du repère de la voiture (un rétro inverse gauche et droite),
+        // avec un réglage pour inverser si besoin.
+        double side = (s.AcCamMirror ? 1 : -1) * (s.HudInvertSide ? -1 : 1);
+        return new HudProjection(w / 2.0, h / 2.0, HudProjection.FocalFor(vfovDeg, h), s.AcCamBack, s.AcCamUp, side).Project;
     }
 
     // La caméra AC ne concerne qu'Assetto Corsa ; la capture suit le réglage « Jeu ».

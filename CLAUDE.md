@@ -60,7 +60,10 @@ en jeu depuis Claude : le dire clairement dans chaque compte rendu.
   - **Capture LMU** (`Capture/WgcCapture.cs`) : Windows.Graphics.Capture de la fenêtre du jeu, zone
     recadrée ; `MaskForm` = cache sur le rétro virtuel (couleur lue en N points autour, dégradé IDW) ;
     `CalibrationForm` = cadre au format 1280/400 (déplacement, coins seulement), repères aimantés
-    (bords détectés dans l'image, milieux), points de couleur à la souris.
+    (bords détectés dans l'image, milieux), points de couleur à la souris, **forme libre du cache**
+    (`MaskShape`, sommets en % de la zone, `MaskShapeSmooth` ; `MaskForm` prend une `Region`).
+    `HudAlignForm` (« Aligner les flèches ») : on fige l'image, on glisse les flèches sur les voitures ;
+    `Hud/HudProjection.Fit` recalcule horizon/centre (1 point) et champ de vision (≥ 2 points, moindres carrés).
 - Télémétrie : `Radar/Rf2Telemetry.cs` (mémoire partagée `$rFactor2SMMP_Scoring$`, structs Pack=4,
   repère local rF2 : x = gauche, y = haut, z = arrière) ; `Radar/AcTelemetry.cs` (mémoire partagée
   `AviXMirror.AC.v1` écrite par l'app Lua, 9104 octets, **disposition identique** au Lua).
@@ -98,7 +101,7 @@ zone de capture au format VoCore → ATH Bosch (flèches, échelles 10 graduatio
 flèches) → ATH net en capture → cache avec marges et couleur du décor → faces avant LMU → rangement
 (retrait MJPEG, extension de fenêtre, capture d'écran entier) → veille/pause/bureau, écran éteint,
 LEDs par catégorie, dive bomb, repères de calibration, onglets, points de couleur → licence
-propriétaire + avis de mise à jour → v1.1.0 → tutoriel de prise en main → v1.2.0 → réglages par défaut du propriétaire → v1.2.1 → jeux beta (rF2, ACC, AC EVO, AMS2/PC2, iRacing, F1) → profils par jeu, jauges, écran de veille personnalisé.
+propriétaire + avis de mise à jour → v1.1.0 → tutoriel de prise en main → v1.2.0 → réglages par défaut du propriétaire → v1.2.1 → jeux beta (rF2, ACC, AC EVO, AMS2/PC2, iRacing, F1) → profils par jeu, jauges, écran de veille personnalisé → réglages d'horizon ATH, outil « Aligner les flèches » (tous jeux), forme libre du cache (rétro F1).
 
 ## Git
 
