@@ -6,7 +6,9 @@ namespace AviXMirror;
 public sealed class MainForm : Form
 {
     readonly MirrorEngine _engine = new();
-    readonly PropertyGrid _grid = new() { Dock = DockStyle.Fill, PropertySort = PropertySort.NoSort, ToolbarVisible = false };
+    readonly SettingsPanel _panel = new() { Dock = DockStyle.Fill };
+    // Réglages affichés (vue du profil choisi : communs + valeurs propres au jeu).
+    Settings _view;
     readonly TabStrip _tabs = new() { Dock = DockStyle.Fill };
     readonly HeaderBar _header = new();
     readonly FlatButton _startStop = new() { Text = "Démarrer", Primary = true, Height = 52, Dock = DockStyle.Fill };
@@ -30,6 +32,7 @@ public sealed class MainForm : Form
     readonly ComboBox _profileBox = new() { DropDownStyle = ComboBoxStyle.DropDownList, FlatStyle = FlatStyle.Flat, Width = 300 };
     readonly Label _profileInfo = new() { AutoSize = false, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft };
     readonly FlatButton _profileReset = new() { Text = "Reprendre les réglages communs", Width = 230, Dock = DockStyle.Right };
+    readonly FlatButton _gameGuide = new() { Text = "Guide du jeu", Width = 130, Dock = DockStyle.Right, Margin = new Padding(8, 0, 0, 0) };
 
     public MainForm()
     {
@@ -47,14 +50,12 @@ public sealed class MainForm : Form
 
         _preview = new MirrorPreview(_engine.Frames, () => _engine.LedSides) { Dock = DockStyle.Fill };
 
-        _grid.SelectedObject = _settings.ForGame(null);
-        _tabs.SetTabs(Tabs.All);
+        _view = _settings.ForGame(null);
+        _tabs.SetTabs(Tabs.For(_view.Mode));
         _tabs.SelectedChanged += ShowTab;
         ShowTab(Tabs.General);
-        StyleGrid();
-        _grid.PropertyValueChanged += (_, e) => OnPropertyChanged(e);
-        // Jauges : la valeur s'applique en direct pendant qu'on fait glisser le curseur.
-        GaugeEditor.Preview += OnGaugePreview;
+        // Curseurs : la valeur s'applique en direct pendant qu'on fait glisser.
+        _panel.ValueChanged += OnPropertyChanged;
         SetupProfiles();
 
         var body = new TableLayoutPanel
@@ -123,7 +124,7 @@ public sealed class MainForm : Form
     /// <summary>Tutoriel de prise en main (premier démarrage, ou bouton « Tutoriel »).</summary>
     void ShowTutorial()
     {
-        using var form = new TutorialForm(((Settings)_grid.SelectedObject).Mode, _settings.ShowTutorial,
+        using var form = new TutorialForm(_view.Mode, _settings.ShowTutorial,
             mode => SelectMode(mode, restart: true), InstallAcApp);
         form.ShowDialog(this);
         // « Afficher au démarrage » : enregistré tout de suite, sans toucher aux autres réglages en cours.
@@ -325,6 +326,8 @@ public sealed class MainForm : Form
         _profileInfo.Padding = new Padding(12, 0, 8, 0);
         profileRow.Controls.Add(_profileInfo);
         profileRow.Controls.Add(_profileReset);
+        profileRow.Controls.Add(new Panel { Dock = DockStyle.Right, Width = 8, BackColor = Theme.Background });
+        profileRow.Controls.Add(_gameGuide);
         profileRow.Controls.Add(_profileBox);
         profileRow.Controls.Add(profileLabel);
         column.Controls.Add(profileRow);
@@ -332,29 +335,9 @@ public sealed class MainForm : Form
         _tabs.Margin = new Padding(0, 6, 0, 0);
         column.Controls.Add(_tabs);
         var gridCard = new Card { Dock = DockStyle.Fill, Margin = new Padding(0), Padding = new Padding(2) };
-        gridCard.Controls.Add(_grid);
+        gridCard.Controls.Add(_panel);
         column.Controls.Add(gridCard);
         return column;
-    }
-
-    void StyleGrid()
-    {
-        _grid.Font = Theme.Font(9f);
-        _grid.BackColor = Theme.Surface;
-        _grid.ViewBackColor = Theme.Surface;
-        _grid.ViewForeColor = Theme.Text;
-        _grid.ViewBorderColor = Theme.Surface;
-        _grid.LineColor = Theme.SurfaceRaised;
-        _grid.CategoryForeColor = Theme.Accent;
-        _grid.CategorySplitterColor = Theme.SurfaceRaised;
-        _grid.HelpBackColor = Theme.SurfaceRaised;
-        _grid.HelpForeColor = Theme.TextMuted;
-        _grid.HelpBorderColor = Theme.SurfaceRaised;
-        _grid.SelectedItemWithFocusBackColor = Theme.AccentDark;
-        _grid.SelectedItemWithFocusForeColor = Color.White;
-        _grid.CommandsBackColor = Theme.Surface;
-        _grid.CommandsForeColor = Theme.Text;
-        _grid.DisabledItemForeColor = Theme.TextMuted;
     }
 
     Settings EditedSettings() => _settings;
@@ -372,6 +355,7 @@ public sealed class MainForm : Form
             _profileChosenByUser = true;
             SelectProfile(_profileBox.SelectedIndex == 0 ? null : Radar.Games.All[_profileBox.SelectedIndex - 1].Game);
         };
+        _gameGuide.Click += (_, _) => ShowGameGuide();
         _profileReset.Click += (_, _) =>
         {
             if (_profile is not { } game)
@@ -384,6 +368,22 @@ public sealed class MainForm : Form
             _engine.UpdateLive(_settings);
         };
         RefreshView();
+    }
+
+    /// <summary>Guide de configuration par jeu (jeu du profil affiché, ou jeu détecté).</summary>
+    void ShowGameGuide()
+    {
+        using var form = new GameGuideForm(_profile ?? _engine.CurrentGame, game =>
+        {
+            foreach (var (name, value, _) in GameGuides.Get(game).Recommended)
+                _settings.Set(game, name, value);
+            _settings.Save();
+            SelectProfile(game);
+            _profileChosenByUser = true;
+            if (_engine.Running)
+                ApplySettings(); // le mode peut changer : redémarrage
+        });
+        form.ShowDialog(this);
     }
 
     /// <summary>Affiche les réglages d'un profil (null = réglages communs).</summary>
@@ -399,12 +399,12 @@ public sealed class MainForm : Form
     /// <summary>Recharge la grille avec les réglages effectifs du profil affiché.</summary>
     void RefreshView()
     {
-        var view = _settings.ForGame(_profile);
-        _grid.SelectedObject = view;
+        var view = _view = _settings.ForGame(_profile);
+        UpdateTabs(view.Mode);
+        _panel.Build(view, _tabs.Selected, view.Mode);
         _profileReset.Visible = _profile != null;
         _profileInfo.Text = _profile is { } game
-            ? $"{_settings.OverrideCount(game)} réglage(s) propre(s) à ce jeu. Capture, Radar, Caméra AC, ATH, mode et alertes " +
-              "s'enregistrent pour ce jeu ; les autres onglets sont communs."
+            ? ProfileText(game)
             : "Réglages utilisés par tous les jeux. Choisissez un jeu pour lui donner ses propres réglages.";
         foreach (var (m, tile) in _tiles)
             tile.Selected = m == view.Mode;
@@ -421,70 +421,84 @@ public sealed class MainForm : Form
         _profileChosenByUser = false;
     }
 
-    void OnGaugePreview(string name, object value)
+    /// <summary>Onglets du mode : celui du mode (Capture, Radar ou Caméra AC) et les onglets communs.</summary>
+    void UpdateTabs(MirrorMode mode)
     {
-        _settings.Set(_profile, name, value);
-        _engine.UpdateLive(_settings);
+        var tabs = Tabs.For(mode);
+        var selected = _tabs.Selected;
+        _tabs.SetTabs(tabs);
+        // L'onglet d'un autre mode disparaît : on passe à celui du mode.
+        if (!tabs.Contains(selected))
+            SelectTabSilently(tabs[1]);
+        else
+            SelectTabSilently(selected);
+    }
+
+    bool _switchingTabs;
+
+    /// <summary>Change l'onglet sans reconstruire les réglages (l'appelant s'en charge).</summary>
+    void SelectTabSilently(string tab)
+    {
+        _switchingTabs = true;
+        try { _tabs.Selected = tab; }
+        finally { _switchingTabs = false; }
     }
 
     /// <summary>Affiche seulement les réglages de l'onglet choisi.</summary>
     void ShowTab(string tab)
     {
-        _grid.BrowsableAttributes = new System.ComponentModel.AttributeCollection(
-            new System.ComponentModel.CategoryAttribute(tab), System.ComponentModel.BrowsableAttribute.Yes);
-        _grid.Refresh();
+        if (!_switchingTabs)
+            _panel.Build(_view, tab, _view.Mode);
     }
 
-    void OnPropertyChanged(PropertyValueChangedEventArgs e)
+    /// <summary>
+    /// Réglage modifié dans le panneau : enregistré dans le profil affiché et appliqué en direct.
+    /// <paramref name="final"/> est faux pendant qu'on fait glisser un curseur (aperçu).
+    /// </summary>
+    void OnPropertyChanged(string name, object? value, bool final)
     {
-        var view = (Settings)_grid.SelectedObject;
-        var edited = _settings;
-        var name = e.ChangedItem?.PropertyDescriptor?.Name;
-        // Réglage d'un objet imbriqué (point de couleur…) : c'est la liste entière qui change.
-        if (e.ChangedItem?.Parent?.PropertyDescriptor is { } parent && typeof(Settings).GetProperty(parent.Name) != null)
-            name = parent.Name;
-        if (name != null && typeof(Settings).GetProperty(name) is { } property)
+        _settings.Set(_profile, name, value);
+        if (!final)
         {
-            _settings.Set(_profile, name, property.GetValue(view));
-            if (_profile != null)
-                _profileInfo.Text = $"{_settings.OverrideCount(_profile.Value)} réglage(s) propre(s) à ce jeu. Capture, Radar, Caméra AC, ATH, " +
-                                    "mode et alertes s'enregistrent pour ce jeu ; les autres onglets sont communs.";
+            _engine.UpdateLive(_settings);
+            return;
         }
+        if (_profile != null)
+            _profileInfo.Text = ProfileText(_profile.Value);
         if (name is nameof(Settings.AccentColor) or nameof(Settings.UiFont))
         {
             // Nouvelle charte : on redessine toute l'interface.
-            Theme.Configure(edited.AccentColor, edited.UiFont);
+            Theme.Configure(_settings.AccentColor, _settings.UiFont);
             Icon = Theme.CreateAppIcon();
-            StyleGrid();
+            _panel.ApplyTheme();
+            BeginInvoke(() => _panel.Build(_view, _tabs.Selected, _view.Mode));
             Refresh();
         }
         if (name == nameof(Settings.Mode))
-            SelectMode(view.Mode, restart: true);
+            BeginInvoke(() => SelectMode(_view.Mode, restart: true)); // reconstruit les onglets après l'événement
         else
-            _engine.UpdateLive(edited); // luminosité, champ de vision… en direct
+            _engine.UpdateLive(_settings); // luminosité, champ de vision… en direct
     }
+
+    string ProfileText(RadarGame game) =>
+        $"{_settings.OverrideCount(game)} réglage(s) propre(s) à ce jeu. Capture, Radar, Caméra AC, ATH, mode et alertes " +
+        "s'enregistrent pour ce jeu ; les autres onglets sont communs.";
 
     void SelectMode(MirrorMode mode, bool restart)
     {
         foreach (var (m, tile) in _tiles)
             tile.Selected = m == mode;
-        // Ouvre l'onglet de réglages du mode choisi.
-        _tabs.Selected = mode switch
-        {
-            MirrorMode.Capture => Tabs.Capture,
-            MirrorMode.Radar => Tabs.Radar,
-            _ => Tabs.Camera,
-        };
         // Seuls les boutons utiles au mode choisi sont affichés.
         _captureActions.Visible = mode == MirrorMode.Capture;
         _installAc.Visible = mode != MirrorMode.Capture;
 
-        var view = (Settings)_grid.SelectedObject;
-        if (view.Mode != mode)
-        {
+        if (_view.Mode != mode)
             _settings.Set(_profile, nameof(Settings.Mode), mode);
-            RefreshView();
-        }
+        // Onglets du mode, et ouverture de l'onglet de réglages du mode choisi.
+        var tabs = Tabs.For(mode);
+        _tabs.SetTabs(tabs);
+        SelectTabSilently(tabs[1]);
+        RefreshView();
         if (restart && _engine.Running)
             ApplySettings();
     }
@@ -656,7 +670,6 @@ public sealed class MainForm : Form
     {
         _statusTimer.Stop();
         _updateTimer.Stop();
-        GaugeEditor.Preview -= OnGaugePreview;
         Microsoft.Win32.SystemEvents.SessionEnding -= OnSessionEnding;
         Microsoft.Win32.SystemEvents.PowerModeChanged -= OnPowerModeChanged;
         _engine.Dispose();

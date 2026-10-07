@@ -33,8 +33,11 @@ en jeu depuis Claude : le dire clairement dans chaque compte rendu.
 ## Architecture (`src/AviXMirror`)
 
 - `MainForm.cs` : tuiles de mode, Démarrer, aperçu VoCore, **onglets** de réglages (`TabStrip` +
-  `PropertyGrid` filtré par `CategoryAttribute` = constantes `Tabs.*` dans `Settings.cs`), bandeau
-  de mise à jour, gestion veille/extinction du PC (`SystemEvents`).
+  `Ui/SettingsPanel` construit par réflexion depuis `CategoryAttribute` = constantes `Tabs.*`,
+  `Tabs.For(mode)` = onglets du mode seulement, `[ModeOnly]` pour les réglages propres à un mode ;
+  curseur `Slider` + case numérique pour les `[Gauge]`, interrupteurs, couleurs), bouton « Guide du
+  jeu » (`GameGuides.cs` + `Ui/GameGuideForm` : config dans le jeu + réglages conseillés appliqués au
+  profil), bandeau de mise à jour, gestion veille/extinction du PC (`SystemEvents`).
 - `MirrorEngine.cs` : orchestration (timer 250 ms) ; `GameActivity` décide de l'état
   **Active / Paused / Desktop / NoGame** → écran de veille (`Frames.Held` + `WriteStandby`,
   animation `Ui/Splash.DrawAnimated`, logo fixe sur le bureau), cache retiré, LEDs suspendues.
@@ -43,8 +46,8 @@ en jeu depuis Claude : le dire clairement dans chaque compte rendu.
   Capture/Radar/Caméra/ATH + Mode, délai, alertes LEDs), `ForGame`, `Set(jeu, nom, valeur)`. L'interface
   édite une vue `ForGame(profil)` et écrit dans `_settings` (maître) ; le moteur détecte le jeu lancé
   (`CurrentGame`) et applique son profil (redémarrage seulement si le mode change).
-- Éditeurs (`Ui/Editors.cs`) : `[Gauge(min,max,pas)]` + `GaugeEditor` (mini-jauge, curseur déroulant,
-  aperçu en direct via `GaugeEditor.Preview`), `ColorHexEditor`, `ImageFileEditor`. Écran de veille
+- Éditeurs (`Ui/Editors.cs`) : `GaugeAttribute`, `ColorHexEditor`, `ImageFileEditor` (repris par
+  `SettingsPanel` ; `GaugeEditor` n'est plus utilisé par la fenêtre principale). Écran de veille
   personnalisé (`StandbyImage`, GIF animé) avec petit logo AVIX en bas à droite (`Splash.DrawCustom`).
 - `Settings.cs` : tous les réglages (JSON à côté de l'exe, `SettingsVersion` + migrations),
   enums, `MaskSample`, `Tabs`.
@@ -101,7 +104,7 @@ zone de capture au format VoCore → ATH Bosch (flèches, échelles 10 graduatio
 flèches) → ATH net en capture → cache avec marges et couleur du décor → faces avant LMU → rangement
 (retrait MJPEG, extension de fenêtre, capture d'écran entier) → veille/pause/bureau, écran éteint,
 LEDs par catégorie, dive bomb, repères de calibration, onglets, points de couleur → licence
-propriétaire + avis de mise à jour → v1.1.0 → tutoriel de prise en main → v1.2.0 → réglages par défaut du propriétaire → v1.2.1 → jeux beta (rF2, ACC, AC EVO, AMS2/PC2, iRacing, F1) → profils par jeu, jauges, écran de veille personnalisé → réglages d'horizon ATH, outil « Aligner les flèches » (tous jeux), forme libre du cache (rétro F1).
+propriétaire + avis de mise à jour → v1.1.0 → tutoriel de prise en main → v1.2.0 → réglages par défaut du propriétaire → v1.2.1 → jeux beta (rF2, ACC, AC EVO, AMS2/PC2, iRacing, F1) → profils par jeu, jauges, écran de veille personnalisé → réglages d'horizon ATH, outil « Aligner les flèches » (tous jeux), forme libre du cache (rétro F1) → panneau de réglages maison (curseurs + cases), onglets par mode, guides et réglages conseillés par jeu.
 
 ## Git
 

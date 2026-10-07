@@ -65,6 +65,15 @@ En Caméra AC, l'ATH utilise exactement le point de vue de la caméra. En Captur
 rétro virtuel du jeu est approché : ajustez l'onglet *ATH* (champ de vision, hauteur, position)
 si les flèches sont décalées, et *Inverser gauche/droite des flèches* si elles sont du mauvais côté.
 
+**Configuration par jeu** : le bouton **Guide du jeu** (à côté du choix du profil) affiche, pour chaque jeu,
+les réglages à faire dans le jeu (affichage sans bordure, rétro virtuel, télémétrie), les étapes dans
+AviX Mirror, et applique d'un clic des **réglages de base conseillés** au profil de ce jeu (mode, délai
+anti-triche, point de départ de l'ATH, cache arrondi pour F1…).
+
+**Fenêtre des réglages** : seuls les onglets utiles au mode choisi sont affichés (Capture, Radar ou
+Caméra AC, plus les onglets communs). Chaque valeur numérique a un curseur toujours visible et une case
+où taper la valeur ; l'explication du réglage survolé s'affiche en bas.
+
 **Placer les flèches sur les voitures en Capture** (tous les jeux ; réglages de l'onglet *ATH*, propres
 à chaque jeu) — le plus simple est le bouton **Aligner les flèches** :
 1. Mode Capture démarré, jeu lancé, roulez avec des voitures derrière vous (ou lancez un replay).

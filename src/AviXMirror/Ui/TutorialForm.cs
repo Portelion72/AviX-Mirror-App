@@ -78,7 +78,8 @@ public sealed class TutorialForm : Form
                 DrawAssetto,
                 () => ActionButton("Installer l'app Assetto Corsa", installAcApp)),
             new("5. Autres jeux (beta)",
-                "Choisissez le jeu dans l'onglet Général (« Jeu », ou Auto). Le Radar, l'ATH et les LEDs fonctionnent aussi avec :\n\n" +
+                "Le jeu lancé est détecté tout seul (« Jeu » = Auto) et chaque jeu a son profil de réglages. Le bouton « Guide du jeu » " +
+                "(à côté du profil) explique la configuration de chaque jeu et applique des réglages de base conseillés.\n\n" +
                 "• rFactor 2 : plugin « rF2 Shared Memory Map », comme LMU.\n" +
                 "• Assetto Corsa Competizione et Assetto Corsa EVO : rien à configurer.\n" +
                 "• Automobilista 2 / Project CARS 2 : Options → Système → Mémoire partagée = « Project CARS 2 ».\n" +
@@ -269,7 +270,13 @@ public sealed class TutorialForm : Form
     {
         var accent = Theme.Accent;
         var leds = Enumerable.Range(0, 16).Select(i => i % 8 < 3 ? accent : Color.FromArgb(50, 50, 55)).ToArray();
-        var screen = DrawMirror(g, r, (gg, s) => Splash.Draw(gg, (int)s.Width, (int)s.Height, ""), leds);
+        var screen = DrawMirror(g, r, (gg, s) =>
+        {
+            // Dessiné dans une image à la taille de l'écran, puis posé dessus (Splash dessine depuis l'origine).
+            using var bmp = new Bitmap(Math.Max(1, (int)s.Width), Math.Max(1, (int)s.Height));
+            Splash.Draw(bmp, "");
+            gg.DrawImage(bmp, s.Location);
+        }, leds);
         // Câble USB vers le PC.
         using var cable = new Pen(Theme.TextMuted, 3) { StartCap = LineCap.Round, EndCap = LineCap.Round };
         var start = new PointF(screen.Right + 16, screen.Bottom);

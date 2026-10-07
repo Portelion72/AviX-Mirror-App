@@ -61,6 +61,14 @@ public static class Tabs
     public const string Appearance = "Apparence";
 
     public static readonly string[] All = { General, Capture, Radar, Camera, Hud, Leds, Screen, Appearance };
+
+    /// <summary>Onglets affichés pour un mode : celui du mode (Capture, Radar ou Caméra AC) et les onglets communs.</summary>
+    public static string[] For(MirrorMode mode) => new[]
+    {
+        General,
+        mode switch { MirrorMode.Capture => Capture, MirrorMode.Radar => Radar, _ => Camera },
+        Hud, Leds, Screen, Appearance,
+    };
 }
 
 public enum MaskSide
@@ -267,19 +275,19 @@ public sealed class Settings
                  "La couleur reste celle de la classe.")]
     public bool RadarBrandFronts { get; set; } = true;
 
-    [Category(Tabs.Radar), DisplayName("LMU : inverser gauche/droite")]
+    [Category(Tabs.General), DisplayName("LMU / rF2 : inverser gauche/droite")]
     [Description("À activer si les voitures apparaissent du mauvais côté.")]
     public bool RadarInvertLateral { get; set; }
 
-    [Category(Tabs.Radar), DisplayName("Assetto Corsa : inverser gauche/droite")]
+    [Category(Tabs.General), DisplayName("Assetto Corsa : inverser gauche/droite")]
     [Description("À activer si, dans Assetto Corsa, les voitures apparaissent du mauvais côté.")]
     public bool AcInvertLateral { get; set; }
 
-    [Category(Tabs.Radar), DisplayName("Jeux beta : inverser gauche/droite")]
+    [Category(Tabs.General), DisplayName("Jeux beta : inverser gauche/droite")]
     [Description("rFactor 2 excepté (réglage LMU) : à activer si, dans ACC, AC EVO, AMS2, iRacing ou F1, les voitures apparaissent du mauvais côté.")]
     public bool BetaInvertLateral { get; set; }
 
-    [Category(Tabs.Radar), DisplayName("F1 : port de télémétrie UDP")]
+    [Category(Tabs.General), DisplayName("F1 : port de télémétrie UDP")]
     [Description("Port réglé dans F1 (Réglages → Télémétrie, UDP activée, format 2023 ou plus récent). " +
                  "Un seul logiciel peut l'écouter : dans SimHub, utilisez le renvoi UDP vers un autre port si besoin.")]
     public int F1UdpPort { get; set; } = 20777;
@@ -359,20 +367,24 @@ public sealed class Settings
     [Gauge(0.5, 5, 0.1), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public double HudScaleTime { get; set; } = 2;
 
+    [ModeOnly(MirrorMode.Capture)]
     [Category(Tabs.Hud), DisplayName("Capture : champ de vision vertical (°)")]
     [Description("Point de vue du rétro virtuel du jeu, pour placer les flèches sur les voitures (propre à chaque jeu). " +
                  "Calculé par « Aligner les flèches » avec deux voitures ou plus.")]
     [Gauge(2, 60, 0.5), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public double HudCaptureFov { get; set; } = 14;
 
+    [ModeOnly(MirrorMode.Capture)]
     [Category(Tabs.Hud), DisplayName("Capture : hauteur de l'œil (m)")]
     [Gauge(0, 3, 0.05), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public double HudCaptureHeight { get; set; } = 0.9;
 
+    [ModeOnly(MirrorMode.Capture)]
     [Category(Tabs.Hud), DisplayName("Capture : position du rétro vers l'avant (m)")]
     [Gauge(-3, 3, 0.05), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public double HudCaptureForward { get; set; } = 0.6;
 
+    [ModeOnly(MirrorMode.Capture)]
     [Category(Tabs.Hud), DisplayName("Capture : hauteur de l'horizon (%)")]
     [Description("Hauteur, dans l'image du rétro, du point où la route disparaît à l'horizon (0 = en haut, 100 = en bas). " +
                  "Si les flèches sont sous les voitures, baissez cette valeur ; au-dessus, augmentez-la. Le plus simple : bouton " +
@@ -380,12 +392,14 @@ public sealed class Settings
     [Gauge(0, 100, 0.5), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public double HudCaptureHorizon { get; set; } = 50;
 
+    [ModeOnly(MirrorMode.Capture)]
     [Category(Tabs.Hud), DisplayName("Capture : centre horizontal (%)")]
     [Description("Position, dans l'image du rétro, de l'axe de votre voiture (50 = milieu). À décaler si les flèches sont " +
                  "toutes un peu à gauche ou à droite des voitures (calculé par « Aligner les flèches »).")]
     [Gauge(0, 100, 0.5), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public double HudCaptureCenter { get; set; } = 50;
 
+    [ModeOnly(MirrorMode.Capture)]
     [Category(Tabs.Hud), DisplayName("Capture : repères de réglage")]
     [Description("Affiche sur le VoCore la ligne d'horizon et des repères au sol (10, 20, 40 et 80 m derrière, bords de " +
                  "voie) : réglez l'horizon, le champ de vision et la hauteur jusqu'à ce qu'ils suivent la route, puis désactivez.")]
