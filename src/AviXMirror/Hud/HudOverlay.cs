@@ -78,6 +78,46 @@ public sealed class HudOverlay : IDisposable
             var camera = Camera(s, bmp.Width, bmp.Height);
             using var g = Graphics.FromImage(bmp);
             HudRenderer.Draw(g, bmp.Width, bmp.Height, camera, -0.35, targets, speed, s);
+            if (_mode == MirrorMode.Capture && s.HudCaptureGuides)
+                DrawGuides(g, bmp.Width, bmp.Height, camera, s);
+        }
+    }
+
+    /// <summary>
+    /// Repères de réglage (capture) : ligne d'horizon et marques au sol à 10, 20, 40 et 80 m, au centre
+    /// et sur les bords d'une voie, pour aligner le point de vue de l'ATH sur l'image du rétro.
+    /// </summary>
+    static void DrawGuides(Graphics g, int w, int h, Func<double, double, double, PointF?> camera, Settings s)
+    {
+        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+        float unit = h / 400f;
+        float horizon = (float)(h * Math.Clamp(s.HudCaptureHorizon, 0, 100) / 100);
+        using var pen = new Pen(Color.FromArgb(230, 255, 0, 200), 2 * unit) { DashStyle = System.Drawing.Drawing2D.DashStyle.Dash };
+        g.DrawLine(pen, 0, horizon, w, horizon);
+        using var font = new Font(Ui.Theme.FontName, 13 * unit, FontStyle.Bold, GraphicsUnit.Pixel);
+        using var brush = new SolidBrush(Color.FromArgb(255, 255, 0, 200));
+        g.DrawString("HORIZON", font, brush, 6 * unit, horizon - 18 * unit);
+
+        const double ground = -0.35, lane = 1.8;
+        PointF? previousLeft = null, previousRight = null;
+        foreach (double d in new[] { 10.0, 20.0, 40.0, 80.0 })
+        {
+            var left = camera(lane, ground, d);
+            var right = camera(-lane, ground, d);
+            var center = camera(0, ground, d);
+            if (left is { } l && right is { } r)
+            {
+                g.DrawLine(pen, l, r);
+                if (previousLeft is { } pl && previousRight is { } pr)
+                {
+                    g.DrawLine(pen, pl, l);
+                    g.DrawLine(pen, pr, r);
+                }
+                previousLeft = l;
+                previousRight = r;
+            }
+            if (center is { } c)
+                g.DrawString($"{d:0} m", font, brush, c.X + 4 * unit, c.Y - 16 * unit);
         }
     }
 
@@ -108,6 +148,10 @@ public sealed class HudOverlay : IDisposable
 
         double focal = h / 2.0 / Math.Tan(Math.Clamp(vfovDeg, 2, 120) * Math.PI / 360);
         bool invert = s.HudInvertSide;
+        // Capture : le centre optique du rétro virtuel n'est pas forcément au milieu de l'image (selon le jeu).
+        bool capture = _mode != MirrorMode.CameraAssettoCorsa;
+        double cx = capture ? w * Math.Clamp(s.HudCaptureCenter, 0, 100) / 100 : w / 2.0;
+        double cy = capture ? h * Math.Clamp(s.HudCaptureHorizon, 0, 100) / 100 : h / 2.0;
         return (lx, ly, lz) =>
         {
             double dz = lz - back;
@@ -116,8 +160,8 @@ public sealed class HudOverlay : IDisposable
             // Côté de l'image : symétrique du repère de la voiture (un rétro inverse gauche et droite),
             // avec un réglage pour inverser si besoin.
             double side = (mirror ? 1 : -1) * (invert ? -1 : 1);
-            double x = w / 2.0 + side * lx * focal / dz;
-            double y = h / 2.0 - (ly - up) * focal / dz;
+            double x = cx + side * lx * focal / dz;
+            double y = cy - (ly - up) * focal / dz;
             return new PointF((float)x, (float)y);
         };
     }

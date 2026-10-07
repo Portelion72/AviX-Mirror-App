@@ -90,7 +90,14 @@ public sealed class AccTelemetry : IRadarTelemetry
         var velocity = WorldMath.Vec(F(_p, PVelocity), F(_p, PVelocity + 4), F(_p, PVelocity + 8));
         var up = WorldMath.Vec(0, 1, 0);
         if (WorldMath.Length(velocity) > 3)
-            _lastForward = WorldMath.Normalize(WorldMath.Vec(velocity.X, 0, velocity.Z));
+        {
+            // Direction réelle, pente comprise (montée, descente), lissée pour ne pas trembler sur les vibreurs.
+            var direction = WorldMath.Normalize(velocity);
+            _lastForward = WorldMath.Normalize(WorldMath.Vec(
+                _lastForward.X + (direction.X - _lastForward.X) * 0.3,
+                _lastForward.Y + (direction.Y - _lastForward.Y) * 0.3,
+                _lastForward.Z + (direction.Z - _lastForward.Z) * 0.3));
+        }
         else
         {
             double heading = F(_p, PHeading);

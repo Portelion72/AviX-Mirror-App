@@ -351,6 +351,23 @@ public sealed class Settings
     [Gauge(-3, 3, 0.05), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public double HudCaptureForward { get; set; } = 0.6;
 
+    [Category(Tabs.Hud), DisplayName("Capture : hauteur de l'horizon (%)")]
+    [Description("Hauteur, dans l'image du rétro, du point où la route disparaît à l'horizon (0 = en haut, 100 = en bas). " +
+                 "Si les flèches sont sous les voitures, baissez cette valeur ; au-dessus, augmentez-la. Réglage le plus utile.")]
+    [Gauge(10, 90, 0.5), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
+    public double HudCaptureHorizon { get; set; } = 50;
+
+    [Category(Tabs.Hud), DisplayName("Capture : centre horizontal (%)")]
+    [Description("Position, dans l'image du rétro, de l'axe de votre voiture (50 = milieu). À décaler si les flèches sont " +
+                 "toutes un peu à gauche ou à droite des voitures.")]
+    [Gauge(20, 80, 0.5), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
+    public double HudCaptureCenter { get; set; } = 50;
+
+    [Category(Tabs.Hud), DisplayName("Capture : repères de réglage")]
+    [Description("Affiche sur le VoCore la ligne d'horizon et des repères au sol (10, 20, 40 et 80 m derrière, bords de " +
+                 "voie) : réglez l'horizon, le champ de vision et la hauteur jusqu'à ce qu'ils suivent la route, puis désactivez.")]
+    public bool HudCaptureGuides { get; set; }
+
     // ---------- LEDs ----------
 
     [Category(Tabs.Leds), DisplayName("Activées")]

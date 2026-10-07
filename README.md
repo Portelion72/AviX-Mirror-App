@@ -65,6 +65,15 @@ En Caméra AC, l'ATH utilise exactement le point de vue de la caméra. En Captur
 rétro virtuel du jeu est approché : ajustez l'onglet *ATH* (champ de vision, hauteur, position)
 si les flèches sont décalées, et *Inverser gauche/droite des flèches* si elles sont du mauvais côté.
 
+**Placer les flèches sur les voitures en Capture** (réglages de l'onglet *ATH*, propres à chaque jeu) :
+1. Activez *Capture : repères de réglage* : la ligne d'horizon et des repères au sol (10, 20, 40 et
+   80 m, bords de voie) s'affichent sur le VoCore.
+2. *Capture : hauteur de l'horizon* : amenez la ligne HORIZON là où la route disparaît dans le rétro
+   (flèches sous les voitures → baissez la valeur ; au-dessus → augmentez-la).
+3. *Capture : champ de vision vertical* : resserrez ou écartez les repères jusqu'à ce que la voie suive
+   la route ; *Capture : centre horizontal* si tout est décalé à gauche ou à droite.
+4. Désactivez les repères. Les jauges appliquent chaque valeur en direct pendant le réglage.
+
 ## LEDs spotter (WS2812B sur la carte MPro)
 
 Deux barrettes de 8 LEDs WS2812B, une de chaque côté de l'écran, branchées en série sur la carte MPro
