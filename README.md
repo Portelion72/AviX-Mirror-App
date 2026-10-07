@@ -16,6 +16,21 @@ VoCore, choix du mode, Radar, Assetto Corsa, Capture LMU, ATH et LEDs, veille et
 y choisir son mode et installer l'app Assetto Corsa directement. Il se rouvre avec le bouton
 **Tutoriel de prise en main**.
 
+## Profils par jeu et jauges
+
+Au-dessus des onglets, **Profil** permet de régler chaque jeu séparément : choisissez « Tous les jeux »
+pour les réglages communs, ou un jeu pour lui donner ses propres valeurs. Les onglets **Capture,
+Radar, Caméra AC et ATH**, le **mode** (ex. LMU en Capture, Assetto Corsa en Caméra AC) et les alertes
+LEDs sont propres à chaque jeu ; les autres onglets (écran VoCore, LEDs, apparence…) restent communs.
+Un réglage non modifié pour un jeu reprend la valeur commune ; **Reprendre les réglages communs**
+efface les réglages propres au jeu affiché. Quand le rétroviseur tourne, le profil du jeu lancé
+s'applique tout seul (et s'affiche dans la fenêtre) ; la zone de **Calibrer la zone** s'enregistre
+dans le profil du jeu capturé.
+
+Les valeurs numériques s'affichent avec une **jauge** ; la flèche ouvre un curseur à faire glisser
+(molette et flèches du clavier aussi), avec **aperçu en direct** sur le VoCore. Les couleurs s'ouvrent
+dans le sélecteur de couleurs de Windows.
+
 ## Écran de veille et extinction
 
 Le VoCore n'affiche l'image du jeu que lorsque vous êtes réellement au volant :
@@ -27,6 +42,10 @@ Le VoCore n'affiche l'image du jeu que lorsque vous êtes réellement au volant 
 | Retour sur le bureau (autre fenêtre au premier plan) | logo AVIX fixe | retiré | éteintes |
 | Jeu non lancé | animation AVIX | — | éteintes |
 | Arrêt d'AviX Mirror, extinction ou mise en veille du PC | **écran totalement éteint** | — | éteintes |
+
+**Écran de veille personnalisé** : onglet *Apparence › Écran de veille : image ou animation* — une
+image (PNG, JPG, BMP) ou une animation (**GIF animé**) remplace l'animation AVIX ; le **logo AVIX reste
+affiché en petit en bas à droite**. *Remplir l'écran* choisit entre image entière et plein écran.
 
 Après une mise en veille, le rétro redémarre tout seul au réveil. Pour Assetto Corsa, la détection de
 la pause demande la dernière version de l'app Lua : recliquez **Installer l'app Assetto Corsa**.

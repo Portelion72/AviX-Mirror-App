@@ -39,6 +39,13 @@ en jeu depuis Claude : le dire clairement dans chaque compte rendu.
   **Active / Paused / Desktop / NoGame** → écran de veille (`Frames.Held` + `WriteStandby`,
   animation `Ui/Splash.DrawAnimated`, logo fixe sur le bureau), cache retiré, LEDs suspendues.
   Propriété `Calibrating` : image brute pendant la calibration (sans ATH ni veille).
+- **Profils par jeu** : `Settings.GameProfiles` (jeu → valeurs propres, JSON), `IsPerGame` (onglets
+  Capture/Radar/Caméra/ATH + Mode, délai, alertes LEDs), `ForGame`, `Set(jeu, nom, valeur)`. L'interface
+  édite une vue `ForGame(profil)` et écrit dans `_settings` (maître) ; le moteur détecte le jeu lancé
+  (`CurrentGame`) et applique son profil (redémarrage seulement si le mode change).
+- Éditeurs (`Ui/Editors.cs`) : `[Gauge(min,max,pas)]` + `GaugeEditor` (mini-jauge, curseur déroulant,
+  aperçu en direct via `GaugeEditor.Preview`), `ColorHexEditor`, `ImageFileEditor`. Écran de veille
+  personnalisé (`StandbyImage`, GIF animé) avec petit logo AVIX en bas à droite (`Splash.DrawCustom`).
 - `Settings.cs` : tous les réglages (JSON à côté de l'exe, `SettingsVersion` + migrations),
   enums, `MaskSample`, `Tabs`.
 - Modes :
@@ -91,7 +98,7 @@ zone de capture au format VoCore → ATH Bosch (flèches, échelles 10 graduatio
 flèches) → ATH net en capture → cache avec marges et couleur du décor → faces avant LMU → rangement
 (retrait MJPEG, extension de fenêtre, capture d'écran entier) → veille/pause/bureau, écran éteint,
 LEDs par catégorie, dive bomb, repères de calibration, onglets, points de couleur → licence
-propriétaire + avis de mise à jour → v1.1.0 → tutoriel de prise en main → v1.2.0 → réglages par défaut du propriétaire → v1.2.1 → jeux beta (rF2, ACC, AC EVO, AMS2/PC2, iRacing, F1).
+propriétaire + avis de mise à jour → v1.1.0 → tutoriel de prise en main → v1.2.0 → réglages par défaut du propriétaire → v1.2.1 → jeux beta (rF2, ACC, AC EVO, AMS2/PC2, iRacing, F1) → profils par jeu, jauges, écran de veille personnalisé.
 
 ## Git
 

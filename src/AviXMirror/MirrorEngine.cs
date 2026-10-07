@@ -16,7 +16,8 @@ public sealed class MirrorEngine : IDisposable
     readonly System.Windows.Forms.Timer _standbyTimer = new() { Interval = 33 };
     readonly Stopwatch _standbyClock = Stopwatch.StartNew();
 
-    Settings _settings = new();
+    Settings _master = new();   // réglages communs + profils de tous les jeux
+    Settings _settings = new(); // réglages effectifs pour le jeu en cours
     WgcCapture? _capture;
     IntPtr _captureWindow;
     volatile bool _captureClosed;
@@ -66,6 +67,12 @@ public sealed class MirrorEngine : IDisposable
     public string Status { get; private set; } = "Arrêté.";
     public WgcCapture? Capture => _capture;
 
+    /// <summary>Jeu dont le profil de réglages est appliqué (null : réglages communs).</summary>
+    public RadarGame? CurrentGame { get; private set; }
+
+    /// <summary>Réglages effectivement appliqués (profil du jeu en cours).</summary>
+    public Settings Effective => _settings;
+
     public MirrorEngine()
     {
         _watchdog.Tick += (_, _) => Tick();
@@ -75,7 +82,9 @@ public sealed class MirrorEngine : IDisposable
     public void Start(Settings settings)
     {
         Stop();
-        _settings = settings.Clone();
+        _master = settings.Clone();
+        CurrentGame = DetectGame(_master) ?? CurrentGame;
+        _settings = EffectiveFor(CurrentGame);
         Running = true;
 
         _usb = new VoCoreUsbOutput(Frames, _settings);
@@ -121,10 +130,53 @@ public sealed class MirrorEngine : IDisposable
     {
         if (!Running)
             return;
-        var copy = settings.Clone();
-        // Les réglages de structure (mode, jeu, sortie) demandent un redémarrage : on les garde.
-        copy.Mode = _settings.Mode;
+        _master = settings.Clone();
+        ApplyEffective(EffectiveFor(CurrentGame));
+    }
+
+    /// <summary>Réglages du profil d'un jeu ; en mode Auto, la télémétrie suit ce jeu.</summary>
+    Settings EffectiveFor(RadarGame? game)
+    {
+        var effective = _master.ForGame(game);
+        if (game is { } g && _master.RadarGame == RadarGame.Auto)
+            effective.RadarGame = g;
+        return effective;
+    }
+
+    /// <summary>Jeu dont le profil doit s'appliquer : le jeu choisi, ou en Auto le premier lancé.</summary>
+    static RadarGame? DetectGame(Settings master)
+    {
+        if (master.RadarGame != RadarGame.Auto)
+            return master.RadarGame;
+        foreach (var game in Games.All)
+            if (Games.IsRunning(game, master))
+                return game.Game;
+        return null;
+    }
+
+    /// <summary>Change de jeu en cours de route : nouveau profil, redémarrage seulement si le mode change.</summary>
+    void FollowGame()
+    {
+        var game = DetectGame(_master);
+        if (game == null || game == CurrentGame)
+            return;
+        var effective = _master.ForGame(game);
+        CurrentGame = game;
+        if (effective.Mode != _settings.Mode)
+        {
+            Start(_master); // autre mode pour ce jeu (ex. LMU en capture, AC en caméra)
+            return;
+        }
+        ApplyEffective(EffectiveFor(game));
+    }
+
+    void ApplyEffective(Settings effective)
+    {
+        // Le mode demande un redémarrage : il reste celui du démarrage.
+        effective.Mode = _settings.Mode;
+        var copy = effective;
         _settings = copy;
+        _capture?.SetCrop(new Rectangle(copy.CropX, copy.CropY, copy.CropWidth, copy.CropHeight));
         _usb?.UpdateSettings(copy);
         _radar?.UpdateSettings(copy);
         _acCamera?.UpdateSettings(copy);
@@ -176,8 +228,13 @@ public sealed class MirrorEngine : IDisposable
         if (!Running)
             return;
 
+        FollowGame();
+        if (!Running)
+            return;
         var s = _settings;
         var messages = new List<string>();
+        if (CurrentGame is { } current)
+            messages.Add($"Profil : {Games.Get(current).Name}" + (_master.OverrideCount(current) > 0 ? "" : " (réglages communs)"));
 
         UpdateState(s);
         messages.Add(_state switch
@@ -353,6 +410,19 @@ public sealed class MirrorEngine : IDisposable
         if (!Running || _usb == null)
             return;
         var size = _usb.LogicalSize;
+        double t = _standbyClock.Elapsed.TotalSeconds;
+
+        // Image ou animation personnalisée (avec le petit logo AVIX), sinon l'écran AVIX.
+        var image = _settings.StandbyImage;
+        if (!string.IsNullOrWhiteSpace(image))
+        {
+            bool drawn = false;
+            double time = _state == GameState.Desktop ? 0 : t;
+            Frames.WriteStandby(size.Width, size.Height, bmp => drawn = Ui.Splash.DrawCustom(bmp, image, _settings.StandbyImageFill, time));
+            if (drawn)
+                return;
+        }
+
         switch (_state)
         {
             case GameState.Desktop:
@@ -360,7 +430,6 @@ public sealed class MirrorEngine : IDisposable
                 break;
             case GameState.Paused:
             case GameState.NoGame:
-                double t = _standbyClock.Elapsed.TotalSeconds;
                 string message = _state == GameState.Paused ? "Pause" : "En attente du jeu…";
                 Frames.WriteStandby(size.Width, size.Height, bmp => Ui.Splash.DrawAnimated(bmp, t, message));
                 break;

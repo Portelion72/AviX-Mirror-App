@@ -19,7 +19,15 @@ public sealed class MainForm : Form
     readonly FlatButton _updateBanner = new() { Primary = true, Dock = DockStyle.Top, Height = 40, Visible = false };
     readonly System.Windows.Forms.Timer _updateTimer = new() { Interval = 6 * 3600 * 1000 };
     Util.UpdateInfo? _update;
+
+    // Réglages communs + profils de chaque jeu (enregistrés tels quels).
     Settings _settings;
+    // Profil affiché dans les onglets : null = tous les jeux (réglages communs).
+    RadarGame? _profile;
+    bool _profileChosenByUser;
+    readonly ComboBox _profileBox = new() { DropDownStyle = ComboBoxStyle.DropDownList, FlatStyle = FlatStyle.Flat, Width = 300 };
+    readonly Label _profileInfo = new() { AutoSize = false, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft };
+    readonly FlatButton _profileReset = new() { Text = "Reprendre les réglages communs", Width = 230, Dock = DockStyle.Right };
 
     public MainForm()
     {
@@ -37,12 +45,15 @@ public sealed class MainForm : Form
 
         _preview = new MirrorPreview(_engine.Frames, () => _engine.LedSides) { Dock = DockStyle.Fill };
 
-        _grid.SelectedObject = _settings.Clone();
+        _grid.SelectedObject = _settings.ForGame(null);
         _tabs.SetTabs(Tabs.All);
         _tabs.SelectedChanged += ShowTab;
         ShowTab(Tabs.General);
         StyleGrid();
         _grid.PropertyValueChanged += (_, e) => OnPropertyChanged(e);
+        // Jauges : la valeur s'applique en direct pendant qu'on fait glisser le curseur.
+        GaugeEditor.Preview += OnGaugePreview;
+        SetupProfiles();
 
         var body = new TableLayoutPanel
         {
@@ -109,11 +120,10 @@ public sealed class MainForm : Form
     /// <summary>Tutoriel de prise en main (premier démarrage, ou bouton « Tutoriel »).</summary>
     void ShowTutorial()
     {
-        using var form = new TutorialForm(EditedSettings().Mode, _settings.ShowTutorial,
+        using var form = new TutorialForm(((Settings)_grid.SelectedObject).Mode, _settings.ShowTutorial,
             mode => SelectMode(mode, restart: true), InstallAcApp);
         form.ShowDialog(this);
         // « Afficher au démarrage » : enregistré tout de suite, sans toucher aux autres réglages en cours.
-        EditedSettings().ShowTutorial = form.ShowAtStartup;
         _settings.ShowTutorial = form.ShowAtStartup;
         var saved = Settings.Load();
         saved.ShowTutorial = form.ShowAtStartup;
@@ -273,9 +283,10 @@ public sealed class MainForm : Form
 
     Control BuildRightColumn()
     {
-        var column = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 4, BackColor = Theme.Background };
+        var column = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 5, BackColor = Theme.Background };
         column.RowStyles.Add(new RowStyle(SizeType.Absolute, 26));
         column.RowStyles.Add(new RowStyle(SizeType.Absolute, 230));
+        column.RowStyles.Add(new RowStyle(SizeType.Absolute, 50));
         column.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
         column.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
@@ -285,7 +296,31 @@ public sealed class MainForm : Form
         previewCard.Controls.Add(_preview);
         column.Controls.Add(previewCard);
 
-        _tabs.Margin = new Padding(0, 10, 0, 0);
+        // Profil : réglages communs ou propres à un jeu.
+        var profileRow = new Panel { Dock = DockStyle.Fill, Margin = new Padding(0, 10, 0, 0), BackColor = Theme.Background };
+        var profileLabel = new Label
+        {
+            Text = "PROFIL",
+            Dock = DockStyle.Left,
+            Width = 64,
+            TextAlign = ContentAlignment.MiddleLeft,
+            ForeColor = Theme.Accent,
+            Font = Theme.Font(9f, FontStyle.Bold),
+        };
+        _profileBox.Dock = DockStyle.Left;
+        _profileBox.BackColor = Theme.SurfaceRaised;
+        _profileBox.ForeColor = Theme.Text;
+        _profileBox.Font = Theme.Font(10f);
+        _profileInfo.ForeColor = Theme.TextMuted;
+        _profileInfo.Font = Theme.Font(8.5f);
+        _profileInfo.Padding = new Padding(12, 0, 8, 0);
+        profileRow.Controls.Add(_profileInfo);
+        profileRow.Controls.Add(_profileReset);
+        profileRow.Controls.Add(_profileBox);
+        profileRow.Controls.Add(profileLabel);
+        column.Controls.Add(profileRow);
+
+        _tabs.Margin = new Padding(0, 6, 0, 0);
         column.Controls.Add(_tabs);
         var gridCard = new Card { Dock = DockStyle.Fill, Margin = new Padding(0), Padding = new Padding(2) };
         gridCard.Controls.Add(_grid);
@@ -313,7 +348,75 @@ public sealed class MainForm : Form
         _grid.DisabledItemForeColor = Theme.TextMuted;
     }
 
-    Settings EditedSettings() => (Settings)_grid.SelectedObject;
+    Settings EditedSettings() => _settings;
+
+    // ---------- Profils par jeu ----------
+
+    void SetupProfiles()
+    {
+        _profileBox.Items.Add("Tous les jeux (réglages communs)");
+        foreach (var game in Radar.Games.All)
+            _profileBox.Items.Add(game.Name + (game.Beta ? " (beta)" : ""));
+        _profileBox.SelectedIndex = 0;
+        _profileBox.SelectedIndexChanged += (_, _) =>
+        {
+            _profileChosenByUser = true;
+            SelectProfile(_profileBox.SelectedIndex == 0 ? null : Radar.Games.All[_profileBox.SelectedIndex - 1].Game);
+        };
+        _profileReset.Click += (_, _) =>
+        {
+            if (_profile is not { } game)
+                return;
+            if (MessageBox.Show(this, $"{Radar.Games.Get(game).Name} reprendra tous les réglages communs. Continuer ?",
+                    "Profil", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                return;
+            _settings.ClearOverrides(game);
+            RefreshView();
+            _engine.UpdateLive(_settings);
+        };
+        RefreshView();
+    }
+
+    /// <summary>Affiche les réglages d'un profil (null = réglages communs).</summary>
+    void SelectProfile(RadarGame? game)
+    {
+        _profile = game;
+        int index = game is { } g ? Array.FindIndex(Radar.Games.All, x => x.Game == g) + 1 : 0;
+        if (_profileBox.SelectedIndex != index)
+            _profileBox.SelectedIndex = index;
+        RefreshView();
+    }
+
+    /// <summary>Recharge la grille avec les réglages effectifs du profil affiché.</summary>
+    void RefreshView()
+    {
+        var view = _settings.ForGame(_profile);
+        _grid.SelectedObject = view;
+        _profileReset.Visible = _profile != null;
+        _profileInfo.Text = _profile is { } game
+            ? $"{_settings.OverrideCount(game)} réglage(s) propre(s) à ce jeu. Capture, Radar, Caméra AC, ATH, mode et alertes " +
+              "s'enregistrent pour ce jeu ; les autres onglets sont communs."
+            : "Réglages utilisés par tous les jeux. Choisissez un jeu pour lui donner ses propres réglages.";
+        foreach (var (m, tile) in _tiles)
+            tile.Selected = m == view.Mode;
+        _calibrate.Visible = view.Mode == MirrorMode.Capture;
+        _installAc.Visible = view.Mode != MirrorMode.Capture;
+    }
+
+    /// <summary>Le profil du jeu détecté s'affiche tout seul, tant que l'utilisateur n'en a pas choisi un.</summary>
+    void FollowDetectedGame()
+    {
+        if (_profileChosenByUser || !_engine.Running || _engine.CurrentGame == _profile)
+            return;
+        SelectProfile(_engine.CurrentGame);
+        _profileChosenByUser = false;
+    }
+
+    void OnGaugePreview(string name, object value)
+    {
+        _settings.Set(_profile, name, value);
+        _engine.UpdateLive(_settings);
+    }
 
     /// <summary>Affiche seulement les réglages de l'onglet choisi.</summary>
     void ShowTab(string tab)
@@ -325,8 +428,19 @@ public sealed class MainForm : Form
 
     void OnPropertyChanged(PropertyValueChangedEventArgs e)
     {
-        var edited = EditedSettings();
+        var view = (Settings)_grid.SelectedObject;
+        var edited = _settings;
         var name = e.ChangedItem?.PropertyDescriptor?.Name;
+        // Réglage d'un objet imbriqué (point de couleur…) : c'est la liste entière qui change.
+        if (e.ChangedItem?.Parent?.PropertyDescriptor is { } parent && typeof(Settings).GetProperty(parent.Name) != null)
+            name = parent.Name;
+        if (name != null && typeof(Settings).GetProperty(name) is { } property)
+        {
+            _settings.Set(_profile, name, property.GetValue(view));
+            if (_profile != null)
+                _profileInfo.Text = $"{_settings.OverrideCount(_profile.Value)} réglage(s) propre(s) à ce jeu. Capture, Radar, Caméra AC, ATH, " +
+                                    "mode et alertes s'enregistrent pour ce jeu ; les autres onglets sont communs.";
+        }
         if (name is nameof(Settings.AccentColor) or nameof(Settings.UiFont))
         {
             // Nouvelle charte : on redessine toute l'interface.
@@ -336,7 +450,7 @@ public sealed class MainForm : Form
             Refresh();
         }
         if (name == nameof(Settings.Mode))
-            SelectMode(edited.Mode, restart: true);
+            SelectMode(view.Mode, restart: true);
         else
             _engine.UpdateLive(edited); // luminosité, champ de vision… en direct
     }
@@ -356,11 +470,11 @@ public sealed class MainForm : Form
         _calibrate.Visible = mode == MirrorMode.Capture;
         _installAc.Visible = mode != MirrorMode.Capture;
 
-        var edited = EditedSettings();
-        if (edited.Mode != mode)
+        var view = (Settings)_grid.SelectedObject;
+        if (view.Mode != mode)
         {
-            edited.Mode = mode;
-            _grid.Refresh();
+            _settings.Set(_profile, nameof(Settings.Mode), mode);
+            RefreshView();
         }
         if (restart && _engine.Running)
             ApplySettings();
@@ -368,6 +482,7 @@ public sealed class MainForm : Form
 
     void RefreshStatus()
     {
+        FollowDetectedGame();
         _status.Text = _engine.Running ? _engine.Status : "Choisissez un mode puis cliquez sur DÉMARRER.";
         _header.SetState(_engine.Running, _engine.Running ? "EN COURS" : "ARRÊTÉ");
         _startStop.Text = _engine.Running ? "Arrêter" : "Démarrer";
@@ -377,7 +492,6 @@ public sealed class MainForm : Form
 
     void ApplySettings()
     {
-        _settings = EditedSettings().Clone();
         _settings.Save();
         if (_engine.Running)
             _engine.Start(_settings);
@@ -392,7 +506,6 @@ public sealed class MainForm : Form
         }
         else
         {
-            _settings = EditedSettings().Clone();
             _settings.Save();
             _engine.Start(_settings);
         }
@@ -403,24 +516,25 @@ public sealed class MainForm : Form
     void Calibrate()
     {
         var capture = _engine.Capture;
-        if (!_engine.Running || _settings.Mode != MirrorMode.Capture || capture == null)
+        var effective = _engine.Effective;
+        if (!_engine.Running || effective.Mode != MirrorMode.Capture || capture == null)
         {
             MessageBox.Show(this,
-                "Démarrez d'abord le rétroviseur en mode Capture, avec Le Mans Ultimate lancé.",
+                "Démarrez d'abord le rétroviseur en mode Capture, avec le jeu lancé.",
                 "Calibrer la zone", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
 
-        var current = new Rectangle(_settings.CropX, _settings.CropY, _settings.CropWidth, _settings.CropHeight);
-        var margins = new Padding(Math.Max(0, _settings.MaskMarginLeft), Math.Max(0, _settings.MaskMarginTop),
-            Math.Max(0, _settings.MaskMarginRight), Math.Max(0, _settings.MaskMarginBottom));
+        var current = new Rectangle(effective.CropX, effective.CropY, effective.CropWidth, effective.CropHeight);
+        var margins = new Padding(Math.Max(0, effective.MaskMarginLeft), Math.Max(0, effective.MaskMarginTop),
+            Math.Max(0, effective.MaskMarginRight), Math.Max(0, effective.MaskMarginBottom));
         DialogResult result;
         List<MaskSample> samples;
         Rectangle sel;
         _engine.Calibrating = true;
         try
         {
-            using var form = new CalibrationForm(capture, _engine.Frames, current, margins, _settings.MaskSamples);
+            using var form = new CalibrationForm(capture, _engine.Frames, current, margins, effective.MaskSamples);
             result = form.ShowDialog(this);
             sel = form.Selection;
             samples = form.Samples;
@@ -431,23 +545,18 @@ public sealed class MainForm : Form
         }
         if (result == DialogResult.OK)
         {
-            var edited = EditedSettings();
-            edited.CropX = sel.X;
-            edited.CropY = sel.Y;
-            edited.CropWidth = sel.Width;
-            edited.CropHeight = sel.Height;
-            edited.MaskSamples = samples;
-            _settings.MaskSamples = samples.Select(x => new MaskSample { Side = x.Side, Position = x.Position, Distance = x.Distance }).ToList();
-            _grid.Refresh();
-            _engine.UpdateLive(edited);
+            // La zone s'enregistre dans le profil du jeu capturé.
+            var game = _engine.CurrentGame;
+            _settings.Set(game, nameof(Settings.CropX), sel.X);
+            _settings.Set(game, nameof(Settings.CropY), sel.Y);
+            _settings.Set(game, nameof(Settings.CropWidth), sel.Width);
+            _settings.Set(game, nameof(Settings.CropHeight), sel.Height);
+            _settings.Set(game, nameof(Settings.MaskSamples), samples);
+            _settings.Save();
+            RefreshView();
         }
         // Applique la nouvelle zone (ou restaure l'ancienne si annulé).
-        _settings.CropX = EditedSettings().CropX;
-        _settings.CropY = EditedSettings().CropY;
-        _settings.CropWidth = EditedSettings().CropWidth;
-        _settings.CropHeight = EditedSettings().CropHeight;
-        _settings.Save();
-        capture.SetCrop(new Rectangle(_settings.CropX, _settings.CropY, _settings.CropWidth, _settings.CropHeight));
+        _engine.UpdateLive(_settings);
     }
 
     void InstallAcApp()
@@ -492,6 +601,7 @@ public sealed class MainForm : Form
     {
         _statusTimer.Stop();
         _updateTimer.Stop();
+        GaugeEditor.Preview -= OnGaugePreview;
         Microsoft.Win32.SystemEvents.SessionEnding -= OnSessionEnding;
         Microsoft.Win32.SystemEvents.PowerModeChanged -= OnPowerModeChanged;
         _engine.Dispose();

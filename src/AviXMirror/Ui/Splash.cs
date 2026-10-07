@@ -128,4 +128,110 @@ public static class Splash
 
         DrawMessage(g, w, h, logo, message);
     }
+
+    // ---------- Image ou animation personnalisée ----------
+
+    sealed class CustomImage : IDisposable
+    {
+        public required Image Image;
+        public required string Path;
+        public required DateTime Modified;
+        public int Frames = 1;
+        public double[] FrameEnds = Array.Empty<double>(); // fin de chaque image (s)
+
+        public void Dispose() => Image.Dispose();
+    }
+
+    static readonly object CustomLock = new();
+    static CustomImage? _custom;
+
+    /// <summary>Charge (une fois) l'image ou le GIF animé ; null si le fichier est illisible.</summary>
+    static CustomImage? LoadCustom(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            return null;
+        var modified = File.GetLastWriteTimeUtc(path);
+        if (_custom != null && _custom.Path == path && _custom.Modified == modified)
+            return _custom;
+        _custom?.Dispose();
+        _custom = null;
+        try
+        {
+            // Copie en mémoire : le fichier reste modifiable pendant que l'application tourne.
+            var image = Image.FromStream(new MemoryStream(File.ReadAllBytes(path)));
+            var custom = new CustomImage { Image = image, Path = path, Modified = modified };
+            var dimension = System.Drawing.Imaging.FrameDimension.Time;
+            if (image.FrameDimensionsList.Contains(dimension.Guid))
+            {
+                custom.Frames = image.GetFrameCount(dimension);
+                // Durées des images d'un GIF (propriété 0x5100, en centièmes de seconde).
+                var delays = image.PropertyIdList.Contains(0x5100) ? image.GetPropertyItem(0x5100)?.Value : null;
+                custom.FrameEnds = new double[custom.Frames];
+                double total = 0;
+                for (int i = 0; i < custom.Frames; i++)
+                {
+                    int delay = delays != null && delays.Length >= (i + 1) * 4 ? BitConverter.ToInt32(delays, i * 4) : 10;
+                    total += Math.Max(2, delay) / 100.0;
+                    custom.FrameEnds[i] = total;
+                }
+            }
+            return _custom = custom;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Écran de veille personnalisé : image ou animation GIF (au temps <paramref name="time"/>), puis petit
+    /// logo AVIX en bas à droite. Retourne faux si l'image est introuvable (l'écran AVIX s'affiche alors).
+    /// </summary>
+    public static bool DrawCustom(Bitmap bmp, string path, bool fill, double time)
+    {
+        lock (CustomLock)
+        {
+            var custom = LoadCustom(path);
+            if (custom == null)
+                return false;
+            var image = custom.Image;
+            if (custom.Frames > 1 && custom.FrameEnds.Length == custom.Frames)
+            {
+                double t = time % custom.FrameEnds[^1];
+                int frame = Array.FindIndex(custom.FrameEnds, end => t < end);
+                image.SelectActiveFrame(System.Drawing.Imaging.FrameDimension.Time, Math.Max(0, frame));
+            }
+
+            using var g = Graphics.FromImage(bmp);
+            int w = bmp.Width, h = bmp.Height;
+            Theme.Smooth(g);
+            g.Clear(Color.Black);
+            float scale = fill
+                ? Math.Max(w / (float)image.Width, h / (float)image.Height)
+                : Math.Min(w / (float)image.Width, h / (float)image.Height);
+            float iw = image.Width * scale, ih = image.Height * scale;
+            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+            g.DrawImage(image, (w - iw) / 2, (h - ih) / 2, iw, ih);
+            DrawCornerLogo(g, w, h);
+            return true;
+        }
+    }
+
+    /// <summary>Logo AVIX en petit, en bas à droite, sur un léger fond pour rester lisible.</summary>
+    public static void DrawCornerLogo(Graphics g, int w, int h)
+    {
+        var logo = Theme.Logo;
+        float lw = w * 0.14f, lh = lw * logo.Height / logo.Width;
+        if (lh > h * 0.2f)
+        {
+            lh = h * 0.2f;
+            lw = lh * logo.Width / logo.Height;
+        }
+        float margin = h * 0.035f;
+        var box = new RectangleF(w - lw - margin, h - lh - margin, lw, lh);
+        using (var shade = Theme.RoundedRect(RectangleF.Inflate(box, h * 0.02f, h * 0.015f), h * 0.02f))
+        using (var brush = new SolidBrush(Color.FromArgb(130, 0, 0, 0)))
+            g.FillPath(brush, shade);
+        Theme.DrawLogo(g, box);
+    }
 }

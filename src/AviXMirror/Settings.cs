@@ -121,6 +121,7 @@ public sealed class Settings
 
     [Category(Tabs.General), DisplayName("Délai après lancement du jeu (s)")]
     [Description("Mode Capture : attente avant de capturer la fenêtre de LMU, pour laisser Easy Anti-Cheat démarrer tranquillement.")]
+    [Gauge(0, 60, 1), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public int GameStartDelaySeconds { get; set; } = 10;
 
     [Browsable(false)] // réglage expert, modifiable dans le fichier de réglages
@@ -131,6 +132,7 @@ public sealed class Settings
 
     [Category(Tabs.Screen), DisplayName("Luminosité")]
     [Description("1 à 255 (0 = maximum).")]
+    [Gauge(0, 255, 1), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public int VoCoreBrightness { get; set; } = 0;
 
     [Category(Tabs.Screen), DisplayName("Rotation")]
@@ -147,6 +149,7 @@ public sealed class Settings
 
     [Category(Tabs.Screen), DisplayName("Images par seconde")]
     [Description("Fréquence maximale de rafraîchissement du rétroviseur.")]
+    [Gauge(10, 60, 1), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public int TargetFps { get; set; } = 60;
 
     [Browsable(false)] // réglage expert, modifiable dans le fichier de réglages
@@ -209,24 +212,30 @@ public sealed class Settings
 
     [Category(Tabs.Capture), DisplayName("Cache : marge à gauche (px)")]
     [Description("Agrandit le cache au-delà de la zone de capture (cadre du rétro, bord flou…). N'agrandit pas la capture.")]
+    [Gauge(0, 600, 1), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public int MaskMarginLeft { get; set; } = 240;
 
     [Category(Tabs.Capture), DisplayName("Cache : marge à droite (px)")]
+    [Gauge(0, 600, 1), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public int MaskMarginRight { get; set; } = 240;
 
     [Category(Tabs.Capture), DisplayName("Cache : marge en haut (px)")]
+    [Gauge(0, 300, 1), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public int MaskMarginTop { get; set; } = 10;
 
     [Category(Tabs.Capture), DisplayName("Cache : marge en bas (px)")]
+    [Gauge(0, 300, 1), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public int MaskMarginBottom { get; set; } = 10;
 
     // ---------- Radar ----------
 
 
     [Category(Tabs.Radar), DisplayName("Portée (m)")]
+    [Gauge(20, 200, 1), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public double RadarRange { get; set; } = 80;
 
     [Category(Tabs.Radar), DisplayName("Champ de vision (°)")]
+    [Gauge(20, 150, 1), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public double RadarFov { get; set; } = 70;
 
     [Category(Tabs.Radar), DisplayName("Afficher les noms")]
@@ -258,23 +267,29 @@ public sealed class Settings
 
     [Category(Tabs.Camera), DisplayName("Champ de vision horizontal (°)")]
     [Description("Largeur de la vue arrière. Un vrai rétroviseur intérieur couvre environ 40 à 60°.")]
+    [Gauge(10, 150, 1), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public double AcCamFov { get; set; } = 55;
 
     [Category(Tabs.Camera), DisplayName("Recul de la caméra (m)")]
     [Description("Distance derrière le centre de la voiture. Augmentez si l'arrière de votre voiture apparaît dans l'image.")]
+    [Gauge(0, 10, 0.1), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public double AcCamBack { get; set; } = 2.4;
 
     [Category(Tabs.Camera), DisplayName("Hauteur de la caméra (m)")]
+    [Gauge(0, 3, 0.05), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public double AcCamUp { get; set; } = 1.0;
 
     [Category(Tabs.Camera), DisplayName("Largeur de rendu")]
+    [Gauge(320, 2048, 16), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public int AcCamResWidth { get; set; } = 1280;
 
     [Category(Tabs.Camera), DisplayName("Hauteur de rendu")]
+    [Gauge(100, 1024, 8), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public int AcCamResHeight { get; set; } = 400;
 
     [Category(Tabs.Camera), DisplayName("Images par seconde")]
     [Description("Chaque image est un rendu supplémentaire de la scène par AC : 30 est un bon compromis.")]
+    [Gauge(5, 60, 1), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public int AcCamFps { get; set; } = 30;
 
     [Category(Tabs.Camera), DisplayName("Effet miroir")]
@@ -283,10 +298,12 @@ public sealed class Settings
 
     [Category(Tabs.Camera), DisplayName("Exposition")]
     [Description("Correction de l'exposition automatique : 1 = neutre, 1,5 = plus clair, 0,7 = plus sombre. S'applique en direct.")]
+    [Gauge(0.1, 4, 0.05), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public double AcCamExposure { get; set; } = 0.7;
 
     [Category(Tabs.Camera), DisplayName("Gamma")]
     [Description("Éclaircit les zones sombres sans brûler les zones claires : 1 = inchangé, 1.5 à 2.2 = ombres plus claires. S'applique en direct.")]
+    [Gauge(0.5, 3, 0.05), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public double AcCamGamma { get; set; } = 2.2;
 
     // ---------- ATH ----------
@@ -297,6 +314,7 @@ public sealed class Settings
 
     [Category(Tabs.Hud), DisplayName("Taille des flèches (%)")]
     [Description("100 = taille normale ; de 20 à 400 %. Les flèches restent plus grosses sur les voitures proches.")]
+    [Gauge(20, 400, 5), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public double HudArrowSize { get; set; } = 200;
 
     [Category(Tabs.Hud), DisplayName("Inverser gauche/droite des flèches")]
@@ -312,20 +330,25 @@ public sealed class Settings
 
     [Category(Tabs.Hud), DisplayName("Échelle de distance : maximum (m)")]
     [Description("Haut de l'échelle de gauche (0 m en bas), découpée en 10 graduations égales.")]
+    [Gauge(10, 300, 5), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public double HudScaleDistance { get; set; } = 100;
 
     [Category(Tabs.Hud), DisplayName("Échelle de temps : maximum (s)")]
     [Description("Haut de l'échelle de droite (0 s en bas), découpée en 10 graduations égales.")]
+    [Gauge(0.5, 5, 0.1), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public double HudScaleTime { get; set; } = 2;
 
     [Category(Tabs.Hud), DisplayName("Capture : champ de vision vertical (°)")]
     [Description("Point de vue approché du rétro virtuel de LMU, pour placer les flèches sur les voitures. À ajuster si elles sont décalées.")]
+    [Gauge(2, 60, 0.5), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public double HudCaptureFov { get; set; } = 14;
 
     [Category(Tabs.Hud), DisplayName("Capture : hauteur de l'œil (m)")]
+    [Gauge(0, 3, 0.05), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public double HudCaptureHeight { get; set; } = 0.9;
 
     [Category(Tabs.Hud), DisplayName("Capture : position du rétro vers l'avant (m)")]
+    [Gauge(-3, 3, 0.05), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public double HudCaptureForward { get; set; } = 0.6;
 
     // ---------- LEDs ----------
@@ -335,6 +358,7 @@ public sealed class Settings
     public bool LedsEnabled { get; set; } = true;
 
     [Category(Tabs.Leds), DisplayName("LEDs par côté")]
+    [Gauge(1, 32, 1), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public int LedsPerSide { get; set; } = 8;
 
     [Category(Tabs.Leds), DisplayName("Ordre de câblage")]
@@ -350,10 +374,12 @@ public sealed class Settings
 
     [Category(Tabs.Leds), DisplayName("Luminosité")]
     [Description("0 à 255.")]
+    [Gauge(0, 255, 1), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public int LedBrightness { get; set; } = 80;
 
     [Category(Tabs.Leds), DisplayName("Distance d'alerte (m)")]
     [Description("Une voiture qui arrive sur un côté est signalée à partir de cette distance derrière vous.")]
+    [Gauge(5, 80, 1), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public double LedWarnDistance { get; set; } = 20;
 
     [Category(Tabs.Leds), DisplayName("Protocole")]
@@ -366,21 +392,27 @@ public sealed class Settings
     public bool LedClassColors { get; set; } = true;
 
     [Category(Tabs.Leds), DisplayName("Couleur Hypercar")]
+    [Editor(typeof(Ui.ColorHexEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public string LedColorHypercar { get; set; } = "#F52727";
 
     [Category(Tabs.Leds), DisplayName("Couleur LMP2")]
+    [Editor(typeof(Ui.ColorHexEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public string LedColorLmp2 { get; set; } = "#2768F5";
 
     [Category(Tabs.Leds), DisplayName("Couleur LMP3")]
+    [Editor(typeof(Ui.ColorHexEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public string LedColorLmp3 { get; set; } = "#7D27F5";
 
     [Category(Tabs.Leds), DisplayName("Couleur GTE")]
+    [Editor(typeof(Ui.ColorHexEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public string LedColorGte { get; set; } = "#F5C827";
 
     [Category(Tabs.Leds), DisplayName("Couleur GT3")]
+    [Editor(typeof(Ui.ColorHexEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public string LedColorGt3 { get; set; } = "#38F527";
 
     [Category(Tabs.Leds), DisplayName("Couleur autres voitures")]
+    [Editor(typeof(Ui.ColorHexEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public string LedColorOther { get; set; } = "#FFB400";
 
     [Category(Tabs.Leds), DisplayName("Détecteur de dive bomb")]
@@ -390,24 +422,117 @@ public sealed class Settings
 
     [Category(Tabs.Leds), DisplayName("Dive bomb : vitesse de rapprochement (km/h)")]
     [Description("Différence de vitesse minimale avec la voiture qui arrive.")]
+    [Gauge(5, 100, 1), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public double LedDiveBombSpeed { get; set; } = 30;
 
     [Category(Tabs.Leds), DisplayName("Dive bomb : délai d'alerte (s)")]
     [Description("L'alerte se déclenche si la voiture sera à votre hauteur dans moins de ce temps.")]
+    [Gauge(0.2, 3, 0.1), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public double LedDiveBombTime { get; set; } = 1.0;
 
     [Category(Tabs.Leds), DisplayName("Dive bomb : couleur")]
+    [Editor(typeof(Ui.ColorHexEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public string LedDiveBombColor { get; set; } = "#FF0000";
 
     // ---------- Apparence ----------
 
     [Category(Tabs.Appearance), DisplayName("Couleur d'accent")]
     [Description("Couleur de la marque au format #RRVVBB (boutons, logo, liserés, écran d'accueil du VoCore).")]
+    [Editor(typeof(Ui.ColorHexEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public string AccentColor { get; set; } = Ui.Theme.DefaultAccent;
 
     [Category(Tabs.Appearance), DisplayName("Police")]
     [Description("Nom d'une police installée sur Windows (par défaut Bahnschrift).")]
     public string UiFont { get; set; } = Ui.Theme.DefaultFont;
+
+    [Category(Tabs.Appearance), DisplayName("Écran de veille : image ou animation")]
+    [Description("Image (PNG, JPG, BMP) ou animation (GIF animé) affichée sur le VoCore à la place de l'animation " +
+                 "AVIX quand le jeu est en pause, absent ou en arrière-plan. Le logo AVIX reste affiché en petit en bas à " +
+                 "droite. Vide = animation AVIX.")]
+    [Editor(typeof(Ui.ImageFileEditor), typeof(System.Drawing.Design.UITypeEditor))]
+    public string StandbyImage { get; set; } = "";
+
+    [Category(Tabs.Appearance), DisplayName("Écran de veille : remplir l'écran")]
+    [Description("Vrai : l'image remplit tout l'écran (bords coupés si besoin). Faux : image entière, avec des bandes noires.")]
+    public bool StandbyImageFill { get; set; }
+
+    // ---------- Profils par jeu ----------
+
+    /// <summary>
+    /// Réglages propres à chaque jeu : pour chaque jeu, les valeurs qui diffèrent des réglages communs.
+    /// Seuls les réglages « par jeu » (voir <see cref="IsPerGame"/>) peuvent y figurer.
+    /// </summary>
+    [Browsable(false)]
+    public Dictionary<string, Dictionary<string, JsonElement>> GameProfiles { get; set; } = new();
+
+    static readonly HashSet<string> PerGameNames = new()
+    {
+        nameof(Mode), nameof(GameStartDelaySeconds), nameof(LedWarnDistance),
+        nameof(LedDiveBomb), nameof(LedDiveBombSpeed), nameof(LedDiveBombTime),
+    };
+
+    static readonly HashSet<string> PerGameTabs = new() { Tabs.Capture, Tabs.Radar, Tabs.Camera, Tabs.Hud };
+
+    /// <summary>Vrai si le réglage peut être différent pour chaque jeu (sinon il est commun à tous).</summary>
+    public static bool IsPerGame(string propertyName)
+    {
+        if (PerGameNames.Contains(propertyName))
+            return true;
+        var property = typeof(Settings).GetProperty(propertyName);
+        var category = property?.GetCustomAttributes(typeof(CategoryAttribute), false).OfType<CategoryAttribute>().FirstOrDefault();
+        return category != null && PerGameTabs.Contains(category.Category);
+    }
+
+    /// <summary>Réglages effectifs pour un jeu : réglages communs + valeurs propres à ce jeu.</summary>
+    public Settings ForGame(RadarGame? game)
+    {
+        var result = Clone();
+        if (game is not { } g || !GameProfiles.TryGetValue(g.ToString(), out var values))
+            return result;
+        foreach (var (name, element) in values)
+        {
+            var property = typeof(Settings).GetProperty(name);
+            if (property == null || !property.CanWrite || !IsPerGame(name))
+                continue;
+            try
+            {
+                property.SetValue(result, element.Deserialize(property.PropertyType, JsonOptions));
+            }
+            catch
+            {
+                // Valeur illisible (ancienne version) : la valeur commune s'applique.
+            }
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// Modifie un réglage : pour le jeu donné si le réglage est « par jeu », sinon pour tous les jeux.
+    /// </summary>
+    public void Set(RadarGame? game, string propertyName, object? value)
+    {
+        var property = typeof(Settings).GetProperty(propertyName);
+        if (property == null)
+            return;
+        if (game is { } g && IsPerGame(propertyName))
+        {
+            var key = g.ToString();
+            if (!GameProfiles.TryGetValue(key, out var values))
+                GameProfiles[key] = values = new Dictionary<string, JsonElement>();
+            values[propertyName] = JsonSerializer.SerializeToElement(value, property.PropertyType, JsonOptions);
+        }
+        else
+        {
+            property.SetValue(this, value);
+        }
+    }
+
+    /// <summary>Nombre de réglages propres à un jeu.</summary>
+    public int OverrideCount(RadarGame game) =>
+        GameProfiles.TryGetValue(game.ToString(), out var values) ? values.Count : 0;
+
+    /// <summary>Le jeu reprend tous les réglages communs.</summary>
+    public void ClearOverrides(RadarGame game) => GameProfiles.Remove(game.ToString());
 
     // ---------- Persistance ----------
 
