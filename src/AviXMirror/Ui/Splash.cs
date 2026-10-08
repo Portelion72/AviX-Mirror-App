@@ -1,5 +1,6 @@
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
+using System.Drawing.Text;
 
 namespace AviXMirror.Ui;
 
@@ -15,8 +16,8 @@ public static class Splash
     public static void Draw(Graphics g, int w, int h, string message)
     {
         Theme.Smooth(g);
-        DrawBackground(g, w, h, 40);
-        var logo = Theme.DrawLogo(g, LogoBox(w, h));
+        DrawBackground(g, w, h);
+        var logo = DrawLogo(g, w, h);
         using var line = new SolidBrush(Theme.Accent);
         g.FillRectangle(line, w / 2f - w * 0.05f, logo.Bottom + h * 0.06f, w * 0.1f, Math.Max(2, h * 0.008f));
         DrawMessage(g, w, h, logo, message);
@@ -24,60 +25,152 @@ public static class Splash
 
     static RectangleF LogoBox(int w, int h) => new(w * 0.2f, h * 0.14f, w * 0.6f, h * 0.56f);
 
-    static void DrawBackground(Graphics g, int w, int h, int haloAlpha)
-    {
-        using (var bg = new LinearGradientBrush(new Rectangle(0, 0, w, h + 1), Color.FromArgb(18, 19, 22), Color.Black, LinearGradientMode.Vertical))
-            g.FillRectangle(bg, 0, 0, w, h);
+    /// <summary>
+    /// Fond noir uni : les dégradés sombres (halo, fond dégradé) donnaient des marches et des pixels
+    /// visibles sur le VoCore (couleurs 16 bits).
+    /// </summary>
+    static void DrawBackground(Graphics g, int w, int h) => g.Clear(Color.Black);
 
-        // Halo couleur d'accent derrière le logo.
-        using var path = new GraphicsPath();
-        path.AddEllipse(w * 0.2f, h * 0.05f, w * 0.6f, h * 0.9f);
-        using var halo = new PathGradientBrush(path)
-        {
-            CenterColor = Color.FromArgb(Math.Clamp(haloAlpha, 0, 255), Theme.Accent),
-            SurroundColors = new[] { Color.FromArgb(0, Theme.Accent) },
-        };
-        g.FillPath(halo, path);
+    /// <summary>Logo centré, redimensionné en haute qualité, aligné sur les pixels (net, sans flou).</summary>
+    static RectangleF DrawLogo(Graphics g, int w, int h)
+    {
+        var logo = Theme.Logo;
+        var box = LogoBox(w, h);
+        float scale = Math.Min(box.Width / logo.Width, box.Height / logo.Height);
+        var r = new RectangleF(MathF.Round(box.X + (box.Width - logo.Width * scale) / 2), MathF.Round(box.Y + (box.Height - logo.Height * scale) / 2),
+            MathF.Round(logo.Width * scale), MathF.Round(logo.Height * scale));
+        lock (LogoLock)
+            DrawImageHq(g, ScaledLogo(Size.Round(r.Size)), r);
+        return r;
+    }
+
+    static void DrawImageHq(Graphics g, Image image, RectangleF r, ImageAttributes? attributes = null)
+    {
+        g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+        g.PixelOffsetMode = PixelOffsetMode.Half;
+        g.CompositingQuality = CompositingQuality.HighQuality;
+        using var wrap = attributes == null ? new ImageAttributes() : null;
+        var a = attributes ?? wrap!;
+        a.SetWrapMode(WrapMode.TileFlipXY); // pas de liseré sur les bords
+        g.DrawImage(image, Rectangle.Round(r), 0, 0, image.Width, image.Height, GraphicsUnit.Pixel, a);
     }
 
     static void DrawMessage(Graphics g, int w, int h, RectangleF logo, string message)
     {
         if (string.IsNullOrEmpty(message))
             return;
+        // Texte lissé en niveaux de gris (le ClearType laisse des franges colorées sur le VoCore).
+        g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;
         using var small = new Font(Theme.FontName, Math.Max(10, h * 0.045f), FontStyle.Regular, GraphicsUnit.Pixel);
-        TextRenderer.DrawText(g, message, small, new Rectangle(0, (int)(logo.Bottom + h * 0.09f), w, (int)(h * 0.1f)),
-            Theme.TextMuted, TextFormatFlags.HorizontalCenter);
+        using var brush = new SolidBrush(Theme.TextMuted);
+        using var format = new StringFormat { Alignment = StringAlignment.Center };
+        g.DrawString(message, small, brush, new RectangleF(0, logo.Bottom + h * 0.09f, w, h * 0.12f), format);
     }
 
-    static Bitmap? _brightLogo;
+    // Logo et logo éclairci, préparés une fois à la taille d'affichage (rendu bicubique de qualité).
+    static readonly object LogoLock = new();
+    static readonly Dictionary<Size, Bitmap> ScaledLogos = new(), ScaledBrights = new();
+    static Bitmap? _sweep;
 
-    /// <summary>Logo éclairci (reflet qui balaie le logo), préparé une fois.</summary>
-    static Bitmap BrightLogo()
+    /// <summary>Cache par taille (VoCore, coin, aperçus du tutoriel) ; à utiliser sous <see cref="LogoLock"/>.</summary>
+    static Bitmap Cached(Dictionary<Size, Bitmap> cache, Size size, Func<Bitmap> create)
     {
-        if (_brightLogo != null)
-            return _brightLogo;
-        var logo = Theme.Logo;
-        var bmp = new Bitmap(logo.Width, logo.Height, PixelFormat.Format32bppArgb);
-        using (var g = Graphics.FromImage(bmp))
-        using (var attributes = new ImageAttributes())
+        if (cache.TryGetValue(size, out var bmp))
+            return bmp;
+        if (cache.Count >= 8)
         {
-            // Couleurs rapprochées du blanc, transparence du logo conservée.
-            attributes.SetColorMatrix(new ColorMatrix(new[]
-            {
-                new[] { 0.4f, 0, 0, 0, 0 },
-                new[] { 0, 0.4f, 0, 0, 0 },
-                new[] { 0, 0, 0.4f, 0, 0 },
-                new[] { 0, 0, 0, 1f, 0 },
-                new[] { 0.6f, 0.6f, 0.6f, 0, 1 },
-            }));
-            lock (logo)
-                g.DrawImage(logo, new Rectangle(0, 0, logo.Width, logo.Height), 0, 0, logo.Width, logo.Height, GraphicsUnit.Pixel, attributes);
+            foreach (var old in cache.Values)
+                old.Dispose();
+            cache.Clear();
         }
-        return _brightLogo = bmp;
+        return cache[size] = create();
+    }
+
+    static Bitmap ScaledLogo(Size size) => Cached(ScaledLogos, size, () => Resample(Theme.Logo, size, null));
+
+    /// <summary>Logo éclairci (pour le reflet), à la taille d'affichage.</summary>
+    static Bitmap ScaledBright(Size size) => Cached(ScaledBrights, size, () =>
+    {
+        using var attributes = new ImageAttributes();
+        // Couleurs rapprochées du blanc, transparence du logo conservée.
+        attributes.SetColorMatrix(new ColorMatrix(new[]
+        {
+            new[] { 0.35f, 0, 0, 0, 0 },
+            new[] { 0, 0.35f, 0, 0, 0 },
+            new[] { 0, 0, 0.35f, 0, 0 },
+            new[] { 0, 0, 0, 1f, 0 },
+            new[] { 0.65f, 0.65f, 0.65f, 0, 1 },
+        }));
+        return Resample(Theme.Logo, size, attributes);
+    });
+
+    static Bitmap Resample(Image source, Size size, ImageAttributes? attributes)
+    {
+        var bmp = new Bitmap(Math.Max(1, size.Width), Math.Max(1, size.Height), PixelFormat.Format32bppArgb);
+        using var g = Graphics.FromImage(bmp);
+        g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+        g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+        g.CompositingQuality = CompositingQuality.HighQuality;
+        g.SmoothingMode = SmoothingMode.HighQuality;
+        using var wrap = new ImageAttributes();
+        var a = attributes ?? wrap;
+        a.SetWrapMode(WrapMode.TileFlipXY);
+        lock (source)
+            g.DrawImage(source, new Rectangle(0, 0, bmp.Width, bmp.Height), 0, 0, source.Width, source.Height, GraphicsUnit.Pixel, a);
+        return bmp;
     }
 
     /// <summary>
-    /// Page de veille animée (jeu en pause, en attente) : halo qui respire, reflet qui balaie le logo
+    /// Reflet : le logo éclairci, visible seulement dans une bande inclinée aux bords très doux
+    /// (transparence calculée pixel par pixel : pas d'escalier sur les bords de la bande).
+    /// </summary>
+    static unsafe Bitmap Sweep(Size size, double center, float strength)
+    {
+        var bright = ScaledBright(size);
+        if (_sweep == null || _sweep.Size != size)
+        {
+            _sweep?.Dispose();
+            _sweep = new Bitmap(size.Width, size.Height, PixelFormat.Format32bppArgb);
+        }
+        int w = size.Width, h = size.Height;
+        double half = w * 0.09;          // demi-largeur de la bande
+        double slope = 0.55;             // inclinaison (décalage horizontal par pixel de hauteur)
+        var rect = new Rectangle(0, 0, w, h);
+        var src = bright.LockBits(rect, ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+        var dst = _sweep.LockBits(rect, ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
+        try
+        {
+            for (int y = 0; y < h; y++)
+            {
+                uint* s = (uint*)((byte*)src.Scan0 + (long)y * src.Stride);
+                uint* d = (uint*)((byte*)dst.Scan0 + (long)y * dst.Stride);
+                double bandCenter = center + (h / 2.0 - y) * slope;
+                for (int x = 0; x < w; x++)
+                {
+                    double t = Math.Abs(x - bandCenter) / half;
+                    if (t >= 1)
+                    {
+                        d[x] = 0;
+                        continue;
+                    }
+                    // Profil en cloche (cosinus) : maximum au centre, nul et plat aux bords.
+                    double weight = 0.5 + 0.5 * Math.Cos(t * Math.PI);
+                    uint c = s[x];
+                    uint alpha = (uint)((c >> 24) * weight * strength);
+                    d[x] = (alpha << 24) | (c & 0x00FFFFFF);
+                }
+            }
+        }
+        finally
+        {
+            bright.UnlockBits(src);
+            _sweep.UnlockBits(dst);
+        }
+        return _sweep;
+    }
+
+    /// <summary>
+    /// Page de veille animée (jeu en pause, en attente) sur fond noir : reflet doux qui balaie le logo
     /// et trait d'accent qui va et vient. <paramref name="time"/> en secondes.
     /// </summary>
     public static void DrawAnimated(Bitmap bmp, double time, string message)
@@ -85,46 +178,34 @@ public static class Splash
         using var g = Graphics.FromImage(bmp);
         int w = bmp.Width, h = bmp.Height;
         Theme.Smooth(g);
+        DrawBackground(g, w, h);
+        var logo = DrawLogo(g, w, h);
 
-        int haloAlpha = (int)(34 + 26 * Math.Sin(time * 1.7));
-        DrawBackground(g, w, h, haloAlpha);
-        var logo = Theme.DrawLogo(g, LogoBox(w, h));
-
-        // Reflet : bande inclinée qui traverse le logo toutes les 3,2 s (puis une pause).
-        double cycle = time % 3.2 / 2.0;
+        // Reflet : traverse le logo en 1,6 s, toutes les 3,2 s, avec une entrée et une sortie en douceur.
+        double cycle = time % 3.2 / 1.6;
         if (cycle < 1)
         {
-            float bandX = logo.Left - logo.Height + (float)cycle * (logo.Width + 2 * logo.Height);
-            var bright = BrightLogo();
-            foreach (var (width, alpha) in new[] { (0.16f, 0.35f), (0.08f, 0.7f), (0.03f, 1f) })
-            {
-                float bw = logo.Width * width;
-                using var band = new GraphicsPath();
-                band.AddPolygon(new[]
-                {
-                    new PointF(bandX - bw / 2 + logo.Height * 0.5f, logo.Top),
-                    new PointF(bandX + bw / 2 + logo.Height * 0.5f, logo.Top),
-                    new PointF(bandX + bw / 2 - logo.Height * 0.5f, logo.Bottom),
-                    new PointF(bandX - bw / 2 - logo.Height * 0.5f, logo.Bottom),
-                });
-                var state = g.Save();
-                g.SetClip(band);
-                using var attributes = new ImageAttributes();
-                attributes.SetColorMatrix(new ColorMatrix { Matrix33 = alpha });
-                g.DrawImage(bright, Rectangle.Round(logo), 0, 0, bright.Width, bright.Height, GraphicsUnit.Pixel, attributes);
-                g.Restore(state);
-            }
+            double eased = cycle * cycle * (3 - 2 * cycle);
+            var size = Size.Round(logo.Size);
+            double travel = size.Width + size.Height * 1.5;
+            double center = -size.Height * 0.75 + eased * travel;
+            lock (LogoLock)
+                DrawImageHq(g, Sweep(size, center, 0.9f), logo);
         }
 
-        // Trait d'accent : un segment qui glisse d'un bord à l'autre sous le logo.
-        float trackW = w * 0.24f, trackY = logo.Bottom + h * 0.06f, thick = Math.Max(2, h * 0.008f);
+        // Trait d'accent : un segment qui glisse d'un bord à l'autre sous le logo, bords arrondis.
+        float trackW = w * 0.24f, trackY = logo.Bottom + h * 0.06f, thick = Math.Max(3, h * 0.009f);
         float trackX = w / 2f - trackW / 2;
-        using (var track = new SolidBrush(Color.FromArgb(50, Theme.Accent)))
-            g.FillRectangle(track, trackX, trackY, trackW, thick);
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+        using (var trackPath = Theme.RoundedRect(new RectangleF(trackX, trackY, trackW, thick), thick / 2))
+        using (var track = new SolidBrush(Theme.Blend(Color.Black, Theme.Accent, 0.25f)))
+            g.FillPath(track, trackPath);
         double phase = (Math.Sin(time * 2.2) + 1) / 2;
         float segW = trackW * 0.3f;
+        using (var segPath = Theme.RoundedRect(new RectangleF(trackX + (float)phase * (trackW - segW), trackY, segW, thick), thick / 2))
         using (var seg = new SolidBrush(Theme.Accent))
-            g.FillRectangle(seg, trackX + (float)phase * (trackW - segW), trackY, segW, thick);
+            g.FillPath(seg, segPath);
 
         DrawMessage(g, w, h, logo, message);
     }
@@ -232,6 +313,8 @@ public static class Splash
         using (var shade = Theme.RoundedRect(RectangleF.Inflate(box, h * 0.02f, h * 0.015f), h * 0.02f))
         using (var brush = new SolidBrush(Color.FromArgb(130, 0, 0, 0)))
             g.FillPath(brush, shade);
-        Theme.DrawLogo(g, box);
+        var r = new RectangleF(MathF.Round(box.X), MathF.Round(box.Y), MathF.Round(box.Width), MathF.Round(box.Height));
+        lock (LogoLock)
+            DrawImageHq(g, ScaledLogo(Size.Round(r.Size)), r);
     }
 }

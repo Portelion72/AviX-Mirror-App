@@ -110,7 +110,7 @@ zone de capture au format VoCore → ATH Bosch (flèches, échelles 10 graduatio
 flèches) → ATH net en capture → cache avec marges et couleur du décor → faces avant LMU → rangement
 (retrait MJPEG, extension de fenêtre, capture d'écran entier) → veille/pause/bureau, écran éteint,
 LEDs par catégorie, dive bomb, repères de calibration, onglets, points de couleur → licence
-propriétaire + avis de mise à jour → v1.1.0 → tutoriel de prise en main → v1.2.0 → réglages par défaut du propriétaire → v1.2.1 → jeux beta (rF2, ACC, AC EVO, AMS2/PC2, iRacing, F1) → profils par jeu, jauges, écran de veille personnalisé → réglages d'horizon ATH, outil « Aligner les flèches » (tous jeux), forme libre du cache (rétro F1) → panneau de réglages maison (curseurs + cases), onglets par mode, guides et réglages conseillés par jeu → réglages du propriétaire par défaut (profils inclus), LEDs IS31 seulement, catégories LEDs personnalisées, raccourci bureau + lancement avec Windows → v1.3.0.
+propriétaire + avis de mise à jour → v1.1.0 → tutoriel de prise en main → v1.2.0 → réglages par défaut du propriétaire → v1.2.1 → jeux beta (rF2, ACC, AC EVO, AMS2/PC2, iRacing, F1) → profils par jeu, jauges, écran de veille personnalisé → réglages d'horizon ATH, outil « Aligner les flèches » (tous jeux), forme libre du cache (rétro F1) → panneau de réglages maison (curseurs + cases), onglets par mode, guides et réglages conseillés par jeu → réglages du propriétaire par défaut (profils inclus), LEDs IS31 seulement, catégories LEDs personnalisées, raccourci bureau + lancement avec Windows → v1.3.0 → animation de veille nette (fond noir uni, reflet doux, logo bicubique).
 
 ## Git
 
