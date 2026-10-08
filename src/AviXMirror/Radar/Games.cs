@@ -108,6 +108,7 @@ public sealed class TelemetrySet : IDisposable
                 continue;
             if (For(game).TryRead(s, out var world, out var message) && world != null)
             {
+                SeenClasses.Add(world);
                 status = message;
                 return world;
             }

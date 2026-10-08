@@ -65,6 +65,10 @@ En Caméra AC, l'ATH utilise exactement le point de vue de la caméra. En Captur
 rétro virtuel du jeu est approché : ajustez l'onglet *ATH* (champ de vision, hauteur, position)
 si les flèches sont décalées, et *Inverser gauche/droite des flèches* si elles sont du mauvais côté.
 
+**Premier lancement** : le tutoriel s'ouvre ; sa dernière étape propose d'ajouter AviX Mirror sur le
+bureau (raccourci) et de le lancer au démarrage de Windows (aussi dans l'onglet *Général* :
+*Lancer avec Windows*). Les réglages de base sont ceux du propriétaire (profils ACC, AC EVO, F1, LMU inclus).
+
 **Configuration par jeu** : le bouton **Guide du jeu** (à côté du choix du profil) affiche, pour chaque jeu,
 les réglages à faire dans le jeu (affichage sans bordure, rétro virtuel, télémétrie), les étapes dans
 AviX Mirror, et applique d'un clic des **réglages de base conseillés** au profil de ce jeu (mode, délai
@@ -103,6 +107,10 @@ cf. [Vonger/V7B_WS2812B](https://github.com/Vonger/V7B_WS2812B)).
 | **Dive bomb** : voiture qui arrive très vite de derrière, déjà décalée d'un côté | **clignotement rapide** de ce côté, avant qu'elle ne soit à votre hauteur |
 | Voitures des deux côtés (sandwich) | rouge clignotant des deux côtés |
 
+**Catégories personnalisées** (onglet *LEDs*) : *+ Ajouter une catégorie*, puis choisissez-la dans le menu
+déroulant, qui liste toutes les catégories déjà vues dans la télémétrie des jeux (nom tapé à la main
+possible), et sa couleur. Elle a priorité sur les couleurs de base.
+
 Les couleurs par catégorie se changent dans l'onglet *LEDs* (ou se désactivent : jaune → orange quand
 une voiture arrive, rouge à côté). Le dive bomb se déclenche quand une voiture arrive avec au moins
 30 km/h d'écart et sera à votre hauteur en moins d'1 s (réglable).
@@ -110,7 +118,7 @@ une voiture arrive, rouge à côté). Le dive bomb se déclenche quand une voitu
 Fonctionne dans tous les modes (Radar, Caméra AC, Capture), avec LMU et Assetto Corsa. Au branchement,
 les LEDs s'allument une par une dans l'ordre de la chaîne (couleur AVIX) : vérifiez que la droite
 s'allume en premier, et utilisez *Inverser le sens* si une barrette se remplit à l'envers. Réglages
-dans l'onglet *LEDs* (luminosité, distance d'alerte, ordre de câblage, protocole). L'aperçu de la
+dans l'onglet *LEDs* (luminosité, distance d'alerte, ordre de câblage ; protocole IS31 compatible, celui de SimHub). L'aperçu de la
 fenêtre montre l'état des LEDs de chaque côté du rétro.
 
 ## Compatible Easy Anti-Cheat

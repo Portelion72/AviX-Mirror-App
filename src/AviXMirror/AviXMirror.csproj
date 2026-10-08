@@ -25,6 +25,7 @@
     <EmbeddedResource Include="..\..\integrations\AssettoCorsa\AviXMirror\AviXMirror.lua" LogicalName="AcApp.AviXMirror.lua" />
     <EmbeddedResource Include="Assets\avix-logo.png" LogicalName="Brand.avix-logo.png" />
     <EmbeddedResource Include="Radar\CarFronts.txt" LogicalName="Radar.CarFronts.txt" />
+    <EmbeddedResource Include="Assets\DefaultProfiles.json" LogicalName="Defaults.Profiles.json" />
     <None Include="native\libusb-NOTICE.txt" Link="libusb-NOTICE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 

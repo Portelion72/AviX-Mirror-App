@@ -37,6 +37,9 @@ public sealed class MainForm : Form
     public MainForm()
     {
         _settings = Settings.Load();
+        // « Lancer avec Windows » suit l'état réel de Windows (et l'emplacement actuel de l'exe).
+        Util.WindowsIntegration.RefreshStartWithWindows();
+        _settings.StartWithWindows = Util.WindowsIntegration.StartsWithWindows;
         Theme.Configure(_settings.AccentColor, _settings.UiFont);
 
         Text = "AVIX_3D Mirror";
@@ -101,14 +104,17 @@ public sealed class MainForm : Form
 
         Shown += async (_, _) =>
         {
-            if (_settings.AutoStart)
+            // Premier lancement (ou tutoriel demandé) : le tutoriel d'abord, fenêtre ouverte.
+            if (_settings.ShowTutorial || Settings.FirstRun)
+            {
+                ShowTutorial();
+                if (_settings.AutoStart && !_engine.Running)
+                    ToggleRunning();
+            }
+            else if (_settings.AutoStart)
             {
                 ToggleRunning();
                 WindowState = FormWindowState.Minimized;
-            }
-            else if (_settings.ShowTutorial)
-            {
-                ShowTutorial();
             }
             _updateTimer.Start();
             await CheckForUpdatesAsync();
@@ -125,8 +131,21 @@ public sealed class MainForm : Form
     void ShowTutorial()
     {
         using var form = new TutorialForm(_view.Mode, _settings.ShowTutorial,
-            mode => SelectMode(mode, restart: true), InstallAcApp);
+            mode => SelectMode(mode, restart: true), InstallAcApp,
+            Util.WindowsIntegration.HasDesktopShortcut, Util.WindowsIntegration.StartsWithWindows);
         form.ShowDialog(this);
+        // Dernière étape : raccourci sur le bureau et lancement avec Windows.
+        if (form.CreateDesktopShortcut && !Util.WindowsIntegration.CreateDesktopShortcut(Theme.CreateAppIcon()))
+            MessageBox.Show(this, "Le raccourci n'a pas pu être créé sur le bureau.", "AviX Mirror", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        if (form.StartWithWindows is { } startup && startup != Util.WindowsIntegration.StartsWithWindows)
+        {
+            Util.WindowsIntegration.SetStartWithWindows(startup);
+            _settings.StartWithWindows = Util.WindowsIntegration.StartsWithWindows;
+            var stored = Settings.Load();
+            stored.StartWithWindows = _settings.StartWithWindows;
+            stored.Save();
+            RefreshView();
+        }
         // « Afficher au démarrage » : enregistré tout de suite, sans toucher aux autres réglages en cours.
         _settings.ShowTutorial = form.ShowAtStartup;
         var saved = Settings.Load();
@@ -465,6 +484,12 @@ public sealed class MainForm : Form
         }
         if (_profile != null)
             _profileInfo.Text = ProfileText(_profile.Value);
+        if (name == nameof(Settings.StartWithWindows) && value is bool startup)
+        {
+            if (!Util.WindowsIntegration.SetStartWithWindows(startup))
+                MessageBox.Show(this, "Impossible de modifier le lancement avec Windows.", "AviX Mirror", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            _settings.StartWithWindows = Util.WindowsIntegration.StartsWithWindows;
+        }
         if (name is nameof(Settings.AccentColor) or nameof(Settings.UiFont))
         {
             // Nouvelle charte : on redessine toute l'interface.

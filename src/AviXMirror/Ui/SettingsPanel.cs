@@ -35,6 +35,7 @@ namespace AviXMirror.Ui
         readonly Label _help = new() { Dock = DockStyle.Bottom, Height = 62, AutoSize = false, Padding = new Padding(12, 8, 12, 6) };
         readonly ToolTip _tips = new() { AutoPopDelay = 20000, InitialDelay = 600 };
         Settings? _view;
+        MirrorMode _mode;
         bool _loading;
 
         /// <summary>
@@ -82,6 +83,7 @@ namespace AviXMirror.Ui
         /// <summary>Construit les lignes de l'onglet à partir des valeurs de <paramref name="view"/>.</summary>
         public void Build(Settings view, string tab, MirrorMode mode)
         {
+            _mode = mode;
             _view = view;
             _loading = true;
             var scroll = _scroll.AutoScrollPosition;
@@ -219,6 +221,9 @@ namespace AviXMirror.Ui
                 return Host(box, 260);
             }
 
+            if (type == typeof(List<LedClassColor>))
+                return ClassColorsEditor(name, value as List<LedClassColor> ?? new());
+
             if (typeof(System.Collections.IList).IsAssignableFrom(type))
                 return ListEditor(property, value as System.Collections.IList);
 
@@ -330,6 +335,86 @@ namespace AviXMirror.Ui
                 Emit(name, "", true);
             };
             panel.Controls.AddRange(new Control[] { box, browse, clear });
+            return panel;
+        }
+
+        /// <summary>
+        /// Catégories personnalisées des LEDs : une ligne par catégorie (menu déroulant des catégories déjà vues,
+        /// modifiable à la main), sa couleur et un bouton pour la retirer ; « Ajouter une catégorie » en dessous.
+        /// </summary>
+        Control ClassColorsEditor(string name, List<LedClassColor> current)
+        {
+            var items = current.Select(c => new LedClassColor { Class = c.Class, Color = c.Color }).ToList();
+            var known = Radar.SeenClasses.All();
+            const int RowHeight = 32;
+            var panel = new Panel { Height = items.Count * RowHeight + 32, BackColor = Color.Transparent };
+
+            void Commit() => Emit(name, items.Select(c => new LedClassColor { Class = c.Class, Color = c.Color }).ToList(), true);
+            // Ligne ajoutée ou retirée : la page est reconstruite après l'événement (hauteur de la ligne).
+            void CommitAndRebuild()
+            {
+                Commit();
+                var tab = (string?)Tag;
+                BeginInvoke(() => { if (_view != null && tab != null) Build(_view, tab, _mode); });
+            }
+
+            for (int i = 0; i < items.Count; i++)
+            {
+                var item = items[i];
+                int y = i * RowHeight;
+                var combo = new ComboBox
+                {
+                    DropDownStyle = ComboBoxStyle.DropDown,
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = Theme.SurfaceRaised,
+                    ForeColor = Theme.Text,
+                    Font = Theme.Font(9f),
+                    Width = 200,
+                    Location = new Point(0, y + 2),
+                    AutoCompleteMode = AutoCompleteMode.SuggestAppend,
+                    AutoCompleteSource = AutoCompleteSource.ListItems,
+                };
+                foreach (var k in known)
+                    combo.Items.Add(k);
+                combo.Text = item.Class;
+                combo.SelectedIndexChanged += (_, _) => { item.Class = combo.Text; Commit(); };
+                combo.Leave += (_, _) =>
+                {
+                    if (item.Class != combo.Text)
+                    {
+                        item.Class = combo.Text.Trim();
+                        Commit();
+                    }
+                };
+                var swatch = new FlatButton { Width = 44, Height = 26, Location = new Point(208, y + 1), FillOverride = Parse(item.Color) };
+                swatch.Click += (_, _) =>
+                {
+                    using var dialog = new ColorDialog { Color = Parse(item.Color), FullOpen = true, AnyColor = true };
+                    if (dialog.ShowDialog(FindForm()) != DialogResult.OK)
+                        return;
+                    item.Color = $"#{dialog.Color.R:X2}{dialog.Color.G:X2}{dialog.Color.B:X2}";
+                    swatch.FillOverride = dialog.Color;
+                    swatch.Invalidate();
+                    Commit();
+                };
+                var remove = new FlatButton { Text = "Retirer", Width = 80, Height = 26, Location = new Point(260, y + 1) };
+                remove.Click += (_, _) =>
+                {
+                    items.Remove(item);
+                    CommitAndRebuild();
+                };
+                panel.Controls.AddRange(new Control[] { combo, swatch, remove });
+            }
+
+            var add = new FlatButton { Text = "+ Ajouter une catégorie", Width = 200, Height = 26, Location = new Point(0, items.Count * RowHeight + 3) };
+            add.Click += (_, _) =>
+            {
+                // Propose d'abord une catégorie vue en jeu qui n'a pas encore de couleur.
+                var next = known.FirstOrDefault(k => items.All(c => !string.Equals(c.Class, k, StringComparison.OrdinalIgnoreCase))) ?? "";
+                items.Add(new LedClassColor { Class = next, Color = "#FFFFFF" });
+                CommitAndRebuild();
+            };
+            panel.Controls.Add(add);
             return panel;
         }
 

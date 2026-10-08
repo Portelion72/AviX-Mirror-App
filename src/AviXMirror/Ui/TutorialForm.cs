@@ -21,7 +21,16 @@ public sealed class TutorialForm : Form
     readonly FlatButton _next = new() { Text = "Suivant", Primary = true, Width = 150, Height = 38 };
     readonly FlatButton _skip = new() { Text = "Passer le tutoriel", Width = 150, Height = 38 };
     readonly CheckBox _showAtStart = new() { Text = "Afficher au démarrage", AutoSize = true };
+    readonly CheckBox _desktopShortcut = new() { Text = "Ajouter AviX Mirror sur le bureau (raccourci)", AutoSize = true };
+    readonly CheckBox _startWithWindows = new() { Text = "Lancer AviX Mirror au démarrage de Windows", AutoSize = true };
+    bool _optionsSeen;
     int _index;
+
+    /// <summary>Vrai si l'utilisateur a vu la dernière étape et coché « Ajouter sur le bureau ».</summary>
+    public bool CreateDesktopShortcut => _optionsSeen && _desktopShortcut.Checked;
+
+    /// <summary>Choix « Lancer au démarrage de Windows » (null si la dernière étape n'a pas été vue).</summary>
+    public bool? StartWithWindows => _optionsSeen ? _startWithWindows.Checked : null;
 
     /// <summary>Faux si l'utilisateur a décoché « Afficher au démarrage ».</summary>
     public bool ShowAtStartup => _showAtStart.Checked;
@@ -29,15 +38,25 @@ public sealed class TutorialForm : Form
     /// <param name="currentMode">Mode actuellement choisi (mis en avant à l'étape des modes).</param>
     /// <param name="chooseMode">Appelé quand l'utilisateur choisit un mode dans le tutoriel.</param>
     /// <param name="installAcApp">Installe l'app Lua d'Assetto Corsa.</param>
-    public TutorialForm(MirrorMode currentMode, bool showAtStartup, Action<MirrorMode> chooseMode, Action installAcApp)
+    public TutorialForm(MirrorMode currentMode, bool showAtStartup, Action<MirrorMode> chooseMode, Action installAcApp,
+        bool hasDesktopShortcut, bool startsWithWindows)
     {
+        // Premier lancement : les deux options sont proposées cochées.
+        _desktopShortcut.Checked = !hasDesktopShortcut;
+        _startWithWindows.Checked = startsWithWindows || Settings.FirstRun;
+        foreach (var box in new[] { _desktopShortcut, _startWithWindows })
+        {
+            box.ForeColor = Theme.Text;
+            box.Font = Theme.Font(10f);
+            box.Margin = new Padding(0, 4, 0, 4);
+        }
         Text = "AviX Mirror — prise en main";
         Icon = Theme.CreateAppIcon();
         StartPosition = FormStartPosition.CenterParent;
         FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false;
         MinimizeBox = false;
-        ClientSize = new Size(880, 600);
+        ClientSize = new Size(880, 640);
         BackColor = Theme.Background;
         ForeColor = Theme.Text;
         _showAtStart.Checked = showAtStartup;
@@ -104,8 +123,9 @@ public sealed class TutorialForm : Form
                 "• Retour sur le bureau : logo AVIX.\n" +
                 "• Fermeture d'AviX Mirror, extinction ou veille du PC : l'écran s'éteint complètement.\n" +
                 "• Une nouvelle version ? Un bandeau apparaît en haut de la fenêtre.\n\n" +
-                "C'est tout ! Cliquez sur « Terminer », puis sur DÉMARRER.",
-                DrawStandby),
+                "C'est tout ! Choisissez ci-dessous, cliquez sur « Terminer », puis sur DÉMARRER.",
+                DrawStandby,
+                InstallOptions),
         };
 
         _picture.Draw = (g, r) => _steps[_index].Illustration(g, r);
@@ -209,6 +229,16 @@ public sealed class TutorialForm : Form
             button.Click += (_, _) => choose(m);
             panel.Controls.Add(button);
         }
+        return panel;
+    }
+
+    /// <summary>Dernière étape : raccourci sur le bureau et lancement avec Windows.</summary>
+    Control InstallOptions()
+    {
+        _optionsSeen = true;
+        var panel = new FlowLayoutPanel { Height = 66, FlowDirection = FlowDirection.TopDown, WrapContents = false, BackColor = Theme.Background };
+        panel.Controls.Add(_desktopShortcut);
+        panel.Controls.Add(_startWithWindows);
         return panel;
     }
 

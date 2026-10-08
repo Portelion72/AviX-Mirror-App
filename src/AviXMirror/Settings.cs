@@ -106,6 +106,18 @@ public sealed class MaskPoint
     public override string ToString() => $"{X:0.#} ; {Y:0.#}";
 }
 
+/// <summary>Couleur des LEDs pour une catégorie de voiture choisie par l'utilisateur.</summary>
+public sealed class LedClassColor
+{
+    [DisplayName("Catégorie"), Description("Nom de la catégorie tel que le jeu le donne (ex. « GT3 », « LMGT3 », « Hypercar »).")]
+    public string Class { get; set; } = "";
+
+    [DisplayName("Couleur"), Description("Couleur au format #RRVVBB.")]
+    public string Color { get; set; } = "#FFFFFF";
+
+    public override string ToString() => $"{Class} {Color}";
+}
+
 public sealed class Settings
 {
     // ---------- Général ----------
@@ -118,11 +130,16 @@ public sealed class Settings
 
     [Category(Tabs.General), DisplayName("Démarrage automatique")]
     [Description("Démarre le rétroviseur dès l'ouverture de l'application.")]
-    public bool AutoStart { get; set; }
+    public bool AutoStart { get; set; } = true;
+
+    [Category(Tabs.General), DisplayName("Lancer avec Windows")]
+    [Description("AviX Mirror s'ouvre tout seul à l'ouverture de session Windows (avec « Démarrage automatique », " +
+                 "le rétro démarre aussi tout seul, fenêtre réduite).")]
+    public bool StartWithWindows { get; set; }
 
     [Browsable(false)]
     [Category(Tabs.General), DisplayName("Tutoriel au démarrage")]
-    public bool ShowTutorial { get; set; } = true;
+    public bool ShowTutorial { get; set; }
 
     [Category(Tabs.General), DisplayName("Jeu")]
     [Description("Auto : détecte le jeu lancé. Le Mans Ultimate et Assetto Corsa (app Lua CSP) sont complets ; " +
@@ -153,7 +170,7 @@ public sealed class Settings
     [Category(Tabs.Screen), DisplayName("Luminosité")]
     [Description("1 à 255 (0 = maximum).")]
     [Gauge(0, 255, 1), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
-    public int VoCoreBrightness { get; set; } = 0;
+    public int VoCoreBrightness { get; set; } = 255;
 
     [Category(Tabs.Screen), DisplayName("Rotation")]
     [Description("Rotation de l'image si l'écran est monté à l'envers ou en portrait.")]
@@ -277,7 +294,7 @@ public sealed class Settings
 
     [Category(Tabs.General), DisplayName("LMU / rF2 : inverser gauche/droite")]
     [Description("À activer si les voitures apparaissent du mauvais côté.")]
-    public bool RadarInvertLateral { get; set; }
+    public bool RadarInvertLateral { get; set; } = true;
 
     [Category(Tabs.General), DisplayName("Assetto Corsa : inverser gauche/droite")]
     [Description("À activer si, dans Assetto Corsa, les voitures apparaissent du mauvais côté.")]
@@ -429,15 +446,15 @@ public sealed class Settings
     [Category(Tabs.Leds), DisplayName("Luminosité")]
     [Description("0 à 255.")]
     [Gauge(0, 255, 1), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
-    public int LedBrightness { get; set; } = 80;
+    public int LedBrightness { get; set; } = 50;
 
     [Category(Tabs.Leds), DisplayName("Distance d'alerte (m)")]
     [Description("Une voiture qui arrive sur un côté est signalée à partir de cette distance derrière vous.")]
     [Gauge(5, 80, 1), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public double LedWarnDistance { get; set; } = 20;
 
-    [Category(Tabs.Leds), DisplayName("Protocole")]
-    [Description("Is31Compatible : protocole standard des LEDs VoCore (celui de SimHub). Complet : firmware « 512 LEDs ».")]
+    // Protocole des LEDs : toujours Is31Compatible (celui de SimHub), le choix a été retiré de la fenêtre.
+    [Browsable(false)]
     public LedProtocol LedProtocol { get; set; } = LedProtocol.Is31Compatible;
 
     [Category(Tabs.Leds), DisplayName("Couleur selon la catégorie")]
@@ -468,6 +485,11 @@ public sealed class Settings
     [Category(Tabs.Leds), DisplayName("Couleur autres voitures")]
     [Editor(typeof(Ui.ColorHexEditor), typeof(System.Drawing.Design.UITypeEditor))]
     public string LedColorOther { get; set; } = "#FFB400";
+
+    [Category(Tabs.Leds), DisplayName("Catégories personnalisées")]
+    [Description("Couleur pour d'autres catégories de voitures (ou pour remplacer celle d'une catégorie ci-dessus). " +
+                 "Le menu déroulant liste toutes les catégories déjà vues dans la télémétrie des jeux.")]
+    public List<LedClassColor> LedCustomClasses { get; set; } = new();
 
     [Category(Tabs.Leds), DisplayName("Détecteur de dive bomb")]
     [Description("Une voiture qui arrive très vite de derrière, déjà décalée d'un côté, fait clignoter rapidement " +
@@ -517,7 +539,23 @@ public sealed class Settings
     /// Seuls les réglages « par jeu » (voir <see cref="IsPerGame"/>) peuvent y figurer.
     /// </summary>
     [Browsable(false)]
-    public Dictionary<string, Dictionary<string, JsonElement>> GameProfiles { get; set; } = new();
+    public Dictionary<string, Dictionary<string, JsonElement>> GameProfiles { get; set; } = DefaultProfiles();
+
+    /// <summary>Profils par défaut (réglages du propriétaire : ACC, AC EVO, F1, LMU), ressource intégrée.</summary>
+    static Dictionary<string, Dictionary<string, JsonElement>> DefaultProfiles()
+    {
+        try
+        {
+            using var stream = typeof(Settings).Assembly.GetManifestResourceStream("Defaults.Profiles.json");
+            if (stream != null)
+                return JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, JsonElement>>>(stream) ?? new();
+        }
+        catch
+        {
+            // Ressource illisible : pas de profil par défaut.
+        }
+        return new();
+    }
 
     static readonly HashSet<string> PerGameNames = new()
     {
@@ -590,7 +628,7 @@ public sealed class Settings
 
     // ---------- Persistance ----------
 
-    const int CurrentVersion = 4;
+    const int CurrentVersion = 5;
 
     [Browsable(false)]
     public int SettingsVersion { get; set; }
@@ -631,8 +669,10 @@ public sealed class Settings
                     // v4 : exposition automatique HDR ; les anciennes valeurs par défaut deviennent neutres.
                     if (Math.Abs(loaded.AcCamExposure - 1.8) < 1e-6) loaded.AcCamExposure = 1.0;
                     if (Math.Abs(loaded.AcCamGamma - 1.4) < 1e-6) loaded.AcCamGamma = 1.0;
-                    loaded.SettingsVersion = CurrentVersion;
+                    loaded.SettingsVersion = 4;
                 }
+                loaded.SettingsVersion = CurrentVersion;
+                loaded.LedProtocol = LedProtocol.Is31Compatible;
                 return loaded;
             }
         }
@@ -640,8 +680,13 @@ public sealed class Settings
         {
             // Fichier corrompu : on repart des valeurs par défaut.
         }
+        FirstRun = true;
         return new Settings { SettingsVersion = CurrentVersion };
     }
+
+    /// <summary>Vrai au tout premier lancement (pas encore de fichier de réglages).</summary>
+    [JsonIgnore, Browsable(false)]
+    public static bool FirstRun { get; private set; }
 
     public void Save()
     {

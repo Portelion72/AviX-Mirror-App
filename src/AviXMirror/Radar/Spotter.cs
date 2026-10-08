@@ -94,8 +94,10 @@ public sealed class Spotter : IDisposable
     {
         public bool Overlap, DiveBomb;
         public CarKind OverlapKind = CarKind.Other;
+        public string OverlapClass = "";
         public double Approach;
         public CarKind ApproachKind = CarKind.Other;
+        public string ApproachClass = "";
     }
 
     /// <summary>Couleurs de chaque côté (de l'arrière vers l'avant) pour un état de course donné.</summary>
@@ -146,7 +148,10 @@ public sealed class Spotter : IDisposable
             if (Math.Abs(lz) <= OverlapHalfLength)
             {
                 if (!side.Overlap)
+                {
                     side.OverlapKind = kind;
+                    side.OverlapClass = v.Class;
+                }
                 side.Overlap = true;
             }
             else if (lz > OverlapHalfLength && lz < warn)
@@ -156,6 +161,7 @@ public sealed class Spotter : IDisposable
                 {
                     side.Approach = level;
                     side.ApproachKind = kind;
+                    side.ApproachClass = v.Class;
                 }
             }
         }
@@ -176,7 +182,7 @@ public sealed class Spotter : IDisposable
         }
         if (side.Overlap)
         {
-            Array.Fill(leds, s.LedClassColors ? ClassColor(s, side.OverlapKind) : red);
+            Array.Fill(leds, s.LedClassColors ? ClassColor(s, side.OverlapKind, side.OverlapClass) : red);
             return;
         }
         if (side.DiveBomb)
@@ -191,13 +197,27 @@ public sealed class Spotter : IDisposable
         int n = leds.Length;
         int lit = Math.Clamp((int)Math.Ceiling(side.Approach * n), 1, n);
         var color = s.LedClassColors
-            ? ClassColor(s, side.ApproachKind)
+            ? ClassColor(s, side.ApproachKind, side.ApproachClass)
             : Color.FromArgb(255, (int)(200 - 110 * side.Approach), 0);
         for (int i = 0; i < lit; i++)
             leds[i] = color;
     }
 
-    /// <summary>Couleur des LEDs pour une catégorie de voiture (réglable dans l'onglet LEDs).</summary>
+    /// <summary>
+    /// Couleur des LEDs pour une voiture : catégorie personnalisée (nom exact donné par le jeu) en priorité,
+    /// sinon couleur de sa famille (réglables dans l'onglet LEDs).
+    /// </summary>
+    public static Color ClassColor(Settings s, CarKind kind, string? className)
+    {
+        var name = className?.Trim();
+        if (!string.IsNullOrEmpty(name))
+            foreach (var custom in s.LedCustomClasses)
+                if (string.Equals(custom.Class?.Trim(), name, StringComparison.OrdinalIgnoreCase))
+                    return ParseColor(custom.Color, ClassColor(s, kind));
+        return ClassColor(s, kind);
+    }
+
+    /// <summary>Couleur des LEDs pour une famille de voitures.</summary>
     public static Color ClassColor(Settings s, CarKind kind) => kind switch
     {
         CarKind.Hypercar => ParseColor(s.LedColorHypercar, Color.Red),

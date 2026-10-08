@@ -1,0 +1,145 @@
+{
+  "AssettoCorsaCompetizione": {
+    "Mode": "Capture",
+    "HudInvertSide": false,
+    "CropX": 702,
+    "CropY": 101,
+    "CropWidth": 518,
+    "CropHeight": 162,
+    "MaskSamples": [
+      {
+        "Side": "Gauche",
+        "Position": 26,
+        "Distance": 1
+      },
+      {
+        "Side": "Gauche",
+        "Position": 75,
+        "Distance": 1
+      },
+      {
+        "Side": "Droite",
+        "Position": 38.1,
+        "Distance": 1
+      },
+      {
+        "Side": "Droite",
+        "Position": 75,
+        "Distance": 1
+      },
+      {
+        "Side": "Bas",
+        "Position": 50,
+        "Distance": 3
+      }
+    ],
+    "MaskShape": [],
+    "MaskShapeSmooth": false,
+    "MaskMarginRight": 70,
+    "MaskMarginLeft": 70
+  },
+  "AssettoCorsaEvo": {
+    "CropX": 682,
+    "CropY": 42,
+    "CropWidth": 557,
+    "CropHeight": 174,
+    "MaskSamples": [
+      {
+        "Side": "Gauche",
+        "Position": 26,
+        "Distance": 1
+      },
+      {
+        "Side": "Gauche",
+        "Position": 75,
+        "Distance": 1
+      },
+      {
+        "Side": "Droite",
+        "Position": 38.1,
+        "Distance": 1
+      },
+      {
+        "Side": "Droite",
+        "Position": 75,
+        "Distance": 1
+      },
+      {
+        "Side": "Bas",
+        "Position": 50,
+        "Distance": 3
+      }
+    ],
+    "MaskShape": [],
+    "MaskShapeSmooth": false,
+    "MaskMarginRight": 50,
+    "MaskMarginLeft": 50,
+    "HudInvertSide": false,
+    "HudCaptureHeight": 0.6,
+    "HudCaptureForward": 0.9,
+    "HudCaptureFov": 50.5,
+    "HudArrowSize": 100
+  },
+  "F1": {
+    "CropX": 801,
+    "CropY": 155,
+    "CropWidth": 318,
+    "CropHeight": 99,
+    "MaskSamples": [
+      {
+        "Side": "Gauche",
+        "Position": 23,
+        "Distance": 16
+      },
+      {
+        "Side": "Gauche",
+        "Position": 62.7,
+        "Distance": 8
+      },
+      {
+        "Side": "Droite",
+        "Position": 37.9,
+        "Distance": 14
+      },
+      {
+        "Side": "Droite",
+        "Position": 74.3,
+        "Distance": 16
+      },
+      {
+        "Side": "Bas",
+        "Position": 50,
+        "Distance": 3
+      },
+      {
+        "Side": "Haut",
+        "Position": 50.7,
+        "Distance": 1
+      },
+      {
+        "Side": "Bas",
+        "Position": 17.9,
+        "Distance": 4
+      },
+      {
+        "Side": "Bas",
+        "Position": 79.3,
+        "Distance": 2
+      }
+    ],
+    "MaskShape": [],
+    "MaskShapeSmooth": true,
+    "HideMirrorOnScreen": true,
+    "MaskMarginLeft": 0,
+    "MaskMarginRight": 0,
+    "MaskMarginTop": 0,
+    "MaskMarginBottom": 0,
+    "HudCaptureHorizon": 42.4,
+    "HudCaptureCenter": 56.8,
+    "HudCaptureFov": 26
+  },
+  "LeMansUltimate": {
+    "GameStartDelaySeconds": 0,
+    "HudInvertSide": false
+  }
+}
