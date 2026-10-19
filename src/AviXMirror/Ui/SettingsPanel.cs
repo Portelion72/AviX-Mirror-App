@@ -44,6 +44,9 @@ namespace AviXMirror.Ui
         /// </summary>
         public event Action<string, object?, bool>? ValueChanged;
 
+        /// <summary>Bouton « Identifier les écrans » (le moteur doit libérer l'écran : géré par la fenêtre principale).</summary>
+        public event Action? IdentifyScreens;
+
         public SettingsPanel()
         {
             _table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 260));
@@ -200,6 +203,9 @@ namespace AviXMirror.Ui
                     : NumberOnly(name, type, value);
             }
 
+            if (name == nameof(Settings.VoCoreDevice))
+                return ScreenPicker(name, value as string ?? "");
+
             if (type == typeof(string) && editorType.Contains(nameof(ColorHexEditor)))
                 return ColorEditor(name, value as string ?? "");
 
@@ -336,6 +342,71 @@ namespace AviXMirror.Ui
             };
             panel.Controls.AddRange(new Control[] { box, browse, clear });
             return panel;
+        }
+
+        /// <summary>
+        /// Choix de l'écran VoCore : liste des écrans branchés (n° de série ou port USB), « Actualiser » et
+        /// « Identifier les écrans » (grand numéro affiché sur chaque VoCore).
+        /// </summary>
+        Control ScreenPicker(string name, string current)
+        {
+            var panel = new Panel { Height = 28, BackColor = Color.Transparent };
+            var combo = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Theme.SurfaceRaised,
+                ForeColor = Theme.Text,
+                Font = Theme.Font(9f),
+                Width = 300,
+                Location = new Point(0, 2),
+            };
+            var refresh = new FlatButton { Text = "Actualiser", Width = 96, Height = 26, Location = new Point(308, 1) };
+            var identify = new FlatButton { Text = "Identifier les écrans", Width = 160, Height = 26, Location = new Point(410, 1) };
+
+            void Fill()
+            {
+                bool wasLoading = _loading;
+                _loading = true;
+                combo.Items.Clear();
+                combo.Items.Add(new ScreenItem("", "Premier écran libre (automatique)"));
+                var devices = _view == null ? new List<Output.VoCoreDeviceInfo>() : Output.VoCoreDevices.List(_view);
+                for (int i = 0; i < devices.Count; i++)
+                    combo.Items.Add(new ScreenItem(devices[i].Key, $"Écran {i + 1} — {devices[i].Label}"));
+                var selected = (_view?.VoCoreDevice ?? current).Trim();
+                int index = 0;
+                for (int i = 1; i < combo.Items.Count; i++)
+                    if (devices[i - 1].Matches(selected))
+                        index = i;
+                if (index == 0 && selected.Length > 0)
+                {
+                    // Écran choisi mais débranché : il reste choisi.
+                    combo.Items.Add(new ScreenItem(selected, $"{selected} (non branché)"));
+                    index = combo.Items.Count - 1;
+                }
+                combo.SelectedIndex = index;
+                _loading = wasLoading;
+            }
+
+            combo.SelectedIndexChanged += (_, _) =>
+            {
+                if (combo.SelectedItem is ScreenItem item)
+                    Emit(name, item.Key, true);
+            };
+            refresh.Click += (_, _) => Fill();
+            identify.Click += (_, _) =>
+            {
+                IdentifyScreens?.Invoke();
+                Fill();
+            };
+            Fill();
+            panel.Controls.AddRange(new Control[] { combo, refresh, identify });
+            return panel;
+        }
+
+        sealed record ScreenItem(string Key, string Text)
+        {
+            public override string ToString() => Text;
         }
 
         /// <summary>

@@ -65,6 +65,11 @@ En Caméra AC, l'ATH utilise exactement le point de vue de la caméra. En Captur
 rétro virtuel du jeu est approché : ajustez l'onglet *ATH* (champ de vision, hauteur, position)
 si les flèches sont décalées, et *Inverser gauche/droite des flèches* si elles sont du mauvais côté.
 
+**Plusieurs VoCore** (comme SimHub) : onglet *Écran VoCore* → *Écran utilisé* liste les écrans branchés,
+reconnus par leur numéro de série USB (ou, à défaut, leur port USB). **Identifier les écrans** affiche
+quelques secondes un grand numéro sur chacun (le rétro est arrêté pendant ce temps). L'autre écran reste
+libre pour SimHub.
+
 **Premier lancement** : le tutoriel s'ouvre ; sa dernière étape propose d'ajouter AviX Mirror sur le
 bureau (raccourci) et de le lancer au démarrage de Windows (aussi dans l'onglet *Général* :
 *Lancer avec Windows*). Les réglages de base sont ceux du propriétaire (profils ACC, AC EVO, F1, LMU inclus).
@@ -313,7 +318,8 @@ miroir et l'envoie au VoCore. **Rien n'est affiché sur l'écran du jeu.**
 | Symptôme | Solution |
 |----------|----------|
 | Easy Anti-Cheat erreur 30007 | Désinstallez le pilote d'**écran** VoCore (voir plus haut) et redémarrez. |
-| « VoCore USB : écran introuvable ou occupé » | Fermez SimHub (ou désactivez-y le VoCore). Vérifiez dans le Gestionnaire de périphériques que l'ID matériel est `USB\VID_C872&PID_1004` ; sinon, reportez-le dans `VoCoreVendorId` / `VoCoreProductId` de `AviXMirror.settings.json` (réglages experts, masqués dans la fenêtre). |
+| « l'écran choisi n'est pas branché » | Onglet *Écran VoCore* → *Écran utilisé* : choisissez l'écran (ou « Premier écran libre »). |
+| « aucun écran branché » / « écran occupé » | Fermez SimHub (ou désactivez-y le VoCore). Vérifiez dans le Gestionnaire de périphériques que l'ID matériel est `USB\VID_C872&PID_1004` ; sinon, reportez-le dans `VoCoreVendorId` / `VoCoreProductId` de `AviXMirror.settings.json` (réglages experts, masqués dans la fenêtre). |
 | Image brouillée ou en biais sur le VoCore | Mauvaise résolution native : réglez `VoCoreWidth` / `VoCoreHeight` dans `AviXMirror.settings.json` (400 × 1280 ou 1280 × 400). |
 | « En attente de Le Mans Ultimate » | Vérifiez `GameProcessName` (`Le Mans Ultimate`) dans `AviXMirror.settings.json`. |
 | Image noire en mode Capture | LMU est en plein écran exclusif : passez en Fenêtré / Sans bordure. |

@@ -59,6 +59,7 @@ public sealed class MainForm : Form
         ShowTab(Tabs.General);
         // Curseurs : la valeur s'applique en direct pendant qu'on fait glisser.
         _panel.ValueChanged += OnPropertyChanged;
+        _panel.IdentifyScreens += IdentifyScreens;
         SetupProfiles();
 
         var body = new TableLayoutPanel
@@ -499,6 +500,11 @@ public sealed class MainForm : Form
             BeginInvoke(() => _panel.Build(_view, _tabs.Selected, _view.Mode));
             Refresh();
         }
+        if (name == nameof(Settings.VoCoreDevice) && _engine.Running)
+        {
+            ApplySettings(); // autre écran : la sortie USB est rouverte
+            return;
+        }
         if (name == nameof(Settings.Mode))
             BeginInvoke(() => SelectMode(_view.Mode, restart: true)); // reconstruit les onglets après l'événement
         else
@@ -651,6 +657,37 @@ public sealed class MainForm : Form
         _settings.Save();
         RefreshView();
         _engine.UpdateLive(_settings);
+    }
+
+    /// <summary>
+    /// Identifie les VoCore branchés (grand numéro sur chacun). Le rétro est arrêté pendant quelques secondes
+    /// pour libérer l'écran qu'il utilise, puis relancé.
+    /// </summary>
+    void IdentifyScreens()
+    {
+        bool wasRunning = _engine.Running;
+        if (wasRunning)
+            _engine.Stop();
+        List<(int Number, Output.VoCoreDeviceInfo Device, bool Shown)> result;
+        Cursor = Cursors.WaitCursor;
+        try
+        {
+            result = Output.VoCoreIdentify.Run(_settings);
+        }
+        finally
+        {
+            Cursor = Cursors.Default;
+            if (wasRunning)
+                _engine.Start(_settings);
+            RefreshStatus();
+        }
+
+        string text = result.Count == 0
+            ? "Aucun VoCore trouvé. Vérifiez le câble USB (et que libusb-1.0.dll est à côté de AviXMirror.exe)."
+            : string.Join("\n", result.Select(r => $"Écran {r.Number} : {r.Device.Label}" +
+                                                   (r.Shown ? "" : " — occupé (SimHub ?), numéro non affiché"))) +
+              "\n\nChoisissez dans « Écran utilisé » celui qui doit afficher le rétro.";
+        MessageBox.Show(this, text, "Identifier les écrans", MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
 
     void InstallAcApp()

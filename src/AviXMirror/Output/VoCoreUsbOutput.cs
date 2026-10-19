@@ -154,21 +154,47 @@ public sealed class VoCoreUsbOutput : IDisposable
                 }
             }
 
-            ushort vid = ParseHex(s.VoCoreVendorId, 0xC872);
-            ushort pid = ParseHex(s.VoCoreProductId, 0x1004);
-            _handle = LibUsb.libusb_open_device_with_vid_pid(_context, vid, pid);
+            ushort vid = VendorOf(s), pid = ProductOf(s);
+            // Écran choisi (n° de série ou port USB), sinon le premier libre : avec 2 VoCore, l'autre peut
+            // rester à SimHub.
+            string wanted = s.VoCoreDevice?.Trim() ?? "";
+            int found = 0;
+            bool busy = false;
+            VoCoreDevices.Scan(_context, vid, pid, (device, port, serialIndex) =>
+            {
+                found++;
+                var known = VoCoreDevices.KnownSerial(port);
+                if (wanted.Length > 0 && known != null && !new VoCoreDeviceInfo(known, port).Matches(wanted))
+                    return false;
+                if (LibUsb.libusb_open(device, out var handle) != 0)
+                {
+                    busy = true;
+                    return false;
+                }
+                var info = new VoCoreDeviceInfo(VoCoreDevices.SerialOf(handle, serialIndex), port);
+                VoCoreDevices.Remember(port, info.Serial);
+                if (wanted.Length > 0 && !info.Matches(wanted))
+                {
+                    LibUsb.libusb_close(handle);
+                    return false;
+                }
+                if (LibUsb.libusb_claim_interface(handle, 0) < 0)
+                {
+                    LibUsb.libusb_close(handle);
+                    busy = true;
+                    return false;
+                }
+                _handle = handle;
+                Device = info;
+                return true;
+            });
             if (_handle == IntPtr.Zero)
             {
-                Status = $"VoCore USB : écran {vid:X4}:{pid:X4} introuvable ou occupé. " +
-                         "Fermez SimHub (ou désactivez-y le VoCore) et vérifiez le câble.";
-                return false;
-            }
-
-            int claim = LibUsb.libusb_claim_interface(_handle, 0);
-            if (claim < 0)
-            {
-                Status = "VoCore USB : écran occupé par un autre logiciel (" + LibUsb.ErrorName(claim) + "). Fermez SimHub.";
-                Close();
+                Status = found == 0
+                    ? $"VoCore USB : aucun écran {vid:X4}:{pid:X4} branché. Vérifiez le câble."
+                    : busy
+                        ? "VoCore USB : écran occupé par un autre logiciel. Fermez SimHub (ou désactivez-y ce VoCore)."
+                        : $"VoCore USB : l'écran choisi ({wanted}) n'est pas branché. Onglet Écran VoCore → « Écran utilisé ».";
                 return false;
             }
 
@@ -185,7 +211,7 @@ public sealed class VoCoreUsbOutput : IDisposable
 
             _ledsInitialized = false;
             _ledsDirty = _leds.Length > 0;
-            Status = $"VoCore USB connecté — modèle 0x{screenId:X}, {_nativeSize.Width}x{_nativeSize.Height}.";
+            Status = $"VoCore USB connecté — {Device?.Label}, modèle 0x{screenId:X}, {_nativeSize.Width}x{_nativeSize.Height}.";
             return true;
         }
         catch (DllNotFoundException)
@@ -200,6 +226,12 @@ public sealed class VoCoreUsbOutput : IDisposable
             return false;
         }
     }
+
+    public static ushort VendorOf(Settings s) => ParseHex(s.VoCoreVendorId, 0xC872);
+    public static ushort ProductOf(Settings s) => ParseHex(s.VoCoreProductId, 0x1004);
+
+    /// <summary>Écran utilisé (null tant qu'aucun n'est connecté).</summary>
+    public VoCoreDeviceInfo? Device { get; private set; }
 
     static ushort ParseHex(string? text, ushort fallback) =>
         ushort.TryParse(text?.Trim().Replace("0x", "", StringComparison.OrdinalIgnoreCase),
@@ -379,6 +411,7 @@ public sealed class VoCoreUsbOutput : IDisposable
             }
             catch { }
             _handle = IntPtr.Zero;
+            Device = null;
         }
     }
 

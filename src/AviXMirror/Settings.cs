@@ -167,6 +167,11 @@ public sealed class Settings
 
     // ---------- Écran VoCore ----------
 
+    [Category(Tabs.Screen), DisplayName("Écran utilisé")]
+    [Description("Avec plusieurs VoCore branchés : celui qui affiche le rétro (reconnu par son numéro de série, ou à défaut " +
+                 "par son port USB). « Identifier les écrans » affiche un grand numéro sur chacun. Vide = le premier écran libre.")]
+    public string VoCoreDevice { get; set; } = "";
+
     [Category(Tabs.Screen), DisplayName("Luminosité")]
     [Description("1 à 255 (0 = maximum).")]
     [Gauge(0, 255, 1), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
