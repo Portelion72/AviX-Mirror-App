@@ -195,6 +195,7 @@ public static class GameGuides
             (nameof(Settings.Mode), MirrorMode.Capture, "Mode Capture"),
             (nameof(Settings.CaptureDual), true, "Deux rétros côte à côte"),
             (nameof(Settings.CaptureDualFit), DualFit.Entier, "Rétros entiers (forme d'origine respectée)"),
+            (nameof(Settings.MaskBlendEdges), true, "Cache fondu sur tout son contour"),
             (nameof(Settings.MaskMarginLeft), 4, "Cache ajusté au rétro (marges de 4 px)"),
             (nameof(Settings.MaskMarginRight), 4, ""),
             (nameof(Settings.MaskMarginTop), 4, ""),

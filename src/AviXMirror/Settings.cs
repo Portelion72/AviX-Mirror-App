@@ -279,6 +279,12 @@ public sealed class Settings
                  "mise à jour en continu, pour se fondre dans le décor. Faux : cache noir.")]
     public bool MaskMatchColor { get; set; } = true;
 
+    [Category(Tabs.Capture), DisplayName("Cache : fondu sur tout le contour")]
+    [Description("Le cache prolonge l'image lue tout autour de lui (bords haut, bas, gauche et droite) au lieu d'un dégradé " +
+                 "entre quelques points : il se fond mieux sur un décor chargé (cabine de camion, cockpit). Les points de couleur " +
+                 "ne servent plus.")]
+    public bool MaskBlendEdges { get; set; }
+
     [Category(Tabs.Capture), DisplayName("Cache : points de couleur")]
     [Description("Points lus autour du cache pour reprendre la couleur du décor. Avec plusieurs points, le cache " +
                  "fait un dégradé entre leurs couleurs. Ajoutez-les, déplacez-les (clic gauche) ou supprimez-les " +

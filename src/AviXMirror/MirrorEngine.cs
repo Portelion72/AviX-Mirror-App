@@ -374,6 +374,7 @@ public sealed class MirrorEngine : IDisposable
     static void Cover(MaskForm mask, Rectangle zone, Settings s)
     {
         mask.MatchColor = s.MaskMatchColor;
+        mask.BlendEdges = s.MaskBlendEdges;
         mask.Samples = s.MaskSamples;
         if (s.MaskShape is { Count: >= 3 } shape)
         {
