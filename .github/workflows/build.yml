@@ -35,6 +35,16 @@ jobs:
           $version = $tag.TrimStart('v', 'V')
           "value=$version" >> $env:GITHUB_OUTPUT
 
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Plugin ETS2 / ATS (SDK de télémétrie SCS)
+        shell: cmd
+        run: |
+          mkdir integrations\TruckSim\build
+          cl /nologo /O2 /LD /EHsc /utf-8 /W3 integrations\TruckSim\AviXMirrorScs.cpp /Fointegrations\TruckSim\build\ /Fe:integrations\TruckSim\build\AviXMirrorScs.dll
+
       - name: Publish (exe unique, autonome)
         shell: pwsh
         run: |
@@ -51,6 +61,8 @@ jobs:
           Copy-Item THIRD-PARTY-NOTICES.md publish/
           New-Item -ItemType Directory -Force publish/AssettoCorsa-app-CSP | Out-Null
           Copy-Item -Recurse integrations/AssettoCorsa/AviXMirror publish/AssettoCorsa-app-CSP/
+          New-Item -ItemType Directory -Force publish/ETS2-ATS-plugin | Out-Null
+          Copy-Item integrations/TruckSim/build/AviXMirrorScs.dll publish/ETS2-ATS-plugin/
 
       - uses: actions/upload-artifact@v4
         with:

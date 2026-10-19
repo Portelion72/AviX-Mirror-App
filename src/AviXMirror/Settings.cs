@@ -26,6 +26,8 @@ public enum RadarGame
     Automobilista2,
     IRacing,
     F1,
+    EuroTruckSimulator2,
+    AmericanTruckSimulator,
 }
 
 public enum LedChainOrder
@@ -228,6 +230,28 @@ public sealed class Settings
 
     [Category(Tabs.Capture), DisplayName("Zone hauteur")]
     public int CropHeight { get; set; } = 108;
+
+    [Category(Tabs.Capture), DisplayName("Deux rétros côte à côte")]
+    [Description("Pour les camions (ETS2, ATS) ou les rétros latéraux : deux zones capturées, la première dans la moitié " +
+                 "gauche du VoCore, la seconde dans la moitié droite. Placez-les avec « Calibrer la zone ».")]
+    public bool CaptureDual { get; set; }
+
+    [Category(Tabs.Capture), DisplayName("Zone 2 X")]
+    public int Crop2X { get; set; }
+
+    [Category(Tabs.Capture), DisplayName("Zone 2 Y")]
+    public int Crop2Y { get; set; }
+
+    [Category(Tabs.Capture), DisplayName("Zone 2 largeur")]
+    public int Crop2Width { get; set; }
+
+    [Category(Tabs.Capture), DisplayName("Zone 2 hauteur")]
+    public int Crop2Height { get; set; }
+
+    /// <summary>Deuxième zone de capture, ou vide si « Deux rétros côte à côte » est désactivé.</summary>
+    public Rectangle SecondCrop() => CaptureDual && Crop2Width > 0 && Crop2Height > 0
+        ? new Rectangle(Crop2X, Crop2Y, Crop2Width, Crop2Height)
+        : Rectangle.Empty;
 
     [Category(Tabs.Capture), DisplayName("Cacher le rétro du jeu")]
     [Description("Pose un cache sur le rétro virtuel de LMU, sur l'écran principal. La capture n'est pas " +
@@ -495,6 +519,10 @@ public sealed class Settings
     [Description("Couleur pour d'autres catégories de voitures (ou pour remplacer celle d'une catégorie ci-dessus). " +
                  "Le menu déroulant liste toutes les catégories déjà vues dans la télémétrie des jeux.")]
     public List<LedClassColor> LedCustomClasses { get; set; } = new();
+
+    [Category(Tabs.Leds), DisplayName("Clignotants du camion (ETS2 / ATS)")]
+    [Description("Euro Truck Simulator 2 et American Truck Simulator : les LEDs du côté du clignotant clignotent en orange.")]
+    public bool LedBlinkers { get; set; } = true;
 
     [Category(Tabs.Leds), DisplayName("Détecteur de dive bomb")]
     [Description("Une voiture qui arrive très vite de derrière, déjà décalée d'un côté, fait clignoter rapidement " +

@@ -65,6 +65,13 @@ En Caméra AC, l'ATH utilise exactement le point de vue de la caméra. En Captur
 rétro virtuel du jeu est approché : ajustez l'onglet *ATH* (champ de vision, hauteur, position)
 si les flèches sont décalées, et *Inverser gauche/droite des flèches* si elles sont du mauvais côté.
 
+**ETS2 / ATS (camions)** : un camion n'a pas de rétro central. Activez *Capture → Deux rétros côte à côte*,
+puis dans **Calibrer la zone** placez le cadre 1 sur le rétro gauche de l'interface du jeu (touche F2) et
+cliquez sur le cadre 2 pour le placer sur le rétro droit : ils s'affichent côte à côte sur le VoCore et sont
+cachés tous les deux sur l'écran principal. Le plugin de télémétrie (SDK officiel SCS, aucune injection) donne
+la pause (animation de veille) et les clignotants (LEDs orange du côté concerné). Le SDK ne fournit pas la
+position du trafic : pas de radar, de flèches d'ATH ni d'alertes de dépassement pour ces jeux.
+
 **Plusieurs VoCore** (comme SimHub) : onglet *Écran VoCore* → *Écran utilisé* liste les écrans branchés,
 reconnus par leur numéro de série USB (ou, à défaut, leur port USB). **Identifier les écrans** affiche
 quelques secondes un grand numéro sur chacun (le rétro est arrêté pendant ce temps). L'autre écran reste
@@ -187,6 +194,7 @@ rétro virtuel aussi (le jeu doit afficher un rétro virtuel, en fenêtré ou sa
 | Automobilista 2 / Project CARS 2 | **beta** | mémoire partagée « Project CARS 2 » | *Options → Système → Mémoire partagée* = Project CARS 2 |
 | iRacing | **beta**, radar simplifié | SDK officiel (mémoire partagée) | rien |
 | F1 23 / 24 / 25 | **beta** | télémétrie UDP officielle | *Réglages → Télémétrie* : UDP activée, port 20777, format 2023 ou plus |
+| Euro Truck Simulator 2 / American Truck Simulator | **beta**, capture seulement | plugin AviX Mirror du SDK officiel SCS | *Guide du jeu* → *Installer le plugin ETS2 / ATS* ; validez le message « SDK » au lancement |
 
 Particularités des jeux beta :
 - **ACC** ne donne que la position des adversaires (ni vitesse, ni catégorie) : vitesses estimées,

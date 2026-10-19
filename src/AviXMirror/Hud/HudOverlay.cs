@@ -29,7 +29,8 @@ public sealed class HudOverlay : IDisposable
     public void Draw(Bitmap bmp)
     {
         var s = _settings;
-        if (!s.HudEnabled)
+        // Deux rétros côte à côte : le point de vue d'un seul rétro ne s'applique pas, pas d'ATH.
+        if (!s.HudEnabled || (_mode == MirrorMode.Capture && !s.SecondCrop().IsEmpty))
             return;
         lock (_lock)
         {

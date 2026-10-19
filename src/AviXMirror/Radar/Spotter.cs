@@ -169,6 +169,17 @@ public sealed class Spotter : IDisposable
         bool sandwich = sides.Left.Overlap && sides.Right.Overlap;
         Fill(left, sides.Left, s, sandwich, blinkOn, fastOn);
         Fill(right, sides.Right, s, sandwich, blinkOn, fastOn);
+
+        // ETS2 / ATS : les clignotants du camion clignotent aussi sur les LEDs du côté concerné.
+        if (s.LedBlinkers && (world.LeftBlinker || world.RightBlinker))
+        {
+            bool on = Environment.TickCount64 / 350 % 2 == 0;
+            var amber = on ? Color.FromArgb(255, 140, 0) : Color.Black;
+            if (world.LeftBlinker)
+                Array.Fill(left, amber);
+            if (world.RightBlinker)
+                Array.Fill(right, amber);
+        }
         return (left, right);
     }
 

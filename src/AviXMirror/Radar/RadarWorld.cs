@@ -53,6 +53,9 @@ public sealed class RadarWorld
 
     /// <summary>Vrai si la gauche et la droite doivent être inversées (réglage par jeu).</summary>
     public bool InvertLateral;
+
+    /// <summary>Clignotants du joueur (ETS2 / ATS : relayés sur les LEDs).</summary>
+    public bool LeftBlinker, RightBlinker;
 }
 
 /// <summary>Source de télémétrie d'un jeu.</summary>

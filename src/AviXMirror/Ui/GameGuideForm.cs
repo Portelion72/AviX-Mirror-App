@@ -9,6 +9,7 @@ public sealed class GameGuideForm : Form
     readonly ListBox _games = new() { Dock = DockStyle.Left, Width = 250, BorderStyle = BorderStyle.None, IntegralHeight = false };
     readonly Panel _content = new() { Dock = DockStyle.Fill, AutoScroll = true, Padding = new Padding(24, 16, 24, 16) };
     readonly FlatButton _apply = new() { Primary = true, Width = 300, Height = 38, Dock = DockStyle.Right };
+    readonly FlatButton _installPlugin = new() { Text = "Installer le plugin ETS2 / ATS", Width = 260, Height = 38, Dock = DockStyle.Right };
     readonly Action<RadarGame> _applyRecommended;
 
     public GameGuideForm(RadarGame? initial, Action<RadarGame> applyRecommended)
@@ -45,7 +46,10 @@ public sealed class GameGuideForm : Form
                                   "Pensez ensuite à « Calibrer la zone » et « Aligner les flèches » en jeu (mode Capture).",
                 "Configuration par jeu", MessageBoxButtons.OK, MessageBoxIcon.Information);
         };
+        _installPlugin.Click += (_, _) => InstallTruckPlugin();
         bottom.Controls.Add(_apply);
+        bottom.Controls.Add(new Panel { Dock = DockStyle.Right, Width = 10, BackColor = Theme.Surface });
+        bottom.Controls.Add(_installPlugin);
         bottom.Controls.Add(close);
 
         Controls.Add(_content);
@@ -86,12 +90,52 @@ public sealed class GameGuideForm : Form
         }
     }
 
+    /// <summary>Copie le plugin de télémétrie dans ETS2 et ATS (dossiers trouvés dans Steam, ou choisis).</summary>
+    void InstallTruckPlugin()
+    {
+        if (!Util.TruckSimInstaller.Available)
+        {
+            MessageBox.Show(this, "Le plugin n'est pas inclus dans cette version (compilation locale). Utilisez la version publiée.",
+                "Plugin ETS2 / ATS", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+        var games = Util.TruckSimInstaller.FindGames();
+        if (games.Count == 0)
+        {
+            using var dialog = new FolderBrowserDialog
+            {
+                Description = "Dossier « bin\\win_x64 » d'Euro Truck Simulator 2 ou d'American Truck Simulator",
+                UseDescriptionForTitle = true,
+            };
+            if (dialog.ShowDialog(this) != DialogResult.OK)
+                return;
+            games.Add(("Jeu choisi", dialog.SelectedPath));
+        }
+        var lines = new List<string>();
+        foreach (var (name, bin) in games)
+        {
+            try
+            {
+                lines.Add($"{name} : {Util.TruckSimInstaller.Install(bin)}");
+            }
+            catch (Exception ex)
+            {
+                lines.Add($"{name} : échec — {ex.Message}");
+            }
+        }
+        MessageBox.Show(this, string.Join("\n", lines) + "\n\n" +
+                              "Au lancement, le jeu prévient qu'un plugin du SDK est chargé (« fonctionnalités avancées du SDK ») : " +
+                              "validez. Le jeu doit être fermé pendant l'installation.",
+            "Plugin ETS2 / ATS", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
+
     void ShowGuide()
     {
         if (_games.SelectedItem is not Radar.GameInfo game)
             return;
         var guide = GameGuides.Get(game.Game);
         _apply.Text = "Appliquer les réglages conseillés";
+        _installPlugin.Visible = game.Game is RadarGame.EuroTruckSimulator2 or RadarGame.AmericanTruckSimulator;
 
         _content.SuspendLayout();
         var old = _content.Controls.Cast<Control>().ToArray();

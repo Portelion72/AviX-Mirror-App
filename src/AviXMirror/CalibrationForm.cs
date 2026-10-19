@@ -23,7 +23,8 @@ public sealed class CalibrationForm : Form
 
     // Rectangle au format du VoCore (1280 x 400) : déplacement à l'intérieur, redimensionnement
     // uniquement par les coins (en diagonale, format conservé).
-    const float Aspect = 1280f / 400f;
+    // Une zone : format du VoCore. Deux zones (rétros gauche et droit) : chacune une moitié (640 x 400).
+    float Aspect => _dual ? 640f / 400f : 1280f / 400f;
     const int HandleSize = 12;
     const float SnapPixels = 8;   // distance d'aimantation, en pixels à l'écran
     const float PointRadius = 6;  // rayon d'un point de couleur à l'écran
@@ -51,14 +52,26 @@ public sealed class CalibrationForm : Form
     readonly List<Guide> _activeGuides = new();
     DateTime _guidesTime = DateTime.MinValue;
 
-    public Rectangle Selection => _selection;
+    // Deux zones : la zone active est dans _sel/_selection, l'autre dans _other ; _activeZone dit laquelle est la n° 1.
+    readonly bool _dual;
+    RectangleF _other;
+    int _activeZone;
+    readonly Rectangle _initialSecond;
+
+    /// <summary>Zone 1 (moitié gauche du VoCore en mode deux rétros).</summary>
+    public Rectangle Selection => _activeZone == 0 ? _selection : Rectangle.Round(_other);
+
+    /// <summary>Zone 2 (moitié droite), vide hors mode deux rétros.</summary>
+    public Rectangle Selection2 => !_dual ? Rectangle.Empty : _activeZone == 1 ? _selection : Rectangle.Round(_other);
     public List<MaskSample> Samples => _samples;
     public List<MaskPoint> Shape => _shape;
     public bool ShapeSmooth => _shapeSmooth.Checked;
 
     public CalibrationForm(WgcCapture capture, FrameBuffer frames, Rectangle current, Padding maskMargins, IEnumerable<MaskSample> samples,
-        IEnumerable<MaskPoint> shape, bool shapeSmooth)
+        IEnumerable<MaskPoint> shape, bool shapeSmooth, Rectangle? second = null)
     {
+        _dual = second != null;
+        _initialSecond = second ?? Rectangle.Empty;
         _shape = shape.Select(p => new MaskPoint { X = p.X, Y = p.Y }).ToList();
         _shapeSmooth.Checked = shapeSmooth;
         _capture = capture;
@@ -142,6 +155,14 @@ public sealed class CalibrationForm : Form
             else
             {
                 ResetSelection();
+            }
+            if (_dual)
+            {
+                // Zone 2 : celle enregistrée, sinon à côté de la zone 1 (même taille).
+                var s2 = _initialSecond;
+                float w2 = s2.Width > 0 ? Math.Min(s2.Width, _image.Width) : _sel.Width, h2 = w2 / Aspect;
+                float x2 = s2.Width > 0 ? s2.X : _sel.Right + 20, y2 = s2.Width > 0 ? s2.Y : _sel.Y;
+                _other = new RectangleF(Math.Clamp(x2, 0, Math.Max(0, _image.Width - w2)), Math.Clamp(y2, 0, Math.Max(0, _image.Height - h2)), w2, h2);
             }
         }
         // Les repères suivent l'image (le rétro peut bouger) : recalculés toutes les 2 s, hors glissement.
@@ -361,6 +382,15 @@ public sealed class CalibrationForm : Form
     /// <summary>Contour du cache en pixels image (forme libre, ou null pour le rectangle).</summary>
     GraphicsPath? ShapePath() => HasShape ? MaskForm.ShapePath(_shape, _selection, _shapeSmooth.Checked) : null;
 
+    RectangleF OtherOnScreen()
+    {
+        var r = ImageRect();
+        if (!_dual || _image == null || r.Width <= 0)
+            return RectangleF.Empty;
+        float k = ImageScale;
+        return new RectangleF(r.X + _other.X * k, r.Y + _other.Y * k, _other.Width * k, _other.Height * k);
+    }
+
     /// <summary>Cache (zone + marges, ou bornes de la forme libre), en pixels image.</summary>
     Rectangle MaskRect()
     {
@@ -480,6 +510,15 @@ public sealed class CalibrationForm : Form
     {
         if (_image == null)
             return;
+        // Deux rétros : un clic dans l'autre cadre le rend actif.
+        if (_dual && !_shapeMode.Checked && e.Button == MouseButtons.Left && HitTest(e.Location) is Drag.None or Drag.Move &&
+            !SelectionOnScreen().Contains(e.Location) && OtherOnScreen().Contains(e.Location))
+        {
+            (_sel, _other) = (_other, _sel);
+            _activeZone ^= 1;
+            SyncSelection();
+            _picture.Invalidate();
+        }
         if (_shapeMode.Checked)
         {
             int point = ShapeHit(e.Location);
@@ -729,10 +768,22 @@ public sealed class CalibrationForm : Form
             }
         }
 
-        var text = $"{_selection.Width}x{_selection.Height} @ {_selection.X},{_selection.Y}   ·   {_samples.Count} point(s) de couleur" +
+        if (_dual)
+        {
+            // L'autre cadre, en pointillés ; un clic dedans le rend actif.
+            var other = OtherOnScreen();
+            using var otherPen = new Pen(Color.FromArgb(200, Ui.Theme.Accent), 2) { DashStyle = DashStyle.Dash };
+            g.DrawRectangle(otherPen, other.X, other.Y, other.Width, other.Height);
+            TextRenderer.DrawText(g, ZoneLabel(1 - _activeZone) + " (cliquez pour la modifier)", Font,
+                new Point((int)other.X + 4, (int)other.Y + 4), Ui.Theme.Accent);
+        }
+        var text = (_dual ? ZoneLabel(_activeZone) + "   ·   " : "") +
+                   $"{_selection.Width}x{_selection.Height} @ {_selection.X},{_selection.Y}   ·   {_samples.Count} point(s) de couleur" +
                    (HasShape ? $"   ·   forme libre ({_shape.Count} points)" : "");
         TextRenderer.DrawText(g, text, Font, new Point((int)sel.X + 4, (int)sel.Y + 4), Ui.Theme.Accent);
     }
+
+    static string ZoneLabel(int zone) => zone == 0 ? "Zone 1 — moitié gauche du VoCore" : "Zone 2 — moitié droite du VoCore";
 
     protected override void OnFormClosed(FormClosedEventArgs e)
     {

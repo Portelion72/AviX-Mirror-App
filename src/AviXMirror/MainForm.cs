@@ -265,7 +265,7 @@ public sealed class MainForm : Form
         Add(new SectionLabel("Mode"), 26, new Padding(0));
         AddTile(MirrorMode.Radar, "Radar", "Vue synthétique des voitures derrière vous. LMU, AC ; beta : ACC, AC EVO, AMS2, iRacing, F1, rF2.");
         AddTile(MirrorMode.CameraAssettoCorsa, "Caméra Assetto Corsa", "Vraie vue arrière rendue hors écran par l'app CSP.");
-        AddTile(MirrorMode.Capture, "Capture du rétro", "Recopie le rétro virtuel du jeu (LMU ; autres jeux en beta) et le cache à l'écran.");
+        AddTile(MirrorMode.Capture, "Capture du rétro", "Recopie le rétro virtuel du jeu (LMU ; autres jeux en beta, ETS2 / ATS : deux rétros) et le cache à l'écran.");
 
         Add(new SectionLabel("Contrôle"), 26, new Padding(0, 8, 0, 0));
         Add(_startStop, 52, new Padding(0, 0, 0, 10));
@@ -586,14 +586,16 @@ public sealed class MainForm : Form
         List<MaskSample> samples;
         List<MaskPoint> shape;
         bool shapeSmooth;
-        Rectangle sel;
+        Rectangle sel, sel2;
         _engine.Calibrating = true;
         try
         {
             using var form = new CalibrationForm(capture, _engine.Frames, current, margins, effective.MaskSamples,
-                effective.MaskShape, effective.MaskShapeSmooth);
+                effective.MaskShape, effective.MaskShapeSmooth,
+                effective.CaptureDual ? new Rectangle(effective.Crop2X, effective.Crop2Y, effective.Crop2Width, effective.Crop2Height) : null);
             result = form.ShowDialog(this);
             sel = form.Selection;
+            sel2 = form.Selection2;
             samples = form.Samples;
             shape = form.Shape;
             shapeSmooth = form.ShapeSmooth;
@@ -610,6 +612,13 @@ public sealed class MainForm : Form
             _settings.Set(game, nameof(Settings.CropY), sel.Y);
             _settings.Set(game, nameof(Settings.CropWidth), sel.Width);
             _settings.Set(game, nameof(Settings.CropHeight), sel.Height);
+            if (!sel2.IsEmpty)
+            {
+                _settings.Set(game, nameof(Settings.Crop2X), sel2.X);
+                _settings.Set(game, nameof(Settings.Crop2Y), sel2.Y);
+                _settings.Set(game, nameof(Settings.Crop2Width), sel2.Width);
+                _settings.Set(game, nameof(Settings.Crop2Height), sel2.Height);
+            }
             _settings.Set(game, nameof(Settings.MaskSamples), samples);
             _settings.Set(game, nameof(Settings.MaskShape), shape);
             _settings.Set(game, nameof(Settings.MaskShapeSmooth), shapeSmooth);

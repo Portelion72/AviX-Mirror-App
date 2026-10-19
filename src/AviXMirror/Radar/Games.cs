@@ -21,6 +21,8 @@ public static class Games
         new(RadarGame.Automobilista2, "Automobilista 2 / Project CARS 2", new[] { "AMS2AVX", "AMS2", "pCARS2AVX", "pCARS2", "pCARS2Gld" }, true, () => new Ams2Telemetry()),
         new(RadarGame.IRacing, "iRacing", new[] { "iRacingSim64DX11", "iRacingSim64" }, true, () => new IRacingTelemetry()),
         new(RadarGame.F1, "F1 23 / 24 / 25", new[] { "F1_23", "F1_24", "F1_25" }, true, () => new F1Telemetry()),
+        new(RadarGame.EuroTruckSimulator2, "Euro Truck Simulator 2", new[] { "eurotrucks2" }, true, () => new ScsTelemetry(1, "Euro Truck Simulator 2")),
+        new(RadarGame.AmericanTruckSimulator, "American Truck Simulator", new[] { "amtrucks" }, true, () => new ScsTelemetry(2, "American Truck Simulator")),
     };
 
     public static GameInfo Get(RadarGame game) => All.First(g => g.Game == game);

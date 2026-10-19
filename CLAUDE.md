@@ -88,6 +88,12 @@ en jeu depuis Claude : le dire clairement dans chaque compte rendu.
   (en capture, l'ATH est dessiné en pleine résolution par-dessus l'image agrandie).
 - `Radar/Spotter.cs` : LEDs WS2812B (2 × 8 en série, ordre et sens réglables) via I2C de la carte MPro (adresse
   0x74, mode compatible IS31FL3731) ; couleurs par catégorie, dive bomb (clignotement rapide).
+- **ETS2 / ATS** : plugin C++ `integrations/TruckSim/AviXMirrorScs.cpp` (SDK télémétrie SCS, types redéclarés,
+  compilé par la CI avec MSVC → ressource `TruckSim.AviXMirrorScs.dll`, installé par `Util/TruckSimInstaller`
+  dans `bin\win_x64\plugins`) → mémoire partagée `Local\AviXMirror.SCS.v1` (88 octets) lue par
+  `Radar/ScsTelemetry` (joueur seul : pause, cap, vitesse, clignotants → LEDs `LedBlinkers`). Pas de trafic dans
+  le SDK. Capture **deux zones** (`CaptureDual`, `Crop2*`, `Settings.SecondCrop()`) : `WgcCapture.WriteDual`
+  (moitiés 640×400), 2ᵉ cache `_mask2`, calibration à deux cadres, ATH désactivé en double zone.
 - **Plusieurs VoCore** : `Output/VoCoreDevices` (énumération libusb, clé = n° de série USB sinon
   « USB bus-ports », n° mémorisés par port), réglage `VoCoreDevice` (vide = premier libre, pas de repli sur un
   autre écran si celui choisi manque), `Output/VoCoreIdentify` (grand numéro sur chaque écran, rétro arrêté
@@ -114,7 +120,7 @@ zone de capture au format VoCore → ATH Bosch (flèches, échelles 10 graduatio
 flèches) → ATH net en capture → cache avec marges et couleur du décor → faces avant LMU → rangement
 (retrait MJPEG, extension de fenêtre, capture d'écran entier) → veille/pause/bureau, écran éteint,
 LEDs par catégorie, dive bomb, repères de calibration, onglets, points de couleur → licence
-propriétaire + avis de mise à jour → v1.1.0 → tutoriel de prise en main → v1.2.0 → réglages par défaut du propriétaire → v1.2.1 → jeux beta (rF2, ACC, AC EVO, AMS2/PC2, iRacing, F1) → profils par jeu, jauges, écran de veille personnalisé → réglages d'horizon ATH, outil « Aligner les flèches » (tous jeux), forme libre du cache (rétro F1) → panneau de réglages maison (curseurs + cases), onglets par mode, guides et réglages conseillés par jeu → réglages du propriétaire par défaut (profils inclus), LEDs IS31 seulement, catégories LEDs personnalisées, raccourci bureau + lancement avec Windows → v1.3.0 → animation de veille nette (fond noir uni, reflet doux, logo bicubique) → v1.3.1 → reconnaissance de plusieurs VoCore (n° de série / port, identification) → v1.3.2.
+propriétaire + avis de mise à jour → v1.1.0 → tutoriel de prise en main → v1.2.0 → réglages par défaut du propriétaire → v1.2.1 → jeux beta (rF2, ACC, AC EVO, AMS2/PC2, iRacing, F1) → profils par jeu, jauges, écran de veille personnalisé → réglages d'horizon ATH, outil « Aligner les flèches » (tous jeux), forme libre du cache (rétro F1) → panneau de réglages maison (curseurs + cases), onglets par mode, guides et réglages conseillés par jeu → réglages du propriétaire par défaut (profils inclus), LEDs IS31 seulement, catégories LEDs personnalisées, raccourci bureau + lancement avec Windows → v1.3.0 → animation de veille nette (fond noir uni, reflet doux, logo bicubique) → v1.3.1 → reconnaissance de plusieurs VoCore (n° de série / port, identification) → v1.3.2 → ETS2 / ATS (plugin SDK SCS, double zone de capture, clignotants sur LEDs).
 
 ## Git
 

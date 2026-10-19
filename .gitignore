@@ -4,3 +4,4 @@ publish/
 .vs/
 *.user
 AviXMirror.settings.json
+integrations/TruckSim/build/

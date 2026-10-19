@@ -168,7 +168,33 @@ public static class GameGuides
                 (nameof(Settings.GameStartDelaySeconds), 10, "Délai anti-triche : 10 s"),
                 (nameof(Settings.MaskShapeSmooth), true, "Cache à forme arrondie"),
             }),
+
+        Truck(RadarGame.EuroTruckSimulator2, "Euro Truck Simulator 2"),
+        Truck(RadarGame.AmericanTruckSimulator, "American Truck Simulator"),
     };
+
+    /// <summary>ETS2 et ATS : mêmes réglages (moteur SCS, plugin AviX Mirror du SDK de télémétrie).</summary>
+    static GameGuide Truck(RadarGame game, string name) => new(game,
+        "Capture des deux rétros du camion côte à côte (beta). Plugin de télémétrie officiel : pause, clignotants sur les LEDs. " +
+        "Le SDK ne donne pas la position du trafic : pas de radar, ni de flèches, ni d'alertes de dépassement.",
+        new[]
+        {
+            "Fermez le jeu, puis bouton « Installer le plugin ETS2 / ATS » ci-dessous (copie dans bin\\win_x64\\plugins).",
+            "Au lancement, le jeu signale un plugin du SDK (« fonctionnalités avancées du SDK ») : validez.",
+            Borderless + " Affichez les rétroviseurs dans l'interface du jeu (touche F2 par défaut).",
+        },
+        new[]
+        {
+            "AviX Mirror : mode Capture ; onglet Capture → « Deux rétros côte à côte ».",
+            "DÉMARRER, puis « Calibrer la zone » : cadre 1 sur le rétro gauche, cliquez sur le cadre 2 et placez-le sur le rétro droit.",
+            "Les deux rétros sont cachés sur l'écran principal et affichés côte à côte sur le VoCore.",
+        },
+        new (string, object, string)[]
+        {
+            (nameof(Settings.Mode), MirrorMode.Capture, "Mode Capture"),
+            (nameof(Settings.CaptureDual), true, "Deux rétros côte à côte"),
+            (nameof(Settings.GameStartDelaySeconds), 3, "Délai : 3 s"),
+        });
 
     public static GameGuide Get(RadarGame game) => All.First(g => g.Game == game);
 }
