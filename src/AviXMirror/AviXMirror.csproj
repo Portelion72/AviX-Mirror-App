@@ -28,6 +28,7 @@
     <EmbeddedResource Include="Assets\DefaultProfiles.json" LogicalName="Defaults.Profiles.json" />
     <!-- Plugin ETS2 / ATS compilé par la CI (absent d'une compilation locale sans MSVC). -->
     <EmbeddedResource Include="..\..\integrations\TruckSim\build\AviXMirrorScs.dll" LogicalName="TruckSim.AviXMirrorScs.dll" Condition="Exists('..\..\integrations\TruckSim\build\AviXMirrorScs.dll')" />
+    <EmbeddedResource Include="..\..\integrations\TruckSim\build\AviXMirror.addon64" LogicalName="TruckSim.AviXMirror.addon64" Condition="Exists('..\..\integrations\TruckSim\build\AviXMirror.addon64')" />
     <None Include="native\libusb-NOTICE.txt" Link="libusb-NOTICE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 

@@ -17,6 +17,27 @@ public static class TruckSimInstaller
         ("American Truck Simulator", "American Truck Simulator"),
     };
 
+    const string AddonResource = "TruckSim.AviXMirror.addon64";
+    const string AddonFile = "AviXMirror.addon64";
+
+    /// <summary>ReShade installé dans ce dossier bin\win_x64 (fichier ReShade.ini ou DLL de ReShade).</summary>
+    public static bool HasReShade(string bin) =>
+        File.Exists(Path.Combine(bin, "ReShade.ini")) || File.Exists(Path.Combine(bin, "ReShade64.dll"));
+
+    /// <summary>
+    /// Copie l'add-on ReShade d'AviX Mirror à côté du jeu (ReShade le charge s'il est installé en version
+    /// « add-ons »). Retourne le chemin du fichier.
+    /// </summary>
+    public static string InstallAddon(string bin)
+    {
+        var target = Path.Combine(bin, AddonFile);
+        using var resource = Assembly.GetExecutingAssembly().GetManifestResourceStream(AddonResource)
+            ?? throw new FileNotFoundException("L'add-on ReShade n'est pas inclus dans cette version d'AviX Mirror.");
+        using var output = File.Create(target);
+        resource.CopyTo(output);
+        return target;
+    }
+
     /// <summary>Plugin présent dans cette version d'AviX Mirror (compilé par la CI).</summary>
     public static bool Available => Assembly.GetExecutingAssembly().GetManifestResourceInfo(Resource) != null;
 

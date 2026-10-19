@@ -73,6 +73,15 @@ public static class Tabs
     };
 }
 
+/// <summary>Origine de l'image du mode Capture.</summary>
+public enum CaptureSourceKind
+{
+    /// <summary>Fenêtre du jeu (Windows.Graphics.Capture), rétro virtuel caché par un cache.</summary>
+    Fenetre,
+    /// <summary>Add-on ReShade (ETS2 / ATS en solo) : image du rétro prise dans la carte graphique, rien à l'écran.</summary>
+    ReShade,
+}
+
 /// <summary>Placement d'un rétro dans sa moitié du VoCore (mode deux rétros).</summary>
 public enum DualFit
 {
@@ -241,6 +250,23 @@ public sealed class Settings
 
     [Category(Tabs.Capture), DisplayName("Zone hauteur")]
     public int CropHeight { get; set; } = 108;
+
+    [Category(Tabs.Capture), DisplayName("Source de l'image")]
+    [Description("Fenetre : capture de la fenêtre du jeu (rétro virtuel caché par un cache). ReShade : ETS2 / ATS en solo, " +
+                 "l'image des rétroviseurs est prise dans la carte graphique par l'add-on AviX Mirror, rien n'apparaît ni n'est " +
+                 "caché à l'écran (installation dans le Guide du jeu).")]
+    public CaptureSourceKind CaptureSource { get; set; } = CaptureSourceKind.Fenetre;
+
+    [Category(Tabs.Capture), DisplayName("Image ReShade")]
+    [Description("Texture calculée par le jeu qui contient le rétroviseur : « Choisir… » affiche toutes les images trouvées " +
+                 "par l'add-on, cliquez sur celle du rétro (jeu lancé, au volant).")]
+    public string ReShadeTarget { get; set; } = "";
+
+    [Category(Tabs.Capture), DisplayName("Image ReShade : miroir gauche/droite")]
+    public bool ReShadeFlipH { get; set; }
+
+    [Category(Tabs.Capture), DisplayName("Image ReShade : retourner haut/bas")]
+    public bool ReShadeFlipV { get; set; }
 
     [Category(Tabs.Capture), DisplayName("Deux rétros côte à côte")]
     [Description("Pour les camions (ETS2, ATS) ou les rétros latéraux : deux zones capturées, la première dans la moitié " +

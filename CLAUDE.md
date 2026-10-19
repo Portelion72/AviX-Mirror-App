@@ -95,8 +95,13 @@ en jeu depuis Claude : le dire clairement dans chaque compte rendu.
   le SDK. Capture **deux zones** (`CaptureDual`, `Crop2*`, `Settings.SecondCrop()`) : `WgcCapture.WriteDual`
   (moitiés 640×400), 2ᵉ cache `_mask2`, calibration à deux cadres libres (forme quelconque), `CaptureDualFit` (Entier / Remplir / Étirer, `WgcCapture.DrawFitted`), ATH désactivé en double zone. `MaskBlendEdges` : cache rempli par surface de Coons
   entre les 4 bords lus à l'écran (`MaskForm.SampleContour`, 40 couleurs par bord, 3 px du bord). « Rétros plus nets » : `r_mirror_scale_x/y = 2` dans `Documents\<jeu>\config.cfg`
-  (sauvegarde `config.cfg.avix-backup`). Rendu hors écran « comme AC » impossible (mods = données, pas de code ;
-  caméra arrière depuis la cabine = paroi de la cabine).
+  (sauvegarde `config.cfg.avix-backup`). **Add-on ReShade** (solo) `integrations/TruckSim/AviXMirrorReShade.cpp`
+  (en-têtes ReShade 6.3.3 vendorés, BSD) : suit les render targets liés (`bind_render_targets_and_depth_stencil`),
+  publie candidats + vignettes 160×100 et 1 ou 2 images choisies (copie GPU→staging double tampon, conversion
+  RGBA8/BGRA8/RGB10A2/R11G11B10F/RGBA16F → BGRA) dans `Local\AviXMirror.ReShade.v1` (en-tête v2, images à 2 Mio
+  et 2 Mio + 16 Mio). Côté app : `Capture/ReShadeSource` (`CaptureSource = ReShade`, `ReShadeTarget` = clés
+  « LxH:format:ordre » séparées par « | », retournements), `Ui/ReShadePickerForm`, `ICaptureSource` +
+  `FrameComposer` (recadrage / deux zones communs à la capture de fenêtre).
 - **Plusieurs VoCore** : `Output/VoCoreDevices` (énumération libusb, clé = n° de série USB sinon
   « USB bus-ports », n° mémorisés par port), réglage `VoCoreDevice` (vide = premier libre, pas de repli sur un
   autre écran si celui choisi manque), `Output/VoCoreIdentify` (grand numéro sur chaque écran, rétro arrêté
@@ -123,7 +128,7 @@ zone de capture au format VoCore → ATH Bosch (flèches, échelles 10 graduatio
 flèches) → ATH net en capture → cache avec marges et couleur du décor → faces avant LMU → rangement
 (retrait MJPEG, extension de fenêtre, capture d'écran entier) → veille/pause/bureau, écran éteint,
 LEDs par catégorie, dive bomb, repères de calibration, onglets, points de couleur → licence
-propriétaire + avis de mise à jour → v1.1.0 → tutoriel de prise en main → v1.2.0 → réglages par défaut du propriétaire → v1.2.1 → jeux beta (rF2, ACC, AC EVO, AMS2/PC2, iRacing, F1) → profils par jeu, jauges, écran de veille personnalisé → réglages d'horizon ATH, outil « Aligner les flèches » (tous jeux), forme libre du cache (rétro F1) → panneau de réglages maison (curseurs + cases), onglets par mode, guides et réglages conseillés par jeu → réglages du propriétaire par défaut (profils inclus), LEDs IS31 seulement, catégories LEDs personnalisées, raccourci bureau + lancement avec Windows → v1.3.0 → animation de veille nette (fond noir uni, reflet doux, logo bicubique) → v1.3.1 → reconnaissance de plusieurs VoCore (n° de série / port, identification) → v1.3.2 → ETS2 / ATS (plugin SDK SCS, double zone de capture, clignotants sur LEDs).
+propriétaire + avis de mise à jour → v1.1.0 → tutoriel de prise en main → v1.2.0 → réglages par défaut du propriétaire → v1.2.1 → jeux beta (rF2, ACC, AC EVO, AMS2/PC2, iRacing, F1) → profils par jeu, jauges, écran de veille personnalisé → réglages d'horizon ATH, outil « Aligner les flèches » (tous jeux), forme libre du cache (rétro F1) → panneau de réglages maison (curseurs + cases), onglets par mode, guides et réglages conseillés par jeu → réglages du propriétaire par défaut (profils inclus), LEDs IS31 seulement, catégories LEDs personnalisées, raccourci bureau + lancement avec Windows → v1.3.0 → animation de veille nette (fond noir uni, reflet doux, logo bicubique) → v1.3.1 → reconnaissance de plusieurs VoCore (n° de série / port, identification) → v1.3.2 → ETS2 / ATS (plugin SDK SCS, double zone de capture, clignotants sur LEDs) → add-on ReShade (image des rétros sans rien à l'écran).
 
 ## Git
 

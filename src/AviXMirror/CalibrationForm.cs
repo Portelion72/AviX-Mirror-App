@@ -15,7 +15,7 @@ namespace AviXMirror;
 /// </summary>
 public sealed class CalibrationForm : Form
 {
-    readonly WgcCapture _capture;
+    readonly ICaptureSource _capture;
     readonly FrameBuffer _frames;
     readonly PictureBox _picture = new() { Dock = DockStyle.Fill, BackColor = Color.Black };
     readonly System.Windows.Forms.Timer _refresh = new() { Interval = 150 };
@@ -67,7 +67,7 @@ public sealed class CalibrationForm : Form
     public List<MaskPoint> Shape => _shape;
     public bool ShapeSmooth => _shapeSmooth.Checked;
 
-    public CalibrationForm(WgcCapture capture, FrameBuffer frames, Rectangle current, Padding maskMargins, IEnumerable<MaskSample> samples,
+    public CalibrationForm(ICaptureSource capture, FrameBuffer frames, Rectangle current, Padding maskMargins, IEnumerable<MaskSample> samples,
         IEnumerable<MaskPoint> shape, bool shapeSmooth, Rectangle? second = null)
     {
         _dual = second != null;

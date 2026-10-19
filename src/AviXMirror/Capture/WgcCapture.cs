@@ -15,7 +15,7 @@ namespace AviXMirror.Capture;
 /// La capture de fenêtre récupère le contenu même s'il est caché par une autre fenêtre
 /// ou situé hors de l'écran : c'est ce qui permet de ne plus afficher le rétro sur l'écran principal.
 /// </summary>
-public sealed class WgcCapture : IDisposable
+public sealed class WgcCapture : ICaptureSource
 {
     const DirectXPixelFormat PixelFormat = DirectXPixelFormat.B8G8R8A8UIntNormalized;
 
@@ -236,47 +236,9 @@ public sealed class WgcCapture : IDisposable
             g.Clear(Color.Black);
             g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBilinear;
             g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.Half;
-            DrawFitted(g, source, new Rectangle(0, 0, a.Width, a.Height), new Rectangle(0, 0, half, outH), fit);
-            DrawFitted(g, source, new Rectangle(a.Width, 0, b.Width, b.Height), new Rectangle(half, 0, half, outH), fit);
+            FrameComposer.DrawFitted(g, source, new Rectangle(0, 0, a.Width, a.Height), new Rectangle(0, 0, half, outH), fit);
+            FrameComposer.DrawFitted(g, source, new Rectangle(a.Width, 0, b.Width, b.Height), new Rectangle(half, 0, half, outH), fit);
         });
-    }
-
-    /// <summary>Place une zone (rétro) dans sa moitié : entière, en remplissant (recadrée au centre) ou étirée.</summary>
-    static void DrawFitted(System.Drawing.Graphics g, Bitmap source, Rectangle src, Rectangle dest, DualFit fit)
-    {
-        if (src.Width <= 0 || src.Height <= 0)
-            return;
-        switch (fit)
-        {
-            case DualFit.Etirer:
-                g.DrawImage(source, dest, src, GraphicsUnit.Pixel);
-                break;
-            case DualFit.Remplir:
-            {
-                // Garde le centre de la zone au format de la moitié.
-                double target = dest.Width / (double)dest.Height;
-                var crop = src;
-                if (src.Width / (double)src.Height > target)
-                {
-                    int w = (int)Math.Round(src.Height * target);
-                    crop = new Rectangle(src.X + (src.Width - w) / 2, src.Y, w, src.Height);
-                }
-                else
-                {
-                    int h = (int)Math.Round(src.Width / target);
-                    crop = new Rectangle(src.X, src.Y + (src.Height - h) / 2, src.Width, h);
-                }
-                g.DrawImage(source, dest, crop, GraphicsUnit.Pixel);
-                break;
-            }
-            default:
-            {
-                double scale = Math.Min(dest.Width / (double)src.Width, dest.Height / (double)src.Height);
-                int w = (int)Math.Round(src.Width * scale), h = (int)Math.Round(src.Height * scale);
-                g.DrawImage(source, new Rectangle(dest.X + (dest.Width - w) / 2, dest.Y + (dest.Height - h) / 2, w, h), src, GraphicsUnit.Pixel);
-                break;
-            }
-        }
     }
 
     void EnsureStaging(int width, int height)

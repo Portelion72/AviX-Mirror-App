@@ -77,6 +77,15 @@ position du trafic : pas de radar, de flèches d'ATH ni d'alertes de dépassemen
 *Guide du jeu → Rétros plus nets* fait calculer au jeu ses rétros de l'interface en résolution double
 (`r_mirror_scale_x/y` de `config.cfg`, copie de sauvegarde, réversible).
 
+**ETS2 / ATS sans rien à l'écran (ReShade, solo uniquement)** : l'add-on AviX Mirror pour ReShade prend
+l'image des rétroviseurs dans la carte graphique, avant qu'elle soit affichée — pas de rétro F2, pas de cache.
+1. Installez ReShade **« with full add-on support »** (reshade.me) sur `eurotrucks2.exe` / `amtrucks.exe`
+   (DirectX 10/11/12). Pas sur TruckersMP (add-ons interdits, risque de ban).
+2. *Guide du jeu* → **Installer plugin + add-on** (copie `AviXMirror.addon64` à côté du jeu).
+3. Onglet *Capture* → *Source de l'image* = **ReShade**, puis *Image ReShade* → **Choisir…** : au volant, les
+   images calculées par le jeu s'affichent en vignettes ; cliquez celle du rétro gauche (1), puis celle du
+   rétro droit (2) si elle est séparée. *Miroir gauche/droite* / *retourner haut/bas* si l'image est inversée.
+
 **Plusieurs VoCore** (comme SimHub) : onglet *Écran VoCore* → *Écran utilisé* liste les écrans branchés,
 reconnus par leur numéro de série USB (ou, à défaut, leur port USB). **Identifier les écrans** affiche
 quelques secondes un grand numéro sur chacun (le rétro est arrêté pendant ce temps). L'autre écran reste

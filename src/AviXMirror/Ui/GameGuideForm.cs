@@ -9,7 +9,7 @@ public sealed class GameGuideForm : Form
     readonly ListBox _games = new() { Dock = DockStyle.Left, Width = 250, BorderStyle = BorderStyle.None, IntegralHeight = false };
     readonly Panel _content = new() { Dock = DockStyle.Fill, AutoScroll = true, Padding = new Padding(24, 16, 24, 16) };
     readonly FlatButton _apply = new() { Primary = true, Width = 300, Height = 38, Dock = DockStyle.Right };
-    readonly FlatButton _installPlugin = new() { Text = "Installer le plugin ETS2 / ATS", Width = 260, Height = 38, Dock = DockStyle.Right };
+    readonly FlatButton _installPlugin = new() { Text = "Installer plugin + add-on", Width = 260, Height = 38, Dock = DockStyle.Right };
     readonly FlatButton _sharpen = new() { Text = "Rétros plus nets", Width = 160, Height = 38, Dock = DockStyle.Right };
     readonly Action<RadarGame> _applyRecommended;
 
@@ -120,13 +120,19 @@ public sealed class GameGuideForm : Form
         {
             try
             {
-                lines.Add($"{name} : {Util.TruckSimInstaller.Install(bin)}");
+                lines.Add($"{name} : plugin de télémétrie → {Util.TruckSimInstaller.Install(bin)}");
+                lines.Add($"{name} : add-on ReShade → {Util.TruckSimInstaller.InstallAddon(bin)}" +
+                          (Util.TruckSimInstaller.HasReShade(bin) ? "" : "  (ReShade pas encore installé dans ce jeu)"));
             }
             catch (Exception ex)
             {
                 lines.Add($"{name} : échec — {ex.Message}");
             }
         }
+        lines.Add("");
+        lines.Add("Image des rétros sans rien à l'écran (solo uniquement, pas TruckersMP) : installez ReShade version « with full add-on support » " +
+                  "(reshade.me) sur eurotrucks2.exe / amtrucks.exe (DirectX 10/11/12), puis dans AviX Mirror : onglet Capture → Source de l'image = ReShade, " +
+                  "« Image ReShade » → Choisir…");
         MessageBox.Show(this, string.Join("\n", lines) + "\n\n" +
                               "Au lancement, le jeu prévient qu'un plugin du SDK est chargé (« fonctionnalités avancées du SDK ») : " +
                               "validez. Le jeu doit être fermé pendant l'installation.",

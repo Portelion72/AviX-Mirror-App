@@ -18,7 +18,7 @@ public sealed class MirrorEngine : IDisposable
 
     Settings _master = new();   // réglages communs + profils de tous les jeux
     Settings _settings = new(); // réglages effectifs pour le jeu en cours
-    WgcCapture? _capture;
+    ICaptureSource? _capture;
     IntPtr _captureWindow;
     volatile bool _captureClosed;
     RadarSource? _radar;
@@ -65,7 +65,7 @@ public sealed class MirrorEngine : IDisposable
     public FrameBuffer Frames { get; } = new();
     public bool Running { get; private set; }
     public string Status { get; private set; } = "Arrêté.";
-    public WgcCapture? Capture => _capture;
+    public ICaptureSource? Capture => _capture;
 
     /// <summary>Voitures derrière, dans le repère du joueur, telles que l'ATH les place (null sans ATH ou sans télémétrie).</summary>
     public List<Hud.HudTarget>? HudTargets() => _hud?.CurrentTargets();
@@ -180,6 +180,7 @@ public sealed class MirrorEngine : IDisposable
         var copy = effective;
         _settings = copy;
         _capture?.SetCrops(new Rectangle(copy.CropX, copy.CropY, copy.CropWidth, copy.CropHeight), copy.SecondCrop(), copy.CaptureDualFit);
+        (_capture as ReShadeSource)?.Configure(copy.ReShadeTarget, copy.ReShadeFlipH, copy.ReShadeFlipV);
         _usb?.UpdateSettings(copy);
         _radar?.UpdateSettings(copy);
         _acCamera?.UpdateSettings(copy);
@@ -311,6 +312,22 @@ public sealed class MirrorEngine : IDisposable
 
     string TickCapture(Settings s)
     {
+        // ETS2 / ATS en solo : image des rétros prise par l'add-on ReShade, sans fenêtre ni cache.
+        if (s.CaptureSource == CaptureSourceKind.ReShade)
+        {
+            if (_capture is not ReShadeSource)
+            {
+                StopCapture();
+                var source = new ReShadeSource(Frames);
+                source.SetCrops(new Rectangle(s.CropX, s.CropY, s.CropWidth, s.CropHeight), s.SecondCrop(), s.CaptureDualFit);
+                source.Configure(s.ReShadeTarget, s.ReShadeFlipH, s.ReShadeFlipV);
+                _capture = source;
+            }
+            return ((ReShadeSource)_capture).Status;
+        }
+        if (_capture is ReShadeSource)
+            StopCapture();
+
         if (!WgcCapture.IsSupported)
             return "Capture Windows.Graphics.Capture non supportée (Windows 10 2004 ou plus récent requis).";
 
@@ -351,7 +368,7 @@ public sealed class MirrorEngine : IDisposable
     /// <summary>Pose le cache sur la zone du rétro (plus ses marges), sur l'écran principal ; un second cache sur la zone 2.</summary>
     void UpdateMask(Settings s)
     {
-        bool show = s.HideMirrorOnScreen && _state == GameState.Active && _capture != null && _captureWindow != IntPtr.Zero && Native.IsWindow(_captureWindow) &&
+        bool show = s.HideMirrorOnScreen && s.CaptureSource == CaptureSourceKind.Fenetre && _state == GameState.Active && _capture != null && _captureWindow != IntPtr.Zero && Native.IsWindow(_captureWindow) &&
                     !Native.IsIconic(_captureWindow) && s.CropWidth > 0 && s.CropHeight > 0;
         var second = s.SecondCrop();
         if (!show)
@@ -394,7 +411,7 @@ public sealed class MirrorEngine : IDisposable
 
     void ConfigureAndStart(Settings s)
     {
-        var capture = _capture!;
+        var capture = (WgcCapture)_capture!;
         capture.SetCrops(new Rectangle(s.CropX, s.CropY, s.CropWidth, s.CropHeight), s.SecondCrop(), s.CaptureDualFit);
         capture.SetFps(s.TargetFps);
         capture.Closed += () => _captureClosed = true;
