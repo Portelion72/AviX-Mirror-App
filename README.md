@@ -71,6 +71,8 @@ cliquez sur le cadre 2 pour le placer sur le rétro droit : ils s'affichent côt
 cachés tous les deux sur l'écran principal. Le plugin de télémétrie (SDK officiel SCS, aucune injection) donne
 la pause (animation de veille) et les clignotants (LEDs orange du côté concerné). Le SDK ne fournit pas la
 position du trafic : pas de radar, de flèches d'ATH ni d'alertes de dépassement pour ces jeux.
+*Guide du jeu → Rétros plus nets* fait calculer au jeu ses rétros de l'interface en résolution double
+(`r_mirror_scale_x/y` de `config.cfg`, copie de sauvegarde, réversible).
 
 **Plusieurs VoCore** (comme SimHub) : onglet *Écran VoCore* → *Écran utilisé* liste les écrans branchés,
 reconnus par leur numéro de série USB (ou, à défaut, leur port USB). **Identifier les écrans** affiche

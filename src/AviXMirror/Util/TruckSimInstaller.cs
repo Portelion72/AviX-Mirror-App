@@ -34,6 +34,60 @@ public static class TruckSimInstaller
         return found;
     }
 
+    // Résolution des rétroviseurs de l'interface (touche F2) : ce sont eux que la capture recopie sur le VoCore.
+    static readonly (string Name, string Value)[] MirrorVariables =
+    {
+        ("r_mirror_scale_x", "2.0"),
+        ("r_mirror_scale_y", "2.0"),
+    };
+
+    /// <summary>Fichiers « config.cfg » d'ETS2 et ATS (Documents).</summary>
+    public static List<(string Name, string Config)> FindConfigs()
+    {
+        var documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        var result = new List<(string, string)>();
+        foreach (var (name, folder) in GamesList)
+        {
+            var config = Path.Combine(documents, folder, "config.cfg");
+            if (File.Exists(config))
+                result.Add((name, config));
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// Rétros de l'interface rendus en résolution double (variables officielles de config.cfg), pour une image
+    /// plus nette sur le VoCore. Une copie « config.cfg.avix-backup » est gardée. Le jeu doit être fermé.
+    /// </summary>
+    public static void SharpenMirrors(string config)
+    {
+        var backup = config + ".avix-backup";
+        if (!File.Exists(backup))
+            File.Copy(config, backup);
+        var lines = File.ReadAllLines(config).ToList();
+        foreach (var (name, value) in MirrorVariables)
+        {
+            var line = $"uset {name} \"{value}\"";
+            int index = lines.FindIndex(l => l.TrimStart().StartsWith("uset " + name + " ", StringComparison.OrdinalIgnoreCase));
+            if (index >= 0)
+                lines[index] = line;
+            else
+                lines.Add(line);
+        }
+        File.WriteAllLines(config, lines);
+    }
+
+    /// <summary>Remet le config.cfg d'avant (copie de sauvegarde), s'il y en a une.</summary>
+    public static bool RestoreConfig(string config)
+    {
+        var backup = config + ".avix-backup";
+        if (!File.Exists(backup))
+            return false;
+        File.Copy(backup, config, overwrite: true);
+        File.Delete(backup);
+        return true;
+    }
+
     /// <summary>Copie le plugin dans « plugins » du dossier bin\win_x64 donné ; retourne le chemin du fichier.</summary>
     public static string Install(string bin)
     {

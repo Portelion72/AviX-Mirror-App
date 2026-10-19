@@ -10,6 +10,7 @@ public sealed class GameGuideForm : Form
     readonly Panel _content = new() { Dock = DockStyle.Fill, AutoScroll = true, Padding = new Padding(24, 16, 24, 16) };
     readonly FlatButton _apply = new() { Primary = true, Width = 300, Height = 38, Dock = DockStyle.Right };
     readonly FlatButton _installPlugin = new() { Text = "Installer le plugin ETS2 / ATS", Width = 260, Height = 38, Dock = DockStyle.Right };
+    readonly FlatButton _sharpen = new() { Text = "Rétros plus nets", Width = 160, Height = 38, Dock = DockStyle.Right };
     readonly Action<RadarGame> _applyRecommended;
 
     public GameGuideForm(RadarGame? initial, Action<RadarGame> applyRecommended)
@@ -47,9 +48,12 @@ public sealed class GameGuideForm : Form
                 "Configuration par jeu", MessageBoxButtons.OK, MessageBoxIcon.Information);
         };
         _installPlugin.Click += (_, _) => InstallTruckPlugin();
+        _sharpen.Click += (_, _) => SharpenTruckMirrors();
         bottom.Controls.Add(_apply);
         bottom.Controls.Add(new Panel { Dock = DockStyle.Right, Width = 10, BackColor = Theme.Surface });
         bottom.Controls.Add(_installPlugin);
+        bottom.Controls.Add(new Panel { Dock = DockStyle.Right, Width = 10, BackColor = Theme.Surface });
+        bottom.Controls.Add(_sharpen);
         bottom.Controls.Add(close);
 
         Controls.Add(_content);
@@ -129,6 +133,45 @@ public sealed class GameGuideForm : Form
             "Plugin ETS2 / ATS", MessageBoxButtons.OK, MessageBoxIcon.Information);
     }
 
+    /// <summary>Rétros de l'interface ETS2 / ATS rendus en résolution double (config.cfg), avec copie de sauvegarde.</summary>
+    void SharpenTruckMirrors()
+    {
+        var configs = Util.TruckSimInstaller.FindConfigs();
+        if (configs.Count == 0)
+        {
+            MessageBox.Show(this, "config.cfg introuvable dans Documents\\Euro Truck Simulator 2 (ou American Truck Simulator). Lancez le jeu une fois.",
+                "Rétros plus nets", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+        var answer = MessageBox.Show(this,
+            "Le jeu calcule ses rétroviseurs de l'interface (touche F2) en résolution double : l'image recopiée sur le VoCore " +
+            "est plus nette (un peu plus de travail pour la carte graphique).\n\nOui : appliquer.   Non : remettre la configuration d'origine.\n\n" +
+            "Fermez le jeu avant.", "Rétros plus nets", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
+        if (answer == DialogResult.Cancel)
+            return;
+        var lines = new List<string>();
+        foreach (var (name, config) in configs)
+        {
+            try
+            {
+                if (answer == DialogResult.Yes)
+                {
+                    Util.TruckSimInstaller.SharpenMirrors(config);
+                    lines.Add($"{name} : rétros en résolution double.");
+                }
+                else
+                {
+                    lines.Add(Util.TruckSimInstaller.RestoreConfig(config) ? $"{name} : configuration d'origine remise." : $"{name} : rien à remettre.");
+                }
+            }
+            catch (Exception ex)
+            {
+                lines.Add($"{name} : échec — {ex.Message}");
+            }
+        }
+        MessageBox.Show(this, string.Join("\n", lines), "Rétros plus nets", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
+
     void ShowGuide()
     {
         if (_games.SelectedItem is not Radar.GameInfo game)
@@ -136,6 +179,7 @@ public sealed class GameGuideForm : Form
         var guide = GameGuides.Get(game.Game);
         _apply.Text = "Appliquer les réglages conseillés";
         _installPlugin.Visible = game.Game is RadarGame.EuroTruckSimulator2 or RadarGame.AmericanTruckSimulator;
+        _sharpen.Visible = _installPlugin.Visible;
 
         _content.SuspendLayout();
         var old = _content.Controls.Cast<Control>().ToArray();
