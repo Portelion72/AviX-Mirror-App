@@ -93,7 +93,7 @@ en jeu depuis Claude : le dire clairement dans chaque compte rendu.
   dans `bin\win_x64\plugins`) → mémoire partagée `Local\AviXMirror.SCS.v1` (88 octets) lue par
   `Radar/ScsTelemetry` (joueur seul : pause, cap, vitesse, clignotants → LEDs `LedBlinkers`). Pas de trafic dans
   le SDK. Capture **deux zones** (`CaptureDual`, `Crop2*`, `Settings.SecondCrop()`) : `WgcCapture.WriteDual`
-  (moitiés 640×400), 2ᵉ cache `_mask2`, calibration à deux cadres, ATH désactivé en double zone. « Rétros plus nets » : `r_mirror_scale_x/y = 2` dans `Documents\<jeu>\config.cfg`
+  (moitiés 640×400), 2ᵉ cache `_mask2`, calibration à deux cadres libres (forme quelconque), `CaptureDualFit` (Entier / Remplir / Étirer, `WgcCapture.DrawFitted`), ATH désactivé en double zone. « Rétros plus nets » : `r_mirror_scale_x/y = 2` dans `Documents\<jeu>\config.cfg`
   (sauvegarde `config.cfg.avix-backup`). Rendu hors écran « comme AC » impossible (mods = données, pas de code ;
   caméra arrière depuis la cabine = paroi de la cabine).
 - **Plusieurs VoCore** : `Output/VoCoreDevices` (énumération libusb, clé = n° de série USB sinon

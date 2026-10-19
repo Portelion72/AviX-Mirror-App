@@ -186,13 +186,19 @@ public static class GameGuides
         new[]
         {
             "AviX Mirror : mode Capture ; onglet Capture → « Deux rétros côte à côte ».",
-            "DÉMARRER, puis « Calibrer la zone » : cadre 1 sur le rétro gauche, cliquez sur le cadre 2 et placez-le sur le rétro droit.",
+            "DÉMARRER, puis « Calibrer la zone » : ajustez le cadre 1 (libre, par les coins) tout autour du rétro gauche, cliquez sur le cadre 2 et ajustez-le autour du rétro droit.",
+            "Onglet Capture → « Deux rétros : ajustement » : Entier (rétros complets côte à côte) ou Remplir (agrandis, haut et bas coupés).",
             "Les deux rétros sont cachés sur l'écran principal et affichés côte à côte sur le VoCore.",
         },
         new (string, object, string)[]
         {
             (nameof(Settings.Mode), MirrorMode.Capture, "Mode Capture"),
             (nameof(Settings.CaptureDual), true, "Deux rétros côte à côte"),
+            (nameof(Settings.CaptureDualFit), DualFit.Entier, "Rétros entiers (forme d'origine respectée)"),
+            (nameof(Settings.MaskMarginLeft), 4, "Cache ajusté au rétro (marges de 4 px)"),
+            (nameof(Settings.MaskMarginRight), 4, ""),
+            (nameof(Settings.MaskMarginTop), 4, ""),
+            (nameof(Settings.MaskMarginBottom), 4, ""),
             (nameof(Settings.GameStartDelaySeconds), 3, "Délai : 3 s"),
         });
 

@@ -67,8 +67,10 @@ si les flèches sont décalées, et *Inverser gauche/droite des flèches* si ell
 
 **ETS2 / ATS (camions)** : un camion n'a pas de rétro central. Activez *Capture → Deux rétros côte à côte*,
 puis dans **Calibrer la zone** placez le cadre 1 sur le rétro gauche de l'interface du jeu (touche F2) et
-cliquez sur le cadre 2 pour le placer sur le rétro droit : ils s'affichent côte à côte sur le VoCore et sont
-cachés tous les deux sur l'écran principal. Le plugin de télémétrie (SDK officiel SCS, aucune injection) donne
+cliquez sur le cadre 2 pour le placer sur le rétro droit (en mode deux rétros, les cadres sont libres : ajustez-les
+par les coins tout autour de chaque rétro, même s'il est plus haut que large) : ils s'affichent côte à côte sur le VoCore et sont
+cachés tous les deux sur l'écran principal. *Deux rétros : ajustement* : **Entier** (chaque rétro complet, forme
+respectée, bandes noires autour), **Remplir** (agrandi, haut et bas coupés) ou **Étirer**. Le plugin de télémétrie (SDK officiel SCS, aucune injection) donne
 la pause (animation de veille) et les clignotants (LEDs orange du côté concerné). Le SDK ne fournit pas la
 position du trafic : pas de radar, de flèches d'ATH ni d'alertes de dépassement pour ces jeux.
 *Guide du jeu → Rétros plus nets* fait calculer au jeu ses rétros de l'interface en résolution double

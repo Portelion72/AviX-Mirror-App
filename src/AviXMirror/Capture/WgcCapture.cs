@@ -34,6 +34,7 @@ public sealed class WgcCapture : IDisposable
     Rectangle _crop;
     Rectangle _crop2;          // deuxième zone (deux rétros côte à côte), vide sinon
     Bitmap? _dualSource;       // les deux zones copiées côte à côte, avant mise à l'échelle
+    DualFit _dualFit;
     long _minTicks;
     long _lastTicks;
     bool _disposed;
@@ -105,12 +106,13 @@ public sealed class WgcCapture : IDisposable
     /// Zones capturées. Avec une deuxième zone, l'image envoyée met la première dans la moitié gauche
     /// et la seconde dans la moitié droite (rétros gauche et droit d'un camion).
     /// </summary>
-    public void SetCrops(Rectangle crop, Rectangle crop2)
+    public void SetCrops(Rectangle crop, Rectangle crop2, DualFit fit = DualFit.Entier)
     {
         lock (_lock)
         {
             _crop = crop;
             _crop2 = crop2;
+            _dualFit = fit;
         }
     }
 
@@ -227,14 +229,54 @@ public sealed class WgcCapture : IDisposable
         // Image de sortie : hauteur de la plus grande zone, chaque moitié au format 640 × 400.
         int outH = height, half = (int)Math.Round(outH * 1.6);
         var source = _dualSource;
+        var fit = _dualFit;
         _output.Write(half * 2, outH, bmp =>
         {
             using var g = System.Drawing.Graphics.FromImage(bmp);
+            g.Clear(Color.Black);
             g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBilinear;
             g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.Half;
-            g.DrawImage(source, new Rectangle(0, 0, half, outH), new Rectangle(0, 0, a.Width, a.Height), GraphicsUnit.Pixel);
-            g.DrawImage(source, new Rectangle(half, 0, half, outH), new Rectangle(a.Width, 0, b.Width, b.Height), GraphicsUnit.Pixel);
+            DrawFitted(g, source, new Rectangle(0, 0, a.Width, a.Height), new Rectangle(0, 0, half, outH), fit);
+            DrawFitted(g, source, new Rectangle(a.Width, 0, b.Width, b.Height), new Rectangle(half, 0, half, outH), fit);
         });
+    }
+
+    /// <summary>Place une zone (rétro) dans sa moitié : entière, en remplissant (recadrée au centre) ou étirée.</summary>
+    static void DrawFitted(System.Drawing.Graphics g, Bitmap source, Rectangle src, Rectangle dest, DualFit fit)
+    {
+        if (src.Width <= 0 || src.Height <= 0)
+            return;
+        switch (fit)
+        {
+            case DualFit.Etirer:
+                g.DrawImage(source, dest, src, GraphicsUnit.Pixel);
+                break;
+            case DualFit.Remplir:
+            {
+                // Garde le centre de la zone au format de la moitié.
+                double target = dest.Width / (double)dest.Height;
+                var crop = src;
+                if (src.Width / (double)src.Height > target)
+                {
+                    int w = (int)Math.Round(src.Height * target);
+                    crop = new Rectangle(src.X + (src.Width - w) / 2, src.Y, w, src.Height);
+                }
+                else
+                {
+                    int h = (int)Math.Round(src.Width / target);
+                    crop = new Rectangle(src.X, src.Y + (src.Height - h) / 2, src.Width, h);
+                }
+                g.DrawImage(source, dest, crop, GraphicsUnit.Pixel);
+                break;
+            }
+            default:
+            {
+                double scale = Math.Min(dest.Width / (double)src.Width, dest.Height / (double)src.Height);
+                int w = (int)Math.Round(src.Width * scale), h = (int)Math.Round(src.Height * scale);
+                g.DrawImage(source, new Rectangle(dest.X + (dest.Width - w) / 2, dest.Y + (dest.Height - h) / 2, w, h), src, GraphicsUnit.Pixel);
+                break;
+            }
+        }
     }
 
     void EnsureStaging(int width, int height)

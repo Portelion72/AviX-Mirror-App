@@ -148,7 +148,8 @@ public sealed class CalibrationForm : Form
             // Reprend la zone actuelle si elle existe, sinon le plus grand rectangle possible.
             if (_selection.Width > 0 && _selection.Height > 0)
             {
-                float w = Math.Min(_selection.Width, _image.Width), h = w / Aspect;
+                // Deux rétros : cadres libres (rétros des camions en hauteur) ; sinon format du VoCore.
+                float w = Math.Min(_selection.Width, _image.Width), h = _dual ? Math.Min(_selection.Height, _image.Height) : w / Aspect;
                 _sel = new RectangleF(Math.Clamp(_selection.X, 0, _image.Width - w), Math.Clamp(_selection.Y, 0, Math.Max(0, _image.Height - h)), w, h);
                 SyncSelection();
             }
@@ -160,7 +161,8 @@ public sealed class CalibrationForm : Form
             {
                 // Zone 2 : celle enregistrée, sinon à côté de la zone 1 (même taille).
                 var s2 = _initialSecond;
-                float w2 = s2.Width > 0 ? Math.Min(s2.Width, _image.Width) : _sel.Width, h2 = w2 / Aspect;
+                float w2 = s2.Width > 0 ? Math.Min(s2.Width, _image.Width) : _sel.Width;
+                float h2 = s2.Height > 0 ? Math.Min(s2.Height, _image.Height) : _sel.Height;
                 float x2 = s2.Width > 0 ? s2.X : _sel.Right + 20, y2 = s2.Width > 0 ? s2.Y : _sel.Y;
                 _other = new RectangleF(Math.Clamp(x2, 0, Math.Max(0, _image.Width - w2)), Math.Clamp(y2, 0, Math.Max(0, _image.Height - h2)), w2, h2);
             }
@@ -620,6 +622,27 @@ public sealed class CalibrationForm : Form
             x = Math.Clamp(x, 0, imgW - start.Width);
             y = Math.Clamp(y, 0, imgH - start.Height);
             _sel = new RectangleF(x, y, start.Width, start.Height);
+        }
+        else if (_dual)
+        {
+            // Deux rétros : le coin opposé reste fixe, largeur et hauteur libres (la forme du rétro du jeu),
+            // chaque bord s'aimante sur les repères.
+            bool left = _drag is Drag.TopLeft or Drag.BottomLeft;
+            bool top = _drag is Drag.TopLeft or Drag.TopRight;
+            float anchorX = left ? start.Right : start.Left;
+            float anchorY = top ? start.Bottom : start.Top;
+            float cornerX = Math.Clamp(p.X, 0, imgW), cornerY = Math.Clamp(p.Y, 0, imgH);
+            if (snap)
+            {
+                cornerX += Snap(new[] { cornerX }, float.NaN, vertical: true, threshold, out var gx);
+                cornerY += Snap(new[] { cornerY }, float.NaN, vertical: false, threshold, out var gy);
+                if (gx is { } vx) _activeGuides.Add(vx);
+                if (gy is { } hy) _activeGuides.Add(hy);
+            }
+            float width = Math.Max(32, Math.Abs(cornerX - anchorX)), height = Math.Max(32, Math.Abs(cornerY - anchorY));
+            width = Math.Min(width, left ? anchorX : imgW - anchorX);
+            height = Math.Min(height, top ? anchorY : imgH - anchorY);
+            _sel = new RectangleF(left ? anchorX - width : anchorX, top ? anchorY - height : anchorY, width, height);
         }
         else
         {

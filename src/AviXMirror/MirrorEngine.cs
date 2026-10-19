@@ -179,7 +179,7 @@ public sealed class MirrorEngine : IDisposable
         effective.Mode = _settings.Mode;
         var copy = effective;
         _settings = copy;
-        _capture?.SetCrops(new Rectangle(copy.CropX, copy.CropY, copy.CropWidth, copy.CropHeight), copy.SecondCrop());
+        _capture?.SetCrops(new Rectangle(copy.CropX, copy.CropY, copy.CropWidth, copy.CropHeight), copy.SecondCrop(), copy.CaptureDualFit);
         _usb?.UpdateSettings(copy);
         _radar?.UpdateSettings(copy);
         _acCamera?.UpdateSettings(copy);
@@ -394,7 +394,7 @@ public sealed class MirrorEngine : IDisposable
     void ConfigureAndStart(Settings s)
     {
         var capture = _capture!;
-        capture.SetCrops(new Rectangle(s.CropX, s.CropY, s.CropWidth, s.CropHeight), s.SecondCrop());
+        capture.SetCrops(new Rectangle(s.CropX, s.CropY, s.CropWidth, s.CropHeight), s.SecondCrop(), s.CaptureDualFit);
         capture.SetFps(s.TargetFps);
         capture.Closed += () => _captureClosed = true;
         capture.Start();

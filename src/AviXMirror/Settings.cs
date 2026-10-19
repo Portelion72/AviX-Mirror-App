@@ -73,6 +73,17 @@ public static class Tabs
     };
 }
 
+/// <summary>Placement d'un rétro dans sa moitié du VoCore (mode deux rétros).</summary>
+public enum DualFit
+{
+    /// <summary>Rétro entier, proportions respectées (bandes noires sur les côtés).</summary>
+    Entier,
+    /// <summary>Remplit la moitié, proportions respectées (haut et bas du rétro coupés).</summary>
+    Remplir,
+    /// <summary>Remplit la moitié en déformant l'image.</summary>
+    Etirer,
+}
+
 public enum MaskSide
 {
     Haut,
@@ -235,6 +246,11 @@ public sealed class Settings
     [Description("Pour les camions (ETS2, ATS) ou les rétros latéraux : deux zones capturées, la première dans la moitié " +
                  "gauche du VoCore, la seconde dans la moitié droite. Placez-les avec « Calibrer la zone ».")]
     public bool CaptureDual { get; set; }
+
+    [Category(Tabs.Capture), DisplayName("Deux rétros : ajustement")]
+    [Description("Les rétros d'un camion sont plus hauts que larges. Entier : chaque rétro en entier, côte à côte, " +
+                 "bandes noires autour. Remplir : rétro agrandi jusqu'à remplir sa moitié (haut et bas coupés). Étirer : déformé.")]
+    public DualFit CaptureDualFit { get; set; } = DualFit.Entier;
 
     [Category(Tabs.Capture), DisplayName("Zone 2 X")]
     public int Crop2X { get; set; }

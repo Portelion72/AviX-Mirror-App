@@ -222,7 +222,8 @@ public sealed class GameGuideForm : Form
         Steps("Dans AviX Mirror", guide.InAviX);
         AddText("RÉGLAGES DE BASE CONSEILLÉS", 9f, Theme.Accent, FontStyle.Bold, 14);
         foreach (var (_, _, label) in guide.Recommended)
-            AddText("•  " + label, 10f, Theme.Text);
+            if (label.Length > 0)
+                AddText("•  " + label, 10f, Theme.Text);
         AddText("Ils s'enregistrent dans le profil de ce jeu (les autres jeux ne changent pas). Rien n'a été testé en jeu " +
              "pour les titres en beta : signalez ce qui ne marche pas.", 8.5f, Theme.TextMuted, top: 10);
 
