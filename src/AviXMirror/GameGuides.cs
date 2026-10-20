@@ -168,43 +168,7 @@ public static class GameGuides
                 (nameof(Settings.GameStartDelaySeconds), 10, "Délai anti-triche : 10 s"),
                 (nameof(Settings.MaskShapeSmooth), true, "Cache à forme arrondie"),
             }),
-
-        Truck(RadarGame.EuroTruckSimulator2, "Euro Truck Simulator 2"),
-        Truck(RadarGame.AmericanTruckSimulator, "American Truck Simulator"),
     };
-
-    /// <summary>ETS2 et ATS : mêmes réglages (moteur SCS, plugin AviX Mirror du SDK de télémétrie).</summary>
-    static GameGuide Truck(RadarGame game, string name) => new(game,
-        "Deux rétros du camion côte à côte (beta). Au choix : capture de la fenêtre (rétros F2 cachés), ou en solo l'add-on ReShade qui prend " +
-        "l'image des rétros dans la carte graphique (rien à l'écran). Plugin de télémétrie officiel : pause, clignotants sur les LEDs. " +
-        "Le SDK ne donne pas la position du trafic : pas de radar, ni de flèches, ni d'alertes de dépassement.",
-        new[]
-        {
-            "Fermez le jeu, puis bouton « Installer le plugin ETS2 / ATS » ci-dessous (copie dans bin\\win_x64\\plugins).",
-            "Au lancement, le jeu signale un plugin du SDK (« fonctionnalités avancées du SDK ») : validez.",
-            Borderless + " Affichez les rétroviseurs dans l'interface du jeu (touche F2 par défaut).",
-        },
-        new[]
-        {
-            "Solo, sans rien à l'écran : installez ReShade « with full add-on support » (reshade.me) sur le jeu, puis onglet Capture → " +
-            "Source de l'image = ReShade et « Image ReShade » → Choisir… : cliquez l'image du rétro gauche puis celle du droit (au volant).",
-            "Sinon (ou sur TruckersMP) : capture de la fenêtre, onglet Capture → « Deux rétros côte à côte » :",
-            "DÉMARRER, puis « Calibrer la zone » : ajustez le cadre 1 (libre, par les coins) tout autour du rétro gauche, cliquez sur le cadre 2 et ajustez-le autour du rétro droit.",
-            "Onglet Capture → « Deux rétros : ajustement » : Entier (rétros complets côte à côte) ou Remplir (agrandis, haut et bas coupés).",
-            "Les deux rétros sont cachés sur l'écran principal et affichés côte à côte sur le VoCore.",
-        },
-        new (string, object, string)[]
-        {
-            (nameof(Settings.Mode), MirrorMode.Capture, "Mode Capture"),
-            (nameof(Settings.CaptureDual), true, "Deux rétros côte à côte"),
-            (nameof(Settings.CaptureDualFit), DualFit.Entier, "Rétros entiers (forme d'origine respectée)"),
-            (nameof(Settings.MaskBlendEdges), true, "Cache fondu sur tout son contour"),
-            (nameof(Settings.MaskMarginLeft), 4, "Cache ajusté au rétro (marges de 4 px)"),
-            (nameof(Settings.MaskMarginRight), 4, ""),
-            (nameof(Settings.MaskMarginTop), 4, ""),
-            (nameof(Settings.MaskMarginBottom), 4, ""),
-            (nameof(Settings.GameStartDelaySeconds), 3, "Délai : 3 s"),
-        });
 
     public static GameGuide Get(RadarGame game) => All.First(g => g.Game == game);
 }

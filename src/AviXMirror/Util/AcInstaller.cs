@@ -21,8 +21,7 @@ public static class AcInstaller
         return null;
     }
 
-    /// <summary>Dossiers des bibliothèques Steam (dossier principal et bibliothèques supplémentaires).</summary>
-    internal static IEnumerable<string> SteamLibraries()
+    static IEnumerable<string> SteamLibraries()
     {
         var roots = new List<string>();
         try

@@ -26,8 +26,6 @@ public enum RadarGame
     Automobilista2,
     IRacing,
     F1,
-    EuroTruckSimulator2,
-    AmericanTruckSimulator,
 }
 
 public enum LedChainOrder
@@ -71,26 +69,6 @@ public static class Tabs
         mode switch { MirrorMode.Capture => Capture, MirrorMode.Radar => Radar, _ => Camera },
         Hud, Leds, Screen, Appearance,
     };
-}
-
-/// <summary>Origine de l'image du mode Capture.</summary>
-public enum CaptureSourceKind
-{
-    /// <summary>Fenêtre du jeu (Windows.Graphics.Capture), rétro virtuel caché par un cache.</summary>
-    Fenetre,
-    /// <summary>Add-on ReShade (ETS2 / ATS en solo) : image du rétro prise dans la carte graphique, rien à l'écran.</summary>
-    ReShade,
-}
-
-/// <summary>Placement d'un rétro dans sa moitié du VoCore (mode deux rétros).</summary>
-public enum DualFit
-{
-    /// <summary>Rétro entier, proportions respectées (bandes noires sur les côtés).</summary>
-    Entier,
-    /// <summary>Remplit la moitié, proportions respectées (haut et bas du rétro coupés).</summary>
-    Remplir,
-    /// <summary>Remplit la moitié en déformant l'image.</summary>
-    Etirer,
 }
 
 public enum MaskSide
@@ -251,50 +229,6 @@ public sealed class Settings
     [Category(Tabs.Capture), DisplayName("Zone hauteur")]
     public int CropHeight { get; set; } = 108;
 
-    [Category(Tabs.Capture), DisplayName("Source de l'image")]
-    [Description("Fenetre : capture de la fenêtre du jeu (rétro virtuel caché par un cache). ReShade : ETS2 / ATS en solo, " +
-                 "l'image des rétroviseurs est prise dans la carte graphique par l'add-on AviX Mirror, rien n'apparaît ni n'est " +
-                 "caché à l'écran (installation dans le Guide du jeu).")]
-    public CaptureSourceKind CaptureSource { get; set; } = CaptureSourceKind.Fenetre;
-
-    [Category(Tabs.Capture), DisplayName("Image ReShade")]
-    [Description("Texture calculée par le jeu qui contient le rétroviseur : « Choisir… » affiche toutes les images trouvées " +
-                 "par l'add-on, cliquez sur celle du rétro (jeu lancé, au volant).")]
-    public string ReShadeTarget { get; set; } = "";
-
-    [Category(Tabs.Capture), DisplayName("Image ReShade : miroir gauche/droite")]
-    public bool ReShadeFlipH { get; set; }
-
-    [Category(Tabs.Capture), DisplayName("Image ReShade : retourner haut/bas")]
-    public bool ReShadeFlipV { get; set; }
-
-    [Category(Tabs.Capture), DisplayName("Deux rétros côte à côte")]
-    [Description("Pour les camions (ETS2, ATS) ou les rétros latéraux : deux zones capturées, la première dans la moitié " +
-                 "gauche du VoCore, la seconde dans la moitié droite. Placez-les avec « Calibrer la zone ».")]
-    public bool CaptureDual { get; set; }
-
-    [Category(Tabs.Capture), DisplayName("Deux rétros : ajustement")]
-    [Description("Les rétros d'un camion sont plus hauts que larges. Entier : chaque rétro en entier, côte à côte, " +
-                 "bandes noires autour. Remplir : rétro agrandi jusqu'à remplir sa moitié (haut et bas coupés). Étirer : déformé.")]
-    public DualFit CaptureDualFit { get; set; } = DualFit.Entier;
-
-    [Category(Tabs.Capture), DisplayName("Zone 2 X")]
-    public int Crop2X { get; set; }
-
-    [Category(Tabs.Capture), DisplayName("Zone 2 Y")]
-    public int Crop2Y { get; set; }
-
-    [Category(Tabs.Capture), DisplayName("Zone 2 largeur")]
-    public int Crop2Width { get; set; }
-
-    [Category(Tabs.Capture), DisplayName("Zone 2 hauteur")]
-    public int Crop2Height { get; set; }
-
-    /// <summary>Deuxième zone de capture, ou vide si « Deux rétros côte à côte » est désactivé.</summary>
-    public Rectangle SecondCrop() => CaptureDual && Crop2Width > 0 && Crop2Height > 0
-        ? new Rectangle(Crop2X, Crop2Y, Crop2Width, Crop2Height)
-        : Rectangle.Empty;
-
     [Category(Tabs.Capture), DisplayName("Cacher le rétro du jeu")]
     [Description("Pose un cache sur le rétro virtuel de LMU, sur l'écran principal. La capture n'est pas " +
                  "affectée : elle lit la fenêtre du jeu, pas l'écran.")]
@@ -304,12 +238,6 @@ public sealed class Settings
     [Description("Vrai : le cache prend la couleur du décor autour de lui (voir « Points de couleur »), " +
                  "mise à jour en continu, pour se fondre dans le décor. Faux : cache noir.")]
     public bool MaskMatchColor { get; set; } = true;
-
-    [Category(Tabs.Capture), DisplayName("Cache : fondu sur tout le contour")]
-    [Description("Le cache prolonge l'image lue tout autour de lui (bords haut, bas, gauche et droite) au lieu d'un dégradé " +
-                 "entre quelques points : il se fond mieux sur un décor chargé (cabine de camion, cockpit). Les points de couleur " +
-                 "ne servent plus.")]
-    public bool MaskBlendEdges { get; set; }
 
     [Category(Tabs.Capture), DisplayName("Cache : points de couleur")]
     [Description("Points lus autour du cache pour reprendre la couleur du décor. Avec plusieurs points, le cache " +
@@ -567,10 +495,6 @@ public sealed class Settings
     [Description("Couleur pour d'autres catégories de voitures (ou pour remplacer celle d'une catégorie ci-dessus). " +
                  "Le menu déroulant liste toutes les catégories déjà vues dans la télémétrie des jeux.")]
     public List<LedClassColor> LedCustomClasses { get; set; } = new();
-
-    [Category(Tabs.Leds), DisplayName("Clignotants du camion (ETS2 / ATS)")]
-    [Description("Euro Truck Simulator 2 et American Truck Simulator : les LEDs du côté du clignotant clignotent en orange.")]
-    public bool LedBlinkers { get; set; } = true;
 
     [Category(Tabs.Leds), DisplayName("Détecteur de dive bomb")]
     [Description("Une voiture qui arrive très vite de derrière, déjà décalée d'un côté, fait clignoter rapidement " +

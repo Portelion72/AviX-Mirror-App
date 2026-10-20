@@ -18,11 +18,11 @@ public sealed class MirrorEngine : IDisposable
 
     Settings _master = new();   // réglages communs + profils de tous les jeux
     Settings _settings = new(); // réglages effectifs pour le jeu en cours
-    ICaptureSource? _capture;
+    WgcCapture? _capture;
     IntPtr _captureWindow;
     volatile bool _captureClosed;
     RadarSource? _radar;
-    MaskForm? _mask, _mask2;
+    MaskForm? _mask;
     VoCoreUsbOutput? _usb;
     AcCameraSource? _acCamera;
     Spotter? _spotter;
@@ -65,7 +65,7 @@ public sealed class MirrorEngine : IDisposable
     public FrameBuffer Frames { get; } = new();
     public bool Running { get; private set; }
     public string Status { get; private set; } = "Arrêté.";
-    public ICaptureSource? Capture => _capture;
+    public WgcCapture? Capture => _capture;
 
     /// <summary>Voitures derrière, dans le repère du joueur, telles que l'ATH les place (null sans ATH ou sans télémétrie).</summary>
     public List<Hud.HudTarget>? HudTargets() => _hud?.CurrentTargets();
@@ -179,8 +179,7 @@ public sealed class MirrorEngine : IDisposable
         effective.Mode = _settings.Mode;
         var copy = effective;
         _settings = copy;
-        _capture?.SetCrops(new Rectangle(copy.CropX, copy.CropY, copy.CropWidth, copy.CropHeight), copy.SecondCrop(), copy.CaptureDualFit);
-        (_capture as ReShadeSource)?.Configure(copy.ReShadeTarget, copy.ReShadeFlipH, copy.ReShadeFlipV);
+        _capture?.SetCrop(new Rectangle(copy.CropX, copy.CropY, copy.CropWidth, copy.CropHeight));
         _usb?.UpdateSettings(copy);
         _radar?.UpdateSettings(copy);
         _acCamera?.UpdateSettings(copy);
@@ -214,9 +213,6 @@ public sealed class MirrorEngine : IDisposable
         _mask?.Close();
         _mask?.Dispose();
         _mask = null;
-        _mask2?.Close();
-        _mask2?.Dispose();
-        _mask2 = null;
         Frames.Clear();
         Running = false;
         Status = "Arrêté.";
@@ -312,22 +308,6 @@ public sealed class MirrorEngine : IDisposable
 
     string TickCapture(Settings s)
     {
-        // ETS2 / ATS en solo : image des rétros prise par l'add-on ReShade, sans fenêtre ni cache.
-        if (s.CaptureSource == CaptureSourceKind.ReShade)
-        {
-            if (_capture is not ReShadeSource)
-            {
-                StopCapture();
-                var source = new ReShadeSource(Frames);
-                source.SetCrops(new Rectangle(s.CropX, s.CropY, s.CropWidth, s.CropHeight), s.SecondCrop(), s.CaptureDualFit);
-                source.Configure(s.ReShadeTarget, s.ReShadeFlipH, s.ReShadeFlipV);
-                _capture = source;
-            }
-            return ((ReShadeSource)_capture).Status;
-        }
-        if (_capture is ReShadeSource)
-            StopCapture();
-
         if (!WgcCapture.IsSupported)
             return "Capture Windows.Graphics.Capture non supportée (Windows 10 2004 ou plus récent requis).";
 
@@ -365,54 +345,45 @@ public sealed class MirrorEngine : IDisposable
         return $"Capture {src.Width}x{src.Height} — {zone}";
     }
 
-    /// <summary>Pose le cache sur la zone du rétro (plus ses marges), sur l'écran principal ; un second cache sur la zone 2.</summary>
+    /// <summary>Pose le cache sur la zone du rétro (plus ses marges), sur l'écran principal.</summary>
     void UpdateMask(Settings s)
     {
-        bool show = s.HideMirrorOnScreen && s.CaptureSource == CaptureSourceKind.Fenetre && _state == GameState.Active && _capture != null && _captureWindow != IntPtr.Zero && Native.IsWindow(_captureWindow) &&
+        bool show = s.HideMirrorOnScreen && _state == GameState.Active && _capture != null && _captureWindow != IntPtr.Zero && Native.IsWindow(_captureWindow) &&
                     !Native.IsIconic(_captureWindow) && s.CropWidth > 0 && s.CropHeight > 0;
-        var second = s.SecondCrop();
         if (!show)
         {
             _mask?.Hide();
-            _mask2?.Hide();
             return;
         }
 
         // La capture de fenêtre commence au coin visible de la fenêtre du jeu.
         var window = Native.GetVisibleBounds(_captureWindow);
-        Cover(_mask ??= new MaskForm(), new Rectangle(window.X + s.CropX, window.Y + s.CropY, s.CropWidth, s.CropHeight), s);
-        if (second.IsEmpty)
-            _mask2?.Hide();
-        else
-            Cover(_mask2 ??= new MaskForm(), new Rectangle(window.X + second.X, window.Y + second.Y, second.Width, second.Height), s);
-    }
-
-    /// <summary>Un cache sur une zone (coordonnées écran) : forme libre, ou rectangle avec marges.</summary>
-    static void Cover(MaskForm mask, Rectangle zone, Settings s)
-    {
-        mask.MatchColor = s.MaskMatchColor;
-        mask.BlendEdges = s.MaskBlendEdges;
-        mask.Samples = s.MaskSamples;
+        _mask ??= new MaskForm();
+        _mask.MatchColor = s.MaskMatchColor;
+        _mask.Samples = s.MaskSamples;
         if (s.MaskShape is { Count: >= 3 } shape)
         {
             // Forme libre (rétro F1…) : le cache entoure le contour tracé, sans marges.
+            var zone = new RectangleF(window.X + s.CropX, window.Y + s.CropY, s.CropWidth, s.CropHeight);
             using var path = MaskForm.ShapePath(shape, zone, s.MaskShapeSmooth);
             var shapeBounds = Rectangle.Ceiling(path.GetBounds());
             var outline = shape.Select(p => new PointF(
                 zone.X + (float)(p.X / 100 * zone.Width) - shapeBounds.X,
                 zone.Y + (float)(p.Y / 100 * zone.Height) - shapeBounds.Y)).ToArray();
-            mask.Cover(shapeBounds, outline, s.MaskShapeSmooth);
+            _mask.Cover(shapeBounds, outline, s.MaskShapeSmooth);
             return;
         }
         int left = Math.Max(0, s.MaskMarginLeft), right = Math.Max(0, s.MaskMarginRight);
         int top = Math.Max(0, s.MaskMarginTop), bottom = Math.Max(0, s.MaskMarginBottom);
-        mask.Cover(new Rectangle(zone.X - left, zone.Y - top, zone.Width + left + right, zone.Height + top + bottom));
+        var bounds = new Rectangle(window.X + s.CropX - left, window.Y + s.CropY - top,
+            s.CropWidth + left + right, s.CropHeight + top + bottom);
+        _mask.Cover(bounds);
     }
 
     void ConfigureAndStart(Settings s)
     {
-        var capture = (WgcCapture)_capture!;
-        capture.SetCrops(new Rectangle(s.CropX, s.CropY, s.CropWidth, s.CropHeight), s.SecondCrop(), s.CaptureDualFit);
+        var capture = _capture!;
+        capture.SetCrop(new Rectangle(s.CropX, s.CropY, s.CropWidth, s.CropHeight));
         capture.SetFps(s.TargetFps);
         capture.Closed += () => _captureClosed = true;
         capture.Start();

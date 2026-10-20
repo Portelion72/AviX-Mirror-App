@@ -65,27 +65,6 @@ En Caméra AC, l'ATH utilise exactement le point de vue de la caméra. En Captur
 rétro virtuel du jeu est approché : ajustez l'onglet *ATH* (champ de vision, hauteur, position)
 si les flèches sont décalées, et *Inverser gauche/droite des flèches* si elles sont du mauvais côté.
 
-**ETS2 / ATS (camions)** : un camion n'a pas de rétro central. Activez *Capture → Deux rétros côte à côte*,
-puis dans **Calibrer la zone** placez le cadre 1 sur le rétro gauche de l'interface du jeu (touche F2) et
-cliquez sur le cadre 2 pour le placer sur le rétro droit (en mode deux rétros, les cadres sont libres : ajustez-les
-par les coins tout autour de chaque rétro, même s'il est plus haut que large) : ils s'affichent côte à côte sur le VoCore et sont
-cachés tous les deux sur l'écran principal. *Deux rétros : ajustement* : **Entier** (chaque rétro complet, forme
-respectée, bandes noires autour), **Remplir** (agrandi, haut et bas coupés) ou **Étirer**. Sur un décor chargé
-(cabine), activez *Cache : fondu sur tout le contour* : le cache prolonge l'image lue tout autour de lui. Le plugin de télémétrie (SDK officiel SCS, aucune injection) donne
-la pause (animation de veille) et les clignotants (LEDs orange du côté concerné). Le SDK ne fournit pas la
-position du trafic : pas de radar, de flèches d'ATH ni d'alertes de dépassement pour ces jeux.
-*Guide du jeu → Rétros plus nets* fait calculer au jeu ses rétros de l'interface en résolution double
-(`r_mirror_scale_x/y` de `config.cfg`, copie de sauvegarde, réversible).
-
-**ETS2 / ATS sans rien à l'écran (ReShade, solo uniquement)** : l'add-on AviX Mirror pour ReShade prend
-l'image des rétroviseurs dans la carte graphique, avant qu'elle soit affichée — pas de rétro F2, pas de cache.
-1. Installez ReShade **« with full add-on support »** (reshade.me) sur `eurotrucks2.exe` / `amtrucks.exe`
-   (DirectX 10/11/12). Pas sur TruckersMP (add-ons interdits, risque de ban).
-2. *Guide du jeu* → **Installer plugin + add-on** (copie `AviXMirror.addon64` à côté du jeu).
-3. Onglet *Capture* → *Source de l'image* = **ReShade**, puis *Image ReShade* → **Choisir…** : au volant, les
-   images calculées par le jeu s'affichent en vignettes ; cliquez celle du rétro gauche (1), puis celle du
-   rétro droit (2) si elle est séparée. *Miroir gauche/droite* / *retourner haut/bas* si l'image est inversée.
-
 **Plusieurs VoCore** (comme SimHub) : onglet *Écran VoCore* → *Écran utilisé* liste les écrans branchés,
 reconnus par leur numéro de série USB (ou, à défaut, leur port USB). **Identifier les écrans** affiche
 quelques secondes un grand numéro sur chacun (le rétro est arrêté pendant ce temps). L'autre écran reste
@@ -208,7 +187,6 @@ rétro virtuel aussi (le jeu doit afficher un rétro virtuel, en fenêtré ou sa
 | Automobilista 2 / Project CARS 2 | **beta** | mémoire partagée « Project CARS 2 » | *Options → Système → Mémoire partagée* = Project CARS 2 |
 | iRacing | **beta**, radar simplifié | SDK officiel (mémoire partagée) | rien |
 | F1 23 / 24 / 25 | **beta** | télémétrie UDP officielle | *Réglages → Télémétrie* : UDP activée, port 20777, format 2023 ou plus |
-| Euro Truck Simulator 2 / American Truck Simulator | **beta**, capture seulement | plugin AviX Mirror du SDK officiel SCS | *Guide du jeu* → *Installer le plugin ETS2 / ATS* ; validez le message « SDK » au lancement |
 
 Particularités des jeux beta :
 - **ACC** ne donne que la position des adversaires (ni vitesse, ni catégorie) : vitesses estimées,

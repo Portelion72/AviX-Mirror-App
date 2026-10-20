@@ -16,7 +16,7 @@
     <Authors>AVIX_3D</Authors>
     <Copyright>© 2026 AVIX_3D (avix3d.com) — tous droits réservés</Copyright>
     <!-- Remplacée à la publication d'une release par le numéro saisi (ex. v1.2.0 -> 1.2.0). -->
-    <Version>1.3.2</Version>
+    <Version>1.3.3</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -26,9 +26,6 @@
     <EmbeddedResource Include="Assets\avix-logo.png" LogicalName="Brand.avix-logo.png" />
     <EmbeddedResource Include="Radar\CarFronts.txt" LogicalName="Radar.CarFronts.txt" />
     <EmbeddedResource Include="Assets\DefaultProfiles.json" LogicalName="Defaults.Profiles.json" />
-    <!-- Plugin ETS2 / ATS compilé par la CI (absent d'une compilation locale sans MSVC). -->
-    <EmbeddedResource Include="..\..\integrations\TruckSim\build\AviXMirrorScs.dll" LogicalName="TruckSim.AviXMirrorScs.dll" Condition="Exists('..\..\integrations\TruckSim\build\AviXMirrorScs.dll')" />
-    <EmbeddedResource Include="..\..\integrations\TruckSim\build\AviXMirror.addon64" LogicalName="TruckSim.AviXMirror.addon64" Condition="Exists('..\..\integrations\TruckSim\build\AviXMirror.addon64')" />
     <None Include="native\libusb-NOTICE.txt" Link="libusb-NOTICE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 

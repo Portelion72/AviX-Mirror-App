@@ -15,7 +15,7 @@ namespace AviXMirror.Capture;
 /// La capture de fenêtre récupère le contenu même s'il est caché par une autre fenêtre
 /// ou situé hors de l'écran : c'est ce qui permet de ne plus afficher le rétro sur l'écran principal.
 /// </summary>
-public sealed class WgcCapture : ICaptureSource
+public sealed class WgcCapture : IDisposable
 {
     const DirectXPixelFormat PixelFormat = DirectXPixelFormat.B8G8R8A8UIntNormalized;
 
@@ -32,9 +32,6 @@ public sealed class WgcCapture : ICaptureSource
     int _stagingWidth, _stagingHeight;
     SizeInt32 _lastSize;
     Rectangle _crop;
-    Rectangle _crop2;          // deuxième zone (deux rétros côte à côte), vide sinon
-    Bitmap? _dualSource;       // les deux zones copiées côte à côte, avant mise à l'échelle
-    DualFit _dualFit;
     long _minTicks;
     long _lastTicks;
     bool _disposed;
@@ -100,20 +97,10 @@ public sealed class WgcCapture : ICaptureSource
         }
     }
 
-    public void SetCrop(Rectangle crop) => SetCrops(crop, Rectangle.Empty);
-
-    /// <summary>
-    /// Zones capturées. Avec une deuxième zone, l'image envoyée met la première dans la moitié gauche
-    /// et la seconde dans la moitié droite (rétros gauche et droit d'un camion).
-    /// </summary>
-    public void SetCrops(Rectangle crop, Rectangle crop2, DualFit fit = DualFit.Entier)
+    public void SetCrop(Rectangle crop)
     {
         lock (_lock)
-        {
             _crop = crop;
-            _crop2 = crop2;
-            _dualFit = fit;
-        }
     }
 
     public void SetFps(int fps)
@@ -157,12 +144,6 @@ public sealed class WgcCapture : ICaptureSource
                     Math.Min(size.Width, (int)desc.Width),
                     Math.Min(size.Height, (int)desc.Height));
 
-                if (!FullFrame && _crop.Width > 0 && _crop.Height > 0 && _crop2.Width > 0 && _crop2.Height > 0)
-                {
-                    WriteDual(texture, full);
-                    return;
-                }
-
                 var region = full;
                 if (!FullFrame && _crop.Width > 0 && _crop.Height > 0)
                 {
@@ -192,53 +173,6 @@ public sealed class WgcCapture : ICaptureSource
                 Debug.WriteLine("Capture : " + ex.Message);
             }
         }
-    }
-
-    /// <summary>
-    /// Deux zones : copiées côte à côte dans la texture de transfert, puis chacune mise à l'échelle dans
-    /// une moitié de l'image (même hauteur, format d'une moitié de VoCore : 640 × 400).
-    /// </summary>
-    void WriteDual(ID3D11Texture2D texture, Rectangle full)
-    {
-        var a = Rectangle.Intersect(_crop, full);
-        var b = Rectangle.Intersect(_crop2, full);
-        if (a.Width <= 0 || a.Height <= 0 || b.Width <= 0 || b.Height <= 0)
-            return;
-        int width = a.Width + b.Width, height = Math.Max(a.Height, b.Height);
-        EnsureStaging(width, height);
-        _context.CopySubresourceRegion(_staging!, 0, 0, 0, 0, texture, 0,
-            new Vortice.Mathematics.Box(a.Left, a.Top, 0, a.Right, a.Bottom, 1));
-        _context.CopySubresourceRegion(_staging!, 0, (uint)a.Width, 0, 0, texture, 0,
-            new Vortice.Mathematics.Box(b.Left, b.Top, 0, b.Right, b.Bottom, 1));
-
-        if (_dualSource == null || _dualSource.Width != width || _dualSource.Height != height)
-        {
-            _dualSource?.Dispose();
-            _dualSource = new Bitmap(width, height, System.Drawing.Imaging.PixelFormat.Format32bppRgb);
-        }
-        var map = _context.Map(_staging!, 0, MapMode.Read, Vortice.Direct3D11.MapFlags.None);
-        try
-        {
-            CopyToBitmap(map.DataPointer, (int)map.RowPitch, _dualSource);
-        }
-        finally
-        {
-            _context.Unmap(_staging!, 0);
-        }
-
-        // Image de sortie : hauteur de la plus grande zone, chaque moitié au format 640 × 400.
-        int outH = height, half = (int)Math.Round(outH * 1.6);
-        var source = _dualSource;
-        var fit = _dualFit;
-        _output.Write(half * 2, outH, bmp =>
-        {
-            using var g = System.Drawing.Graphics.FromImage(bmp);
-            g.Clear(Color.Black);
-            g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBilinear;
-            g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.Half;
-            FrameComposer.DrawFitted(g, source, new Rectangle(0, 0, a.Width, a.Height), new Rectangle(0, 0, half, outH), fit);
-            FrameComposer.DrawFitted(g, source, new Rectangle(a.Width, 0, b.Width, b.Height), new Rectangle(half, 0, half, outH), fit);
-        });
     }
 
     void EnsureStaging(int width, int height)
@@ -293,7 +227,6 @@ public sealed class WgcCapture : ICaptureSource
             try { _session.Dispose(); } catch { }
             try { _pool.Dispose(); } catch { }
             _staging?.Dispose();
-            _dualSource?.Dispose();
             _context.ClearState();
             _context.Dispose();
             _device.Dispose();

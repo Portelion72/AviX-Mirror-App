@@ -9,11 +9,3 @@ chacun soumis à sa propre licence, qui s'applique à ce seul composant.
 | [Vortice.Windows](https://github.com/amerkoleci/Vortice.Windows) (Vortice.Direct3D11) | Direct3D 11 (capture, caméra Assetto Corsa) | MIT |
 | [.NET](https://github.com/dotnet/runtime) et Windows Forms | Environnement d'exécution | MIT |
 | [CsWinRT](https://github.com/microsoft/CsWinRT) / Windows SDK projections | Windows.Graphics.Capture | MIT |
-
-## ReShade — API d'add-ons (en-têtes)
-
-L'add-on ETS2 / ATS (`AviXMirror.addon64`) est compilé avec les en-têtes de l'API d'add-ons de ReShade
-(`integrations/TruckSim/reshade/`, version 6.3.3), © 2014 Patrick Mours, licence BSD à 3 clauses
-(texte complet : `integrations/TruckSim/reshade/LICENSE-ReShade.md`). ReShade lui-même n'est pas fourni :
-l'utilisateur l'installe depuis https://reshade.me.
-

@@ -206,9 +206,6 @@ namespace AviXMirror.Ui
             if (name == nameof(Settings.VoCoreDevice))
                 return ScreenPicker(name, value as string ?? "");
 
-            if (name == nameof(Settings.ReShadeTarget))
-                return ReShadeTargetEditor(name, value as string ?? "");
-
             if (type == typeof(string) && editorType.Contains(nameof(ColorHexEditor)))
                 return ColorEditor(name, value as string ?? "");
 
@@ -404,35 +401,6 @@ namespace AviXMirror.Ui
             };
             Fill();
             panel.Controls.AddRange(new Control[] { combo, refresh, identify });
-            return panel;
-        }
-
-        /// <summary>Texture du rétro (add-on ReShade) : identifiant et bouton « Choisir… » (vignettes en direct).</summary>
-        Control ReShadeTargetEditor(string name, string current)
-        {
-            var panel = new Panel { Height = 28, BackColor = Color.Transparent };
-            var label = new Label
-            {
-                Text = current.Length > 0 ? current : "aucune",
-                AutoSize = false,
-                Width = 200,
-                Height = 26,
-                Location = new Point(0, 1),
-                TextAlign = ContentAlignment.MiddleLeft,
-                ForeColor = Theme.TextMuted,
-                Font = Theme.Font(9f),
-            };
-            var choose = new FlatButton { Text = "Choisir…", Width = 110, Height = 26, Location = new Point(206, 1) };
-            choose.Click += (_, _) =>
-            {
-                using var form = new ReShadePickerForm(_view?.ReShadeTarget ?? current);
-                if (form.ShowDialog(FindForm()) != DialogResult.OK)
-                    return;
-                label.Text = form.Selected.Length > 0 ? form.Selected : "aucune";
-                Emit(name, form.Selected, true);
-            };
-            panel.Controls.Add(label);
-            panel.Controls.Add(choose);
             return panel;
         }
 
