@@ -16,8 +16,9 @@ public enum GameState
 }
 
 /// <summary>
-/// Détermine si le joueur est réellement en train de rouler : jeu lancé, au premier plan, et
-/// télémétrie qui avance (horloge du jeu), pour tous les jeux du catalogue.
+/// Détermine si le joueur est réellement en train de rouler : jeu lancé et télémétrie qui avance (horloge du
+/// jeu), même si une autre fenêtre a le focus (plusieurs écrans). Sans télémétrie : actif tant que le jeu
+/// n'est pas réduit.
 /// </summary>
 public sealed class GameActivity : IDisposable
 {
@@ -41,28 +42,49 @@ public sealed class GameActivity : IDisposable
             return _last = GameState.NoGame;
 
         var ids = new HashSet<uint>();
+        int windows = 0, minimizedWindows = 0;
         foreach (var game in running)
             foreach (var name in Games.ProcessesOf(game, s))
-                AddProcesses(ids, name);
+                AddProcesses(ids, name, ref windows, ref minimizedWindows);
+        // Réduit seulement si on a trouvé la fenêtre du jeu et qu'elle est réduite.
+        bool minimized = windows > 0 && minimizedWindows == windows;
 
-        bool live = running.Any(g => Live(g, s));
+        bool telemetry = false;
+        bool live = false;
+        foreach (var game in running)
+            live |= Live(game, s, ref telemetry);
+
+        // Au volant (horloge du jeu qui avance) : le rétro reste actif quelle que soit la fenêtre au premier plan.
+        // Avec plusieurs écrans, on clique souvent ailleurs (SimHub, Discord, AviX Mirror…) sans quitter le jeu.
+        if (live)
+            return _last = GameState.Active;
+
+        // Pas de télémétrie du tout (plugin désactivé) : impossible de savoir si le jeu est en pause ;
+        // le rétro reste actif tant que la fenêtre du jeu n'est pas réduite.
+        if (!telemetry)
+            return _last = minimized ? GameState.Desktop : GameState.Active;
 
         Native.GetWindowThreadProcessId(Native.GetForegroundWindow(), out uint foreground);
         if (foreground == _ownProcess)
         {
             // Réglages en cours dans AviX Mirror : on ne bascule pas sur le logo du bureau.
-            return _last = live ? GameState.Active : (_last == GameState.Desktop ? GameState.Desktop : GameState.Paused);
+            return _last = _last == GameState.Desktop ? GameState.Desktop : GameState.Paused;
         }
-        if (!ids.Contains(foreground))
-            return _last = GameState.Desktop;
-        return _last = live ? GameState.Active : GameState.Paused;
+        // Jeu en pause ou dans les menus : animation ; une autre application au premier plan : logo.
+        return _last = ids.Contains(foreground) ? GameState.Paused : GameState.Desktop;
     }
 
-    /// <summary>Au volant : télémétrie lisible, joueur en piste et horloge du jeu qui avance.</summary>
-    bool Live(GameInfo game, Settings s)
+    /// <summary>
+    /// Au volant : télémétrie lisible, joueur en piste et horloge du jeu qui avance.
+    /// <paramref name="telemetry"/> passe à vrai dès que la télémétrie du jeu est lisible.
+    /// </summary>
+    bool Live(GameInfo game, Settings s, ref bool telemetry)
     {
         var world = _telemetry.For(game).ReadOrNull(s);
-        if (world == null || !world.InRealtime || world.Player == null)
+        if (world == null)
+            return false;
+        telemetry = true;
+        if (!world.InRealtime || world.Player == null)
             return false;
         if (world.Time != _lastClock)
         {
@@ -72,7 +94,8 @@ public sealed class GameActivity : IDisposable
         return _sinceClock.Elapsed.TotalSeconds < FrozenSeconds;
     }
 
-    static void AddProcesses(HashSet<uint> ids, string name)
+    /// <summary>Ajoute les processus du nom donné et compte leurs fenêtres principales (et celles qui sont réduites).</summary>
+    static void AddProcesses(HashSet<uint> ids, string name, ref int windows, ref int minimized)
     {
         if (string.IsNullOrWhiteSpace(name))
             return;
@@ -81,6 +104,20 @@ public sealed class GameActivity : IDisposable
         foreach (var p in Process.GetProcessesByName(name))
         {
             ids.Add((uint)p.Id);
+            try
+            {
+                var window = p.MainWindowHandle;
+                if (window != IntPtr.Zero)
+                {
+                    windows++;
+                    if (Native.IsIconic(window))
+                        minimized++;
+                }
+            }
+            catch
+            {
+                // Processus inaccessible : ignoré.
+            }
             p.Dispose();
         }
     }
