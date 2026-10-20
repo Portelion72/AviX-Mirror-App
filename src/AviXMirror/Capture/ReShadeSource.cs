@@ -1,5 +1,6 @@
 using System.Drawing.Imaging;
 using System.IO.MemoryMappedFiles;
+using AviXMirror.Radar;
 using AviXMirror.Util;
 
 namespace AviXMirror.Capture;
