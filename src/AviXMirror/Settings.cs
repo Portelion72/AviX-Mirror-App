@@ -71,6 +71,17 @@ public static class Tabs
     };
 }
 
+/// <summary>Qualité de l'agrandissement de l'image capturée jusqu'à la taille du VoCore.</summary>
+public enum UpscaleQuality
+{
+    /// <summary>Bilinéaire simple (rendu des versions précédentes).</summary>
+    Standard,
+    /// <summary>Bicubique + accentuation douce des contours.</summary>
+    Net,
+    /// <summary>Bicubique + accentuation forte des contours.</summary>
+    TresNet,
+}
+
 public enum MaskSide
 {
     Haut,
@@ -228,6 +239,12 @@ public sealed class Settings
 
     [Category(Tabs.Capture), DisplayName("Zone hauteur")]
     public int CropHeight { get; set; } = 108;
+
+    [Category(Tabs.Capture), DisplayName("Agrandissement de l'image")]
+    [Description("Le rétro capturé est petit (ex. 346 × 108) et agrandi jusqu'à 1280 × 400. Standard : bilinéaire (ancien rendu). " +
+                 "Net : contours accentués puis agrandissement bicubique, image plus piquée. Très net : accentuation forte. " +
+                 "S'applique en direct.")]
+    public UpscaleQuality CaptureUpscale { get; set; } = UpscaleQuality.Net;
 
     [Category(Tabs.Capture), DisplayName("Cacher le rétro du jeu")]
     [Description("Pose un cache sur le rétro virtuel de LMU, sur l'écran principal. La capture n'est pas " +
@@ -546,6 +563,31 @@ public sealed class Settings
     [Browsable(false)]
     public Dictionary<string, Dictionary<string, JsonElement>> GameProfiles { get; set; } = DefaultProfiles();
 
+    /// <summary>
+    /// Profils par voiture (« Jeu|voiture » → valeurs propres), appliqués par-dessus le profil du jeu : la position du
+    /// rétro virtuel, et donc la zone de capture, change d'un cockpit à l'autre.
+    /// </summary>
+    [Browsable(false)]
+    public Dictionary<string, Dictionary<string, JsonElement>> CarProfiles { get; set; } = new();
+
+    public static string CarProfileKey(RadarGame game, string car) => game + "|" + car;
+
+    /// <summary>Voitures qui ont un profil, pour un jeu.</summary>
+    public IEnumerable<string> CarsWithProfile(RadarGame game) =>
+        CarProfiles.Keys.Where(k => k.StartsWith(game + "|", StringComparison.Ordinal)).Select(k => k[(game.ToString().Length + 1)..]).OrderBy(c => c);
+
+    public bool HasCarProfile(RadarGame game, string car) => CarProfiles.ContainsKey(CarProfileKey(game, car));
+
+    /// <summary>Crée un profil (vide) pour une voiture : elle reprend d'abord les réglages de son jeu.</summary>
+    public void CreateCarProfile(RadarGame game, string car)
+    {
+        var key = CarProfileKey(game, car);
+        if (!CarProfiles.ContainsKey(key))
+            CarProfiles[key] = new Dictionary<string, JsonElement>();
+    }
+
+    public void DeleteCarProfile(RadarGame game, string car) => CarProfiles.Remove(CarProfileKey(game, car));
+
     /// <summary>Profils par défaut (réglages du propriétaire : ACC, AC EVO, F1, LMU), ressource intégrée.</summary>
     static Dictionary<string, Dictionary<string, JsonElement>> DefaultProfiles()
     {
@@ -580,12 +622,24 @@ public sealed class Settings
         return category != null && PerGameTabs.Contains(category.Category);
     }
 
-    /// <summary>Réglages effectifs pour un jeu : réglages communs + valeurs propres à ce jeu.</summary>
-    public Settings ForGame(RadarGame? game)
+    /// <summary>
+    /// Réglages effectifs pour un jeu : réglages communs + valeurs propres à ce jeu, + valeurs propres à la voiture
+    /// si elle a un profil.
+    /// </summary>
+    public Settings ForGame(RadarGame? game, string? car = null)
     {
         var result = Clone();
-        if (game is not { } g || !GameProfiles.TryGetValue(g.ToString(), out var values))
+        if (game is not { } g)
             return result;
+        if (GameProfiles.TryGetValue(g.ToString(), out var values))
+            Apply(result, values);
+        if (car != null && CarProfiles.TryGetValue(CarProfileKey(g, car), out var carValues))
+            Apply(result, carValues);
+        return result;
+    }
+
+    static void Apply(Settings result, Dictionary<string, JsonElement> values)
+    {
         foreach (var (name, element) in values)
         {
             var property = typeof(Settings).GetProperty(name);
@@ -600,17 +654,27 @@ public sealed class Settings
                 // Valeur illisible (ancienne version) : la valeur commune s'applique.
             }
         }
-        return result;
     }
 
     /// <summary>
     /// Modifie un réglage : pour le jeu donné si le réglage est « par jeu », sinon pour tous les jeux.
     /// </summary>
-    public void Set(RadarGame? game, string propertyName, object? value)
+    public void Set(RadarGame? game, string propertyName, object? value) => Set(game, null, propertyName, value);
+
+    /// <summary>
+    /// Modifie un réglage : pour la voiture (si elle a un profil) ou le jeu donné si le réglage est « par jeu »,
+    /// sinon pour tous les jeux.
+    /// </summary>
+    public void Set(RadarGame? game, string? car, string propertyName, object? value)
     {
         var property = typeof(Settings).GetProperty(propertyName);
         if (property == null)
             return;
+        if (game is { } cg && car != null && IsPerGame(propertyName) && CarProfiles.TryGetValue(CarProfileKey(cg, car), out var carValues))
+        {
+            carValues[propertyName] = JsonSerializer.SerializeToElement(value, property.PropertyType, JsonOptions);
+            return;
+        }
         if (game is { } g && IsPerGame(propertyName))
         {
             var key = g.ToString();
@@ -624,12 +688,24 @@ public sealed class Settings
         }
     }
 
-    /// <summary>Nombre de réglages propres à un jeu.</summary>
-    public int OverrideCount(RadarGame game) =>
-        GameProfiles.TryGetValue(game.ToString(), out var values) ? values.Count : 0;
+    /// <summary>Nombre de réglages propres à un jeu (ou à une voiture de ce jeu).</summary>
+    public int OverrideCount(RadarGame game, string? car = null) => car != null
+        ? CarProfiles.TryGetValue(CarProfileKey(game, car), out var carValues) ? carValues.Count : 0
+        : GameProfiles.TryGetValue(game.ToString(), out var values) ? values.Count : 0;
 
-    /// <summary>Le jeu reprend tous les réglages communs.</summary>
-    public void ClearOverrides(RadarGame game) => GameProfiles.Remove(game.ToString());
+    /// <summary>Le jeu reprend tous les réglages communs (ou la voiture, ceux de son jeu).</summary>
+    public void ClearOverrides(RadarGame game, string? car = null)
+    {
+        if (car != null)
+        {
+            if (CarProfiles.TryGetValue(CarProfileKey(game, car), out var values))
+                values.Clear();
+        }
+        else
+        {
+            GameProfiles.Remove(game.ToString());
+        }
+    }
 
     // ---------- Persistance ----------
 

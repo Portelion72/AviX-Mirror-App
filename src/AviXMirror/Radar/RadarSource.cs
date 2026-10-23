@@ -412,7 +412,7 @@ public sealed class RadarSource : IDisposable
 
     static CarKind Classify(string cls) => CarClasses.Classify(cls);
 
-    static string KindName(CarKind kind) => kind switch
+    internal static string KindName(CarKind kind) => kind switch
     {
         CarKind.Hypercar => "hyper",
         CarKind.Lmp2 => "lmp2",

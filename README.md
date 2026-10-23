@@ -83,6 +83,14 @@ anti-triche, point de départ de l'ATH, cache arrondi pour F1…).
 Caméra AC, plus les onglets communs). Chaque valeur numérique a un curseur toujours visible et une case
 où taper la valeur ; l'explication du réglage survolé s'affiche en bas.
 
+**Profils par voiture** : en roulant, la liste *Profil* propose **« + Profil pour <voiture> »** (LMU : modèle
+reconnu, ex. Ferrari 499P ; Assetto Corsa : dossier de la voiture). Ce profil s'applique par-dessus celui du jeu
+dès que vous prenez cette voiture : zone de capture, cache, flèches, mode… propres à chaque cockpit.
+
+**Agrandissement de l'image** (onglet *Capture*) : *Net* (par défaut) accentue les contours de la petite capture
+puis l'agrandit en bicubique, pour un rétro plus piqué sur le VoCore ; *Très net* accentue davantage ; *Standard*
+garde l'ancien rendu.
+
 **Placer les flèches sur les voitures en Capture** (tous les jeux ; réglages de l'onglet *ATH*, propres
 à chaque jeu) — le plus simple est le bouton **Aligner les flèches** :
 1. Mode Capture démarré, jeu lancé, roulez avec des voitures derrière vous (ou lancez un replay).
@@ -93,6 +101,10 @@ où taper la valeur ; l'explication du réglage survolé s'affiche en bas.
    loin, ou de l'autre côté), le champ de vision est aussi calculé. On peut reprendre le direct et figer
    d'autres images pour ajouter des points.
 4. **Valider** : les valeurs s'enregistrent dans le profil du jeu capturé.
+
+**Calibration automatique** : dans *Aligner les flèches*, bouton **Calibration automatique (30 s)** : roulez
+avec des voitures derrière vous ; AviX Mirror compare l'image du rétro à la position des voitures et calcule
+lui-même l'horizon, le centre et le champ de vision (confiance affichée), puis *Valider*.
 
 Réglage à la main : *Capture : repères de réglage* affiche sur le VoCore la ligne d'horizon et des repères
 au sol (10, 20, 40, 80 m) ; ajustez *hauteur de l'horizon* (flèches sous les voitures → baissez), *champ

@@ -73,6 +73,12 @@ public sealed class MirrorEngine : IDisposable
     /// <summary>Jeu dont le profil de réglages est appliqué (null : réglages communs).</summary>
     public RadarGame? CurrentGame { get; private set; }
 
+    /// <summary>Voiture du joueur reconnue (identifiant de profil), null si inconnue.</summary>
+    public string? CurrentCar { get; private set; }
+
+    /// <summary>Voiture dont le profil s'applique (null si la voiture n'a pas de profil).</summary>
+    public string? ProfileCar => CurrentGame is { } g && CurrentCar != null && _master.HasCarProfile(g, CurrentCar) ? CurrentCar : null;
+
     /// <summary>Réglages effectivement appliqués (profil du jeu en cours).</summary>
     public Settings Effective => _settings;
 
@@ -109,6 +115,7 @@ public sealed class MirrorEngine : IDisposable
             {
                 _upscale = size;
                 Frames.UpscaleTo = size;
+                Frames.UpscaleSharpness = SharpnessOf(_settings);
             }
         }
 
@@ -140,7 +147,7 @@ public sealed class MirrorEngine : IDisposable
     /// <summary>Réglages du profil d'un jeu ; en mode Auto, la télémétrie suit ce jeu.</summary>
     Settings EffectiveFor(RadarGame? game)
     {
-        var effective = _master.ForGame(game);
+        var effective = _master.ForGame(game, game == CurrentGame ? CurrentCar : null);
         if (game is { } g && _master.RadarGame == RadarGame.Auto)
             effective.RadarGame = g;
         return effective;
@@ -165,6 +172,7 @@ public sealed class MirrorEngine : IDisposable
             return;
         var effective = _master.ForGame(game);
         CurrentGame = game;
+        CurrentCar = null;
         if (effective.Mode != _settings.Mode)
         {
             Start(_master); // autre mode pour ce jeu (ex. LMU en capture, AC en caméra)
@@ -173,8 +181,32 @@ public sealed class MirrorEngine : IDisposable
         ApplyEffective(EffectiveFor(game));
     }
 
+    /// <summary>Change de voiture : profil de la voiture s'il existe, redémarrage seulement si le mode change.</summary>
+    void FollowCar()
+    {
+        var car = _activity?.PlayerCar;
+        if (car == null || car == CurrentCar)
+            return;
+        CurrentCar = car;
+        var effective = EffectiveFor(CurrentGame);
+        if (effective.Mode != _settings.Mode)
+        {
+            Start(_master);
+            return;
+        }
+        ApplyEffective(effective);
+    }
+
+    static float SharpnessOf(Settings s) => s.CaptureUpscale switch
+    {
+        UpscaleQuality.Net => 0.5f,
+        UpscaleQuality.TresNet => 1f,
+        _ => 0f,
+    };
+
     void ApplyEffective(Settings effective)
     {
+        Frames.UpscaleSharpness = SharpnessOf(effective);
         // Le mode demande un redémarrage : il reste celui du démarrage.
         effective.Mode = _settings.Mode;
         var copy = effective;
@@ -236,10 +268,16 @@ public sealed class MirrorEngine : IDisposable
             return;
         var s = _settings;
         var messages = new List<string>();
-        if (CurrentGame is { } current)
-            messages.Add($"Profil : {Games.Get(current).Name}" + (_master.OverrideCount(current) > 0 ? "" : " (réglages communs)"));
-
         UpdateState(s);
+        FollowCar();
+        if (!Running)
+            return;
+        s = _settings;
+        if (CurrentGame is { } current)
+            messages.Add($"Profil : {Games.Get(current).Name}" +
+                         (ProfileCar is { } car ? $" — {CarIdentity.Display(car)}" : CurrentCar is { } seen ? $" (voiture : {CarIdentity.Display(seen)}, sans profil)" : "") +
+                         (_master.OverrideCount(current) > 0 || ProfileCar != null ? "" : " (réglages communs)"));
+
         messages.Add(_state switch
         {
             GameState.Paused => "Jeu en pause ou dans les menus : écran de veille AVIX.",

@@ -24,6 +24,12 @@ public sealed class FrameBuffer : IDisposable
     /// </summary>
     public Size? UpscaleTo { get; set; }
 
+    /// <summary>
+    /// Agrandissement : 0 = bilinéaire simple (ancien rendu) ; au-delà, accentuation adaptative des contours
+    /// (type AMD FidelityFX CAS) sur la petite image puis agrandissement bicubique. 1 = accentuation maximale.
+    /// </summary>
+    public float UpscaleSharpness { get; set; }
+
     /// <summary>Déclenché (sur le thread du producteur) après chaque nouvelle image.</summary>
     public event Action? Updated;
 
@@ -60,9 +66,12 @@ public sealed class FrameBuffer : IDisposable
                     _source = new Bitmap(width, height, PixelFormat.Format32bppRgb);
                 }
                 fill(_source);
+                float sharpness = UpscaleSharpness;
+                if (sharpness > 0)
+                    ImageSharpen.Apply(_source, sharpness);
                 using var g = Graphics.FromImage(_bitmap);
-                // Même filtrage que l'agrandissement fait ensuite par la sortie : l'image ne change pas.
-                g.InterpolationMode = InterpolationMode.Bilinear;
+                // Bilinéaire : même rendu qu'avant. Net : bicubique, après accentuation des contours.
+                g.InterpolationMode = sharpness > 0 ? InterpolationMode.HighQualityBicubic : InterpolationMode.Bilinear;
                 g.PixelOffsetMode = PixelOffsetMode.Half;
                 g.CompositingMode = CompositingMode.SourceCopy;
                 using var attributes = new ImageAttributes();

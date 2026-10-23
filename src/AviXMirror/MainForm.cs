@@ -28,7 +28,16 @@ public sealed class MainForm : Form
     Settings _settings;
     // Profil affiché dans les onglets : null = tous les jeux (réglages communs).
     RadarGame? _profile;
+    // Voiture du profil affiché (profil par voiture, par-dessus celui du jeu), null = profil du jeu.
+    string? _profileCar;
     bool _profileChosenByUser;
+    string? _lastSeenCar;
+
+    /// <summary>Entrée de la liste des profils : réglages communs, un jeu, une voiture, ou création d'un profil de voiture.</summary>
+    sealed record ProfileItem(RadarGame? Game, string? Car, string Text, bool Create = false)
+    {
+        public override string ToString() => Text;
+    }
     readonly ComboBox _profileBox = new() { DropDownStyle = ComboBoxStyle.DropDownList, FlatStyle = FlatStyle.Flat, Width = 300 };
     readonly Label _profileInfo = new() { AutoSize = false, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft };
     readonly FlatButton _profileReset = new() { Text = "Reprendre les réglages communs", Width = 230, Dock = DockStyle.Right };
@@ -366,20 +375,39 @@ public sealed class MainForm : Form
 
     void SetupProfiles()
     {
-        _profileBox.Items.Add("Tous les jeux (réglages communs)");
-        foreach (var game in Radar.Games.All)
-            _profileBox.Items.Add(game.Name + (game.Beta ? " (beta)" : ""));
-        _profileBox.SelectedIndex = 0;
+        RebuildProfileItems();
         _profileBox.SelectedIndexChanged += (_, _) =>
         {
+            if (_rebuildingProfiles || _profileBox.SelectedItem is not ProfileItem item)
+                return;
             _profileChosenByUser = true;
-            SelectProfile(_profileBox.SelectedIndex == 0 ? null : Radar.Games.All[_profileBox.SelectedIndex - 1].Game);
+            if (item.Create && item.Game is { } game && item.Car is { } car)
+            {
+                // Nouveau profil pour la voiture détectée : il reprend d'abord les réglages du jeu.
+                _settings.CreateCarProfile(game, car);
+                _settings.Save();
+                RebuildProfileItems();
+                _engine.UpdateLive(_settings);
+            }
+            SelectProfile(item.Game, item.Car);
         };
         _gameGuide.Click += (_, _) => ShowGameGuide();
         _profileReset.Click += (_, _) =>
         {
             if (_profile is not { } game)
                 return;
+            if (_profileCar is { } car)
+            {
+                if (MessageBox.Show(this, $"Supprimer le profil de la voiture {Radar.CarIdentity.Display(car)} ? Elle reprendra les réglages de {Radar.Games.Get(game).Name}.",
+                        "Profil", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                    return;
+                _settings.DeleteCarProfile(game, car);
+                _settings.Save();
+                RebuildProfileItems();
+                SelectProfile(game, null);
+                _engine.UpdateLive(_settings);
+                return;
+            }
             if (MessageBox.Show(this, $"{Radar.Games.Get(game).Name} reprendra tous les réglages communs. Continuer ?",
                     "Profil", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                 return;
@@ -406,23 +434,67 @@ public sealed class MainForm : Form
         form.ShowDialog(this);
     }
 
-    /// <summary>Affiche les réglages d'un profil (null = réglages communs).</summary>
-    void SelectProfile(RadarGame? game)
+    bool _rebuildingProfiles;
+
+    /// <summary>
+    /// Liste des profils : réglages communs, chaque jeu, les voitures qui ont un profil (sous leur jeu), et
+    /// « Créer un profil » pour la voiture que vous conduisez si elle n'en a pas.
+    /// </summary>
+    void RebuildProfileItems()
+    {
+        _rebuildingProfiles = true;
+        try
+        {
+            _profileBox.Items.Clear();
+            _profileBox.Items.Add(new ProfileItem(null, null, "Tous les jeux (réglages communs)"));
+            foreach (var game in Radar.Games.All)
+            {
+                _profileBox.Items.Add(new ProfileItem(game.Game, null, game.Name + (game.Beta ? " (beta)" : "")));
+                foreach (var car in _settings.CarsWithProfile(game.Game))
+                    _profileBox.Items.Add(new ProfileItem(game.Game, car, "      ↳ " + Radar.CarIdentity.Display(car)));
+                if (_engine.Running && _engine.CurrentGame == game.Game && _engine.CurrentCar is { } current &&
+                    !_settings.HasCarProfile(game.Game, current))
+                    _profileBox.Items.Add(new ProfileItem(game.Game, current, "      + Profil pour " + Radar.CarIdentity.Display(current), Create: true));
+            }
+            SelectItem();
+        }
+        finally
+        {
+            _rebuildingProfiles = false;
+        }
+    }
+
+    void SelectItem()
+    {
+        for (int i = 0; i < _profileBox.Items.Count; i++)
+            if (_profileBox.Items[i] is ProfileItem item && !item.Create && item.Game == _profile && item.Car == _profileCar)
+            {
+                if (_profileBox.SelectedIndex != i)
+                    _profileBox.SelectedIndex = i;
+                return;
+            }
+    }
+
+    /// <summary>Affiche les réglages d'un profil (null = réglages communs ; voiture = profil de la voiture).</summary>
+    void SelectProfile(RadarGame? game, string? car = null)
     {
         _profile = game;
-        int index = game is { } g ? Array.FindIndex(Radar.Games.All, x => x.Game == g) + 1 : 0;
-        if (_profileBox.SelectedIndex != index)
-            _profileBox.SelectedIndex = index;
+        _profileCar = game != null && car != null && _settings.HasCarProfile(game.Value, car) ? car : null;
+        bool was = _rebuildingProfiles;
+        _rebuildingProfiles = true;
+        try { SelectItem(); }
+        finally { _rebuildingProfiles = was; }
         RefreshView();
     }
 
     /// <summary>Recharge la grille avec les réglages effectifs du profil affiché.</summary>
     void RefreshView()
     {
-        var view = _view = _settings.ForGame(_profile);
+        var view = _view = _settings.ForGame(_profile, _profileCar);
         UpdateTabs(view.Mode);
         _panel.Build(view, _tabs.Selected, view.Mode);
         _profileReset.Visible = _profile != null;
+        _profileReset.Text = _profileCar != null ? "Supprimer ce profil de voiture" : "Reprendre les réglages communs";
         _profileInfo.Text = _profile is { } game
             ? ProfileText(game)
             : "Réglages utilisés par tous les jeux. Choisissez un jeu pour lui donner ses propres réglages.";
@@ -435,9 +507,15 @@ public sealed class MainForm : Form
     /// <summary>Le profil du jeu détecté s'affiche tout seul, tant que l'utilisateur n'en a pas choisi un.</summary>
     void FollowDetectedGame()
     {
-        if (_profileChosenByUser || !_engine.Running || _engine.CurrentGame == _profile)
+        // Nouvelle voiture détectée : la liste propose de lui créer un profil.
+        if (_engine.CurrentCar != _lastSeenCar)
+        {
+            _lastSeenCar = _engine.CurrentCar;
+            RebuildProfileItems();
+        }
+        if (_profileChosenByUser || !_engine.Running || (_engine.CurrentGame == _profile && _engine.ProfileCar == _profileCar))
             return;
-        SelectProfile(_engine.CurrentGame);
+        SelectProfile(_engine.CurrentGame, _engine.ProfileCar);
         _profileChosenByUser = false;
     }
 
@@ -477,7 +555,7 @@ public sealed class MainForm : Form
     /// </summary>
     void OnPropertyChanged(string name, object? value, bool final)
     {
-        _settings.Set(_profile, name, value);
+        _settings.Set(_profile, _profileCar, name, value);
         if (!final)
         {
             _engine.UpdateLive(_settings);
@@ -511,9 +589,11 @@ public sealed class MainForm : Form
             _engine.UpdateLive(_settings); // luminosité, champ de vision… en direct
     }
 
-    string ProfileText(RadarGame game) =>
-        $"{_settings.OverrideCount(game)} réglage(s) propre(s) à ce jeu. Capture, Radar, Caméra AC, ATH, mode et alertes " +
-        "s'enregistrent pour ce jeu ; les autres onglets sont communs.";
+    string ProfileText(RadarGame game) => _profileCar is { } car
+        ? $"{_settings.OverrideCount(game, car)} réglage(s) propre(s) à la voiture {Radar.CarIdentity.Display(car)} (les autres viennent du profil " +
+          "du jeu). Zone de capture, ATH, mode… s'enregistrent pour cette voiture."
+        : $"{_settings.OverrideCount(game)} réglage(s) propre(s) à ce jeu. Capture, Radar, Caméra AC, ATH, mode et alertes " +
+          "s'enregistrent pour ce jeu ; les autres onglets sont communs. Profil par voiture : choisissez « + Profil pour… » en roulant.";
 
     void SelectMode(MirrorMode mode, bool restart)
     {
@@ -524,7 +604,7 @@ public sealed class MainForm : Form
         _installAc.Visible = mode != MirrorMode.Capture;
 
         if (_view.Mode != mode)
-            _settings.Set(_profile, nameof(Settings.Mode), mode);
+            _settings.Set(_profile, _profileCar, nameof(Settings.Mode), mode);
         // Onglets du mode, et ouverture de l'onglet de réglages du mode choisi.
         var tabs = Tabs.For(mode);
         _tabs.SetTabs(tabs);
@@ -606,13 +686,14 @@ public sealed class MainForm : Form
         {
             // La zone s'enregistre dans le profil du jeu capturé.
             var game = _engine.CurrentGame;
-            _settings.Set(game, nameof(Settings.CropX), sel.X);
-            _settings.Set(game, nameof(Settings.CropY), sel.Y);
-            _settings.Set(game, nameof(Settings.CropWidth), sel.Width);
-            _settings.Set(game, nameof(Settings.CropHeight), sel.Height);
-            _settings.Set(game, nameof(Settings.MaskSamples), samples);
-            _settings.Set(game, nameof(Settings.MaskShape), shape);
-            _settings.Set(game, nameof(Settings.MaskShapeSmooth), shapeSmooth);
+            var car = _engine.ProfileCar;
+            _settings.Set(game, car, nameof(Settings.CropX), sel.X);
+            _settings.Set(game, car, nameof(Settings.CropY), sel.Y);
+            _settings.Set(game, car, nameof(Settings.CropWidth), sel.Width);
+            _settings.Set(game, car, nameof(Settings.CropHeight), sel.Height);
+            _settings.Set(game, car, nameof(Settings.MaskSamples), samples);
+            _settings.Set(game, car, nameof(Settings.MaskShape), shape);
+            _settings.Set(game, car, nameof(Settings.MaskShapeSmooth), shapeSmooth);
             _settings.Save();
             RefreshView();
         }
@@ -651,9 +732,10 @@ public sealed class MainForm : Form
         if (result != DialogResult.OK)
             return;
         var game = _engine.CurrentGame;
-        _settings.Set(game, nameof(Settings.HudCaptureHorizon), horizon);
-        _settings.Set(game, nameof(Settings.HudCaptureCenter), center);
-        _settings.Set(game, nameof(Settings.HudCaptureFov), fov);
+        var car = _engine.ProfileCar;
+        _settings.Set(game, car, nameof(Settings.HudCaptureHorizon), horizon);
+        _settings.Set(game, car, nameof(Settings.HudCaptureCenter), center);
+        _settings.Set(game, car, nameof(Settings.HudCaptureFov), fov);
         _settings.Save();
         RefreshView();
         _engine.UpdateLive(_settings);

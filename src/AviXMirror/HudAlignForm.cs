@@ -23,6 +23,15 @@ public sealed class HudAlignForm : Form
     readonly System.Windows.Forms.Timer _refresh = new() { Interval = 100 };
     readonly Button _freeze = new() { Text = "Figer dans 5 s", AutoSize = true };
     readonly Button _live = new() { Text = "Reprendre le direct", AutoSize = true };
+    readonly Button _auto = new() { Text = "Calibration automatique (30 s)", AutoSize = true };
+
+    // Calibration automatique : images et voitures collectées en roulant, puis recherche du meilleur point de vue.
+    const int AutoSeconds = 30;
+    readonly HudAutoCalibrator _calibrator = new();
+    DateTime? _autoUntil;
+    DateTime _lastAutoSample;
+    bool _autoSolving;
+    string _autoMessage = "";
 
     Bitmap? _image;
     List<HudTarget> _targets = new();
@@ -86,7 +95,8 @@ public sealed class HudAlignForm : Form
             UpdateInfo();
             _picture.Invalidate();
         };
-        buttons.Controls.AddRange(new Control[] { ok, cancel, reset, clear, _live, _freeze });
+        _auto.Click += (_, _) => StartAuto();
+        buttons.Controls.AddRange(new Control[] { ok, cancel, reset, clear, _live, _freeze, _auto });
         AcceptButton = ok;
         CancelButton = cancel;
 
@@ -130,7 +140,63 @@ public sealed class HudAlignForm : Form
         }
         if (!_frozen)
             Grab();
+        if (_autoUntil is { } until && !_frozen)
+            CollectAuto(until);
         _picture.Invalidate();
+    }
+
+    void StartAuto()
+    {
+        _calibrator.Clear();
+        _frozen = false;
+        _freezeAt = null;
+        _autoUntil = DateTime.Now.AddSeconds(AutoSeconds);
+        _autoMessage = "";
+        UpdateInfo();
+    }
+
+    /// <summary>Garde 4 images par seconde avec les voitures derrière, puis lance la recherche.</summary>
+    void CollectAuto(DateTime until)
+    {
+        if (_image != null && (DateTime.Now - _lastAutoSample).TotalMilliseconds >= 250 && _targets.Count > 0)
+        {
+            _lastAutoSample = DateTime.Now;
+            _calibrator.Add(_image, _targets);
+        }
+        if (DateTime.Now < until)
+        {
+            UpdateInfo();
+            return;
+        }
+        _autoUntil = null;
+        _autoSolving = true;
+        UpdateInfo();
+        var settings = Current().Clone();
+        Task.Run(() => _calibrator.Solve(settings)).ContinueWith(task =>
+        {
+            if (IsDisposed)
+                return;
+            BeginInvoke(() =>
+            {
+                _autoSolving = false;
+                var result = task.IsCompletedSuccessfully ? task.Result : null;
+                if (result == null)
+                {
+                    _autoMessage = $"Calibration automatique : pas assez de voitures vues ({_calibrator.CarCount}). Recommencez avec des voitures derrière vous.";
+                }
+                else
+                {
+                    _matches.Clear();
+                    Horizon = Math.Round(result.Horizon, 1);
+                    Center = Math.Round(result.Center, 1);
+                    Fov = Math.Round(result.Fov, 1);
+                    _autoMessage = $"Calibration automatique sur {_calibrator.CarCount} voitures : confiance {result.Confidence:0.0}" +
+                                   (result.Confidence >= 3 ? " (bonne). Vérifiez puis Valider." : " (faible) : vérifiez, ou affinez en glissant une flèche.");
+                }
+                UpdateInfo();
+                _picture.Invalidate();
+            });
+        });
     }
 
     void Grab()
@@ -180,7 +246,14 @@ public sealed class HudAlignForm : Form
 
     void UpdateInfo()
     {
-        string step = _freezeAt is { } at
+        string step = _autoUntil is { } autoUntil
+            ? $"Calibration automatique : roulez avec des voitures derrière vous… {Math.Max(0, Math.Ceiling((autoUntil - DateTime.Now).TotalSeconds))} s " +
+              $"({_calibrator.CarCount} voiture(s) vues)"
+            : _autoSolving
+                ? "Calibration automatique : calcul en cours…"
+                : _autoMessage.Length > 0
+                    ? _autoMessage
+                    : _freezeAt is { } at
             ? $"Retournez en jeu : image figée dans {Math.Max(0, Math.Ceiling((at - DateTime.Now).TotalSeconds))} s…"
             : !_frozen
                 ? "1. Roulez avec des voitures derrière vous (ou un replay), puis figez l'image : Espace, un clic sur une flèche, ou « Figer dans 5 s » pour avoir le temps de revenir en jeu."
@@ -189,7 +262,8 @@ public sealed class HudAlignForm : Form
         _info.Text = step + "\n" +
                      $"Horizon {Horizon:0.0} %   ·   Centre {Center:0.0} %   ·   Champ de vision {Fov:0.0}°   ·   {_matches.Count} point(s) posé(s)";
         _live.Enabled = _frozen || _freezeAt != null;
-        _freeze.Enabled = _freezeAt == null;
+        _freeze.Enabled = _freezeAt == null && _autoUntil == null;
+        _auto.Enabled = _autoUntil == null && !_autoSolving;
     }
 
     // ---------- Géométrie de l'affichage ----------

@@ -35,6 +35,9 @@ public sealed class GameActivity : IDisposable
         ? new[] { Games.Get(RadarGame.AssettoCorsa) }
         : Games.Candidates(s);
 
+    /// <summary>Voiture du joueur reconnue dans la télémétrie (profils par voiture), null si inconnue.</summary>
+    public string? PlayerCar { get; private set; }
+
     public GameState Update(Settings s)
     {
         var running = GamesFor(s).Where(g => Games.IsRunning(g, s)).ToList();
@@ -84,6 +87,8 @@ public sealed class GameActivity : IDisposable
         if (world == null)
             return false;
         telemetry = true;
+        if (CarIdentity.Key(game.Game, world.Player) is { } car)
+            PlayerCar = car;
         if (!world.InRealtime || world.Player == null)
             return false;
         if (world.Time != _lastClock)
