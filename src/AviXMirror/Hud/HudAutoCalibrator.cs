@@ -13,8 +13,10 @@ public sealed class HudAutoCalibrator
 {
     const double CarWidth = 1.9, CarHeight = 1.2;
     const int MinBoxes = 10;
+    /// <summary>Largeur maximale gardée par image (réduite au-delà) : 2 min d'images restent légères en mémoire.</summary>
+    const int MaxWidth = 480;
 
-    sealed record Sample(double[] Integral, int Width, int Height, List<HudTarget> Targets);
+    sealed record Sample(float[] Integral, int Width, int Height, List<HudTarget> Targets);
 
     readonly List<Sample> _samples = new();
 
@@ -29,11 +31,24 @@ public sealed class HudAutoCalibrator
         var useful = targets.Where(t => t.Lz > 6 && t.Lz < 90 && Math.Abs(t.Lx) < 12).ToList();
         if (useful.Count == 0 || image.Width < 16 || image.Height < 8)
             return;
-        _samples.Add(new Sample(DetailIntegral(image), image.Width, image.Height, useful));
+        if (image.Width <= MaxWidth)
+        {
+            _samples.Add(new Sample(DetailIntegral(image), image.Width, image.Height, useful));
+            return;
+        }
+        // Les cadres sont projetés en % de la taille de l'image : la réduire ne change pas le résultat.
+        int h = Math.Max(8, image.Height * MaxWidth / image.Width);
+        using var small = new Bitmap(MaxWidth, h, PixelFormat.Format32bppRgb);
+        using (var g = Graphics.FromImage(small))
+        {
+            g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBilinear;
+            g.DrawImage(image, 0, 0, MaxWidth, h);
+        }
+        _samples.Add(new Sample(DetailIntegral(small), MaxWidth, h, useful));
     }
 
     /// <summary>Image intégrale du « détail » (gradient de luminance), normalisé par sa moyenne sur l'image.</summary>
-    static unsafe double[] DetailIntegral(Bitmap image)
+    static unsafe float[] DetailIntegral(Bitmap image)
     {
         int w = image.Width, h = image.Height;
         var lum = new float[w * h];
@@ -67,23 +82,23 @@ public sealed class HudAutoCalibrator
             }
         double mean = total / (w * h) + 1e-6;
 
-        var integral = new double[(w + 1) * (h + 1)];
+        var integral = new float[(w + 1) * (h + 1)];
         for (int y = 0; y < h; y++)
         {
             double row = 0;
             for (int x = 0; x < w; x++)
             {
                 row += detail[y * w + x] / mean;
-                integral[(y + 1) * (w + 1) + x + 1] = integral[y * (w + 1) + x + 1] + row;
+                integral[(y + 1) * (w + 1) + x + 1] = (float)(integral[y * (w + 1) + x + 1] + row);
             }
         }
         return integral;
     }
 
-    static double BoxSum(double[] I, int w, int x0, int y0, int x1, int y1)
+    static double BoxSum(float[] I, int w, int x0, int y0, int x1, int y1)
     {
         int s = w + 1;
-        return I[y1 * s + x1] - I[y0 * s + x1] - I[y1 * s + x0] + I[y0 * s + x0];
+        return (double)I[y1 * s + x1] - I[y0 * s + x1] - I[y1 * s + x0] + I[y0 * s + x0];
     }
 
     double Score(double centerPct, double horizonPct, double fov, Settings s)

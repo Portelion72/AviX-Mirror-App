@@ -69,8 +69,11 @@ public sealed class AccTelemetry : IRadarTelemetry
         int state = I(_g, GStatus);
         if (state == 0)
         {
-            status = "Assetto Corsa Competizione : pas de session en cours.";
-            return false;
+            // Menus (pas de session) : télémétrie présente mais pas au volant. Signalé comme tel pour que le
+            // cache et le rétro se retirent (sinon l'absence de télémétrie laisserait le rétro actif).
+            world = new RadarWorld { Game = GameName, InRealtime = false };
+            status = "Assetto Corsa Competizione : menus, pas de session en cours.";
+            return true;
         }
 
         int count = Math.Clamp(I(_g, GActiveCars), 0, MaxCars);

@@ -242,7 +242,7 @@ public sealed class Settings
 
     [Category(Tabs.Capture), DisplayName("Agrandissement de l'image")]
     [Description("Le rétro capturé est petit (ex. 346 × 108) et agrandi jusqu'à 1280 × 400. Standard : bilinéaire (ancien rendu). " +
-                 "Net : contours accentués puis agrandissement bicubique, image plus piquée. Très net : accentuation forte. " +
+                 "Net : contours accentués puis agrandissement bicubique, image plus piquée. Très net : accentuation maximale + masque flou, nettement plus marqué (peut faire ressortir le bruit). " +
                  "S'applique en direct.")]
     public UpscaleQuality CaptureUpscale { get; set; } = UpscaleQuality.Net;
 

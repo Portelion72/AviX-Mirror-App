@@ -23,10 +23,15 @@ public sealed class HudAlignForm : Form
     readonly System.Windows.Forms.Timer _refresh = new() { Interval = 100 };
     readonly Button _freeze = new() { Text = "Figer dans 5 s", AutoSize = true };
     readonly Button _live = new() { Text = "Reprendre le direct", AutoSize = true };
-    readonly Button _auto = new() { Text = "Calibration automatique (30 s)", AutoSize = true };
+    readonly Button _auto = new() { Text = "Calibration automatique", AutoSize = true };
+    readonly ComboBox _autoDuration = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 80, Margin = new Padding(3, 5, 3, 3) };
 
     // Calibration automatique : images et voitures collectées en roulant, puis recherche du meilleur point de vue.
-    const int AutoSeconds = 30;
+    static readonly (string Label, int Seconds)[] AutoDurations = { ("30 s", 30), ("1 min", 60), ("2 min", 120) };
+    static int _autoDurationIndex = 1; // 1 min par défaut, gardé pendant la session
+    /// <summary>Images gardées au plus (au-delà, l'intervalle entre deux images s'allonge).</summary>
+    const int MaxAutoSamples = 240;
+    int _autoSeconds = 60;
     readonly HudAutoCalibrator _calibrator = new();
     DateTime? _autoUntil;
     DateTime _lastAutoSample;
@@ -96,7 +101,11 @@ public sealed class HudAlignForm : Form
             _picture.Invalidate();
         };
         _auto.Click += (_, _) => StartAuto();
-        buttons.Controls.AddRange(new Control[] { ok, cancel, reset, clear, _live, _freeze, _auto });
+        foreach (var d in AutoDurations)
+            _autoDuration.Items.Add(d.Label);
+        _autoDuration.SelectedIndex = _autoDurationIndex;
+        _autoDuration.SelectedIndexChanged += (_, _) => _autoDurationIndex = Math.Max(0, _autoDuration.SelectedIndex);
+        buttons.Controls.AddRange(new Control[] { ok, cancel, reset, clear, _live, _freeze, _autoDuration, _auto });
         AcceptButton = ok;
         CancelButton = cancel;
 
@@ -150,15 +159,17 @@ public sealed class HudAlignForm : Form
         _calibrator.Clear();
         _frozen = false;
         _freezeAt = null;
-        _autoUntil = DateTime.Now.AddSeconds(AutoSeconds);
+        _autoSeconds = AutoDurations[Math.Clamp(_autoDurationIndex, 0, AutoDurations.Length - 1)].Seconds;
+        _autoUntil = DateTime.Now.AddSeconds(_autoSeconds);
         _autoMessage = "";
         UpdateInfo();
     }
 
-    /// <summary>Garde 4 images par seconde avec les voitures derrière, puis lance la recherche.</summary>
+    /// <summary>Garde jusqu'à 4 images par seconde avec les voitures derrière, puis lance la recherche.</summary>
     void CollectAuto(DateTime until)
     {
-        if (_image != null && (DateTime.Now - _lastAutoSample).TotalMilliseconds >= 250 && _targets.Count > 0)
+        double interval = Math.Max(250, _autoSeconds * 1000.0 / MaxAutoSamples);
+        if (_image != null && (DateTime.Now - _lastAutoSample).TotalMilliseconds >= interval && _targets.Count > 0)
         {
             _lastAutoSample = DateTime.Now;
             _calibrator.Add(_image, _targets);
@@ -263,7 +274,7 @@ public sealed class HudAlignForm : Form
                      $"Horizon {Horizon:0.0} %   ·   Centre {Center:0.0} %   ·   Champ de vision {Fov:0.0}°   ·   {_matches.Count} point(s) posé(s)";
         _live.Enabled = _frozen || _freezeAt != null;
         _freeze.Enabled = _freezeAt == null && _autoUntil == null;
-        _auto.Enabled = _autoUntil == null && !_autoSolving;
+        _auto.Enabled = _autoDuration.Enabled = _autoUntil == null && !_autoSolving;
     }
 
     // ---------- Géométrie de l'affichage ----------

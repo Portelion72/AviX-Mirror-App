@@ -6,16 +6,25 @@ namespace AviXMirror.Util;
 /// Accentuation adaptative des contours (principe d'AMD FidelityFX CAS) : chaque pixel est renforcé par rapport à
 /// ses 4 voisins, d'autant moins que la zone est déjà contrastée (pas de halo ni de bruit amplifié). Appliquée sur
 /// la petite image capturée avant son agrandissement, elle redonne du piqué au rétro sur le VoCore.
+/// Netteté de 0 à 1 : CAS seul ; au-delà de 1 (« Très net ») : CAS maximal puis masque flou (flou gaussien 3×3)
+/// d'intensité (netteté − 1), nettement plus visible.
 /// </summary>
 public static class ImageSharpen
 {
     [ThreadStatic] static byte[]? _copy;
 
-    public static unsafe void Apply(Bitmap bmp, float sharpness)
+    public static void Apply(Bitmap bmp, float sharpness)
+    {
+        if (bmp.Width < 3 || bmp.Height < 3)
+            return;
+        Cas(bmp, sharpness);
+        if (sharpness > 1)
+            Unsharp(bmp, Math.Min(sharpness - 1, 1.5f));
+    }
+
+    static unsafe void Cas(Bitmap bmp, float sharpness)
     {
         int w = bmp.Width, h = bmp.Height;
-        if (w < 3 || h < 3)
-            return;
         var data = bmp.LockBits(new Rectangle(0, 0, w, h), ImageLockMode.ReadWrite, PixelFormat.Format32bppRgb);
         try
         {
@@ -47,6 +56,45 @@ public static class ImageSharpen
                         {
                             int i = o + ch;
                             float v = (row[i] + wgt * (up[i] + down[i] + row[i + 4] + row[i - 4])) * norm;
+                            outRow[i] = (byte)Math.Clamp((int)(v + 0.5f), 0, 255);
+                        }
+                    }
+                }
+            }
+        }
+        finally
+        {
+            bmp.UnlockBits(data);
+        }
+    }
+
+    /// <summary>Masque flou : pixel + intensité × (pixel − flou gaussien 3×3 [1 2 1]).</summary>
+    static unsafe void Unsharp(Bitmap bmp, float amount)
+    {
+        int w = bmp.Width, h = bmp.Height;
+        var data = bmp.LockBits(new Rectangle(0, 0, w, h), ImageLockMode.ReadWrite, PixelFormat.Format32bppRgb);
+        try
+        {
+            int stride = data.Stride, size = stride * h;
+            var copy = _copy != null && _copy.Length >= size ? _copy : _copy = new byte[size];
+            System.Runtime.InteropServices.Marshal.Copy(data.Scan0, copy, 0, size);
+            byte* dst = (byte*)data.Scan0;
+            fixed (byte* src = copy)
+            {
+                for (int y = 1; y < h - 1; y++)
+                {
+                    byte* row = src + y * stride, up = row - stride, down = row + stride;
+                    byte* outRow = dst + y * stride;
+                    for (int x = 1; x < w - 1; x++)
+                    {
+                        int o = x * 4;
+                        for (int ch = 0; ch < 3; ch++)
+                        {
+                            int i = o + ch;
+                            int blur = (up[i - 4] + 2 * up[i] + up[i + 4]
+                                + 2 * row[i - 4] + 4 * row[i] + 2 * row[i + 4]
+                                + down[i - 4] + 2 * down[i] + down[i + 4]) >> 4;
+                            float v = row[i] + amount * (row[i] - blur);
                             outRow[i] = (byte)Math.Clamp((int)(v + 0.5f), 0, 255);
                         }
                     }

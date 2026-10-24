@@ -102,8 +102,8 @@ garde l'ancien rendu.
    d'autres images pour ajouter des points.
 4. **Valider** : les valeurs s'enregistrent dans le profil du jeu capturé.
 
-**Calibration automatique** : dans *Aligner les flèches*, bouton **Calibration automatique (30 s)** : roulez
-avec des voitures derrière vous ; AviX Mirror compare l'image du rétro à la position des voitures et calcule
+**Calibration automatique** : dans *Aligner les flèches*, choisissez la durée (30 s, **1 min** par défaut, 2 min) puis
+**Calibration automatique** : roulez avec des voitures derrière vous (plus c'est long, plus c'est fiable) ; AviX Mirror compare l'image du rétro à la position des voitures et calcule
 lui-même l'horizon, le centre et le champ de vision (confiance affichée), puis *Valider*.
 
 Réglage à la main : *Capture : repères de réglage* affiche sur le VoCore la ligne d'horizon et des repères
@@ -205,6 +205,8 @@ Particularités des jeux beta :
   toutes les voitures dessinées en GT3 ; le tracé du circuit s'apprend avec vos propres tours.
 - **AC EVO** : comme ACC, seules les positions des adversaires sont connues (vitesses estimées,
   catégorie inconnue) ; le tracé s'apprend avec vos propres tours.
+- **ACC / AC EVO en capture** : dans les menus (pas de session en piste), le cache est retiré et le
+  VoCore passe en veille ; il revient dès que vous êtes en course.
 - **AMS2 / PC2** : la catégorie des adversaires n'est pas lue ; vitesses estimées.
 - **iRacing** ne donne pas la position des autres voitures dans le monde : le radar montre la
   **distance exacte** derrière vous sur une route droite, et place les voitures à votre hauteur à

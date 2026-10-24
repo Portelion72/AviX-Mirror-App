@@ -199,8 +199,8 @@ public sealed class MirrorEngine : IDisposable
 
     static float SharpnessOf(Settings s) => s.CaptureUpscale switch
     {
-        UpscaleQuality.Net => 0.5f,
-        UpscaleQuality.TresNet => 1f,
+        UpscaleQuality.Net => 0.4f,
+        UpscaleQuality.TresNet => 1.9f, // CAS maximal + masque flou 0,9
         _ => 0f,
     };
 

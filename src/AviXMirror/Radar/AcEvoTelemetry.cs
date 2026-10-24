@@ -70,8 +70,11 @@ public sealed class AcEvoTelemetry : IRadarTelemetry
         int state = BitConverter.ToInt32(_g, GStatus);
         if (state == 0)
         {
-            status = "Assetto Corsa EVO : pas de session en cours.";
-            return false;
+            // Menus (pas de session) : télémétrie présente mais pas au volant. Signalé comme tel pour que le
+            // cache et le rétro se retirent (sinon l'absence de télémétrie laisserait le rétro actif).
+            world = new RadarWorld { Game = GameName, InRealtime = false };
+            status = "Assetto Corsa EVO : menus, pas de session en cours.";
+            return true;
         }
 
         int count = Math.Clamp((int)_g[GActiveCars], 0, MaxCars);

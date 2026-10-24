@@ -53,8 +53,8 @@ en jeu depuis Claude : le dire clairement dans chaque compte rendu.
   `GameActivity.PlayerCar` → `MirrorEngine.CurrentCar` / `ProfileCar` / `FollowCar`, liste « + Profil pour… »
   dans `MainForm.RebuildProfileItems`. Calibrer / Aligner écrivent dans le profil de la voiture s'il existe.
 - Agrandissement : `CaptureUpscale` (Standard / Net / TresNet) → `FrameBuffer.UpscaleSharpness` :
-  `Util/ImageSharpen` (accentuation type CAS sur la petite image) puis bicubique.
-- `Hud/HudAutoCalibrator` : calibration automatique des flèches (images + voitures pendant 30 s, score = détail
+  `Util/ImageSharpen` (accentuation type CAS sur la petite image ; netteté > 1 = CAS max + masque flou 3×3, « Très net » = 1,9) puis bicubique.
+- `Hud/HudAutoCalibrator` : calibration automatique des flèches (images + voitures pendant 30 s / 1 min / 2 min, au plus 240 images réduites à 480 px de large, score = détail
   dans le cadre projeté de chaque voiture − détail autour, grille horizon/centre/champ puis affinage).
 - Éditeurs (`Ui/Editors.cs`) : `GaugeAttribute`, `ColorHexEditor`, `ImageFileEditor` (repris par
   `SettingsPanel` ; `GaugeEditor` n'est plus utilisé par la fenêtre principale). Écran de veille
@@ -124,7 +124,7 @@ zone de capture au format VoCore → ATH Bosch (flèches, échelles 10 graduatio
 flèches) → ATH net en capture → cache avec marges et couleur du décor → faces avant LMU → rangement
 (retrait MJPEG, extension de fenêtre, capture d'écran entier) → veille/pause/bureau, écran éteint,
 LEDs par catégorie, dive bomb, repères de calibration, onglets, points de couleur → licence
-propriétaire + avis de mise à jour → v1.1.0 → tutoriel de prise en main → v1.2.0 → réglages par défaut du propriétaire → v1.2.1 → jeux beta (rF2, ACC, AC EVO, AMS2/PC2, iRacing, F1) → profils par jeu, jauges, écran de veille personnalisé → réglages d'horizon ATH, outil « Aligner les flèches » (tous jeux), forme libre du cache (rétro F1) → panneau de réglages maison (curseurs + cases), onglets par mode, guides et réglages conseillés par jeu → réglages du propriétaire par défaut (profils inclus), LEDs IS31 seulement, catégories LEDs personnalisées, raccourci bureau + lancement avec Windows → v1.3.0 → animation de veille nette (fond noir uni, reflet doux, logo bicubique) → v1.3.1 → reconnaissance de plusieurs VoCore (n° de série / port, identification) → v1.3.2 → (essais ETS2 / ATS abandonnés, retirés : voir l'historique git avant v1.3.3) → rétro actif sans le focus (4 écrans) → v1.3.3 → profils par voiture, agrandissement net, calibration automatique des flèches → v1.3.4.
+propriétaire + avis de mise à jour → v1.1.0 → tutoriel de prise en main → v1.2.0 → réglages par défaut du propriétaire → v1.2.1 → jeux beta (rF2, ACC, AC EVO, AMS2/PC2, iRacing, F1) → profils par jeu, jauges, écran de veille personnalisé → réglages d'horizon ATH, outil « Aligner les flèches » (tous jeux), forme libre du cache (rétro F1) → panneau de réglages maison (curseurs + cases), onglets par mode, guides et réglages conseillés par jeu → réglages du propriétaire par défaut (profils inclus), LEDs IS31 seulement, catégories LEDs personnalisées, raccourci bureau + lancement avec Windows → v1.3.0 → animation de veille nette (fond noir uni, reflet doux, logo bicubique) → v1.3.1 → reconnaissance de plusieurs VoCore (n° de série / port, identification) → v1.3.2 → (essais ETS2 / ATS abandonnés, retirés : voir l'historique git avant v1.3.3) → rétro actif sans le focus (4 écrans) → v1.3.3 → profils par voiture, agrandissement net, calibration automatique des flèches → v1.3.4 → « Très net » renforcé (CAS + masque flou), calibration 1 min, cache retiré dans les menus ACC / AC EVO.
 
 ## Git
 
