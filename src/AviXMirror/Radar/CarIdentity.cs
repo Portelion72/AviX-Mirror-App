@@ -35,6 +35,10 @@ public static class CarIdentity
         }
     }
 
+    /// <summary>Vrai si le jeu donne le modèle de la voiture (profils par voiture possibles).</summary>
+    public static bool Supported(RadarGame game) =>
+        game is RadarGame.LeMansUltimate or RadarGame.RFactor2 or RadarGame.AssettoCorsa;
+
     static string Slug(string text) =>
         Regex.Replace(text.Trim().ToLowerInvariant(), @"[^a-z0-9]+", "_").Trim('_');
 

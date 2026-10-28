@@ -24,6 +24,9 @@ public static class CarFronts
         bool Lit, Pen Outline);
 
     static readonly Lazy<List<Front>> All = new(Load);
+
+    /// <summary>Identifiants de toutes les voitures connues (« ferrari_499p »…), pour choisir un profil de voiture.</summary>
+    public static IEnumerable<string> Ids => All.Value.Select(f => f.Id).Distinct();
     static readonly Dictionary<string, Front?> Cache = new();
 
     /// <summary>Face avant correspondant à la voiture (catégorie « hyper », « gt3 »…), ou null.</summary>

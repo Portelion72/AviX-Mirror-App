@@ -50,8 +50,11 @@ en jeu depuis Claude : le dire clairement dans chaque compte rendu.
   (`CurrentGame`) et applique son profil (redémarrage seulement si le mode change).
 - **Profils par voiture** : `Settings.CarProfiles` (« Jeu|voiture », appliqué après le profil du jeu dans
   `ForGame(jeu, voiture)`), `Radar/CarIdentity` (LMU/rF2 : id `CarFronts` sinon nom sans numéro ; AC : dossier),
-  `GameActivity.PlayerCar` → `MirrorEngine.CurrentCar` / `ProfileCar` / `FollowCar`, liste « + Profil pour… »
-  dans `MainForm.RebuildProfileItems`. Calibrer / Aligner écrivent dans le profil de la voiture s'il existe.
+  `GameActivity.PlayerCar` → `MirrorEngine.CurrentCar` / `ProfileCar` / `FollowCar`. Interface : menus **Jeu** puis
+  **Voiture** (`MainForm.RebuildGameItems` / `RebuildCarItems` : voitures avec profil ●, en piste, déjà conduites
+  `Radar/SeenCars` dans `%LOCALAPPDATA%\AviXMirror\voitures.txt`, + `CarFronts.Ids` pour LMU ; `CarIdentity.Supported`).
+  `Settings.Set(jeu, voiture, …)` crée le profil de la voiture au premier réglage. Calibrer / Aligner : `CalibrationCar()`
+  (voiture en piste si elle a un profil ou si elle est choisie dans le menu).
 - Agrandissement : `CaptureUpscale` (Standard / Net / TresNet) → `FrameBuffer.UpscaleSharpness` :
   `Util/ImageSharpen` (accentuation type CAS sur la petite image ; netteté > 1 = CAS max + masque flou 3×3, « Très net » = 1,9) puis bicubique.
 - `Hud/HudAutoCalibrator` : calibration automatique des flèches (images + voitures pendant 30 s / 1 min / 2 min, au plus 240 images réduites à 480 px de large, score = détail
@@ -124,7 +127,7 @@ zone de capture au format VoCore → ATH Bosch (flèches, échelles 10 graduatio
 flèches) → ATH net en capture → cache avec marges et couleur du décor → faces avant LMU → rangement
 (retrait MJPEG, extension de fenêtre, capture d'écran entier) → veille/pause/bureau, écran éteint,
 LEDs par catégorie, dive bomb, repères de calibration, onglets, points de couleur → licence
-propriétaire + avis de mise à jour → v1.1.0 → tutoriel de prise en main → v1.2.0 → réglages par défaut du propriétaire → v1.2.1 → jeux beta (rF2, ACC, AC EVO, AMS2/PC2, iRacing, F1) → profils par jeu, jauges, écran de veille personnalisé → réglages d'horizon ATH, outil « Aligner les flèches » (tous jeux), forme libre du cache (rétro F1) → panneau de réglages maison (curseurs + cases), onglets par mode, guides et réglages conseillés par jeu → réglages du propriétaire par défaut (profils inclus), LEDs IS31 seulement, catégories LEDs personnalisées, raccourci bureau + lancement avec Windows → v1.3.0 → animation de veille nette (fond noir uni, reflet doux, logo bicubique) → v1.3.1 → reconnaissance de plusieurs VoCore (n° de série / port, identification) → v1.3.2 → (essais ETS2 / ATS abandonnés, retirés : voir l'historique git avant v1.3.3) → rétro actif sans le focus (4 écrans) → v1.3.3 → profils par voiture, agrandissement net, calibration automatique des flèches → v1.3.4 → « Très net » renforcé (CAS + masque flou), calibration 1 min, cache retiré dans les menus ACC / AC EVO.
+propriétaire + avis de mise à jour → v1.1.0 → tutoriel de prise en main → v1.2.0 → réglages par défaut du propriétaire → v1.2.1 → jeux beta (rF2, ACC, AC EVO, AMS2/PC2, iRacing, F1) → profils par jeu, jauges, écran de veille personnalisé → réglages d'horizon ATH, outil « Aligner les flèches » (tous jeux), forme libre du cache (rétro F1) → panneau de réglages maison (curseurs + cases), onglets par mode, guides et réglages conseillés par jeu → réglages du propriétaire par défaut (profils inclus), LEDs IS31 seulement, catégories LEDs personnalisées, raccourci bureau + lancement avec Windows → v1.3.0 → animation de veille nette (fond noir uni, reflet doux, logo bicubique) → v1.3.1 → reconnaissance de plusieurs VoCore (n° de série / port, identification) → v1.3.2 → (essais ETS2 / ATS abandonnés, retirés : voir l'historique git avant v1.3.3) → rétro actif sans le focus (4 écrans) → v1.3.3 → profils par voiture, agrandissement net, calibration automatique des flèches → v1.3.4 → « Très net » renforcé (CAS + masque flou), calibration 1 min, cache retiré dans les menus ACC / AC EVO → profils simplifiés (menus Jeu puis Voiture).
 
 ## Git
 

@@ -83,12 +83,15 @@ anti-triche, point de départ de l'ATH, cache arrondi pour F1…).
 Caméra AC, plus les onglets communs). Chaque valeur numérique a un curseur toujours visible et une case
 où taper la valeur ; l'explication du réglage survolé s'affiche en bas.
 
-**Profils par voiture** : en roulant, la liste *Profil* propose **« + Profil pour <voiture> »** (LMU : modèle
-reconnu, ex. Ferrari 499P ; Assetto Corsa : dossier de la voiture). Ce profil s'applique par-dessus celui du jeu
-dès que vous prenez cette voiture : zone de capture, cache, flèches, mode… propres à chaque cockpit.
+**Profils : jeu puis voiture** : sous l'aperçu, deux menus. **Jeu** : *Tous les jeux* (réglages communs) ou
+un jeu. **Voiture** (LMU, rFactor 2, Assetto Corsa) : *Toutes (réglages du jeu)* ou une voiture — pour LMU
+toutes les voitures connues, sinon celles déjà conduites ; *(en piste)* marque celle que vous conduisez, ●
+celles qui ont leurs propres réglages. Il suffit de modifier un réglage (zone de capture, cache, flèches,
+mode…) avec une voiture choisie pour qu'il ne vaille que pour elle ; le reste vient du jeu. *Calibrer* et
+*Aligner les flèches* enregistrent dans la voiture choisie si c'est celle en piste.
 
 **Agrandissement de l'image** (onglet *Capture*) : *Net* (par défaut) accentue les contours de la petite capture
-puis l'agrandit en bicubique, pour un rétro plus piqué sur le VoCore ; *Très net* accentue davantage ; *Standard*
+puis l'agrandit en bicubique, pour un rétro plus piqué sur le VoCore ; *Très net* accentue nettement plus (accentuation maximale + masque flou) ; *Standard*
 garde l'ancien rendu.
 
 **Placer les flèches sur les voitures en Capture** (tous les jeux ; réglages de l'onglet *ATH*, propres

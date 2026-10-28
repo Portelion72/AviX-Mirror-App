@@ -188,6 +188,8 @@ public sealed class MirrorEngine : IDisposable
         if (car == null || car == CurrentCar)
             return;
         CurrentCar = car;
+        if (CurrentGame is { } game)
+            SeenCars.Add(game, car);
         var effective = EffectiveFor(CurrentGame);
         if (effective.Mode != _settings.Mode)
         {

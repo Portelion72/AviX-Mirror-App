@@ -662,16 +662,19 @@ public sealed class Settings
     public void Set(RadarGame? game, string propertyName, object? value) => Set(game, null, propertyName, value);
 
     /// <summary>
-    /// Modifie un réglage : pour la voiture (si elle a un profil) ou le jeu donné si le réglage est « par jeu »,
-    /// sinon pour tous les jeux.
+    /// Modifie un réglage : pour la voiture (son profil est créé au premier réglage) ou le jeu donné si le réglage
+    /// est « par jeu », sinon pour tous les jeux.
     /// </summary>
     public void Set(RadarGame? game, string? car, string propertyName, object? value)
     {
         var property = typeof(Settings).GetProperty(propertyName);
         if (property == null)
             return;
-        if (game is { } cg && car != null && IsPerGame(propertyName) && CarProfiles.TryGetValue(CarProfileKey(cg, car), out var carValues))
+        if (game is { } cg && car != null && IsPerGame(propertyName))
         {
+            var carKey = CarProfileKey(cg, car);
+            if (!CarProfiles.TryGetValue(carKey, out var carValues))
+                CarProfiles[carKey] = carValues = new Dictionary<string, JsonElement>();
             carValues[propertyName] = JsonSerializer.SerializeToElement(value, property.PropertyType, JsonOptions);
             return;
         }
