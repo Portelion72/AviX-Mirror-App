@@ -16,6 +16,7 @@ public sealed class AcEvoTelemetry : IRadarTelemetry
     const int GStatus = 4;              // 0 éteint, 1 replay, 2 en course, 3 pause
     const int GPlayerCarId = 24;        // uint64 × 2
     const int GNpos = 1244;             // progression du joueur sur le tour (0..1)
+    const int GCarModel = 3086;         // char[33] : voiture du joueur
     const int GInPitBox = 3119;
     const int GInPitLane = 3120;
     const int GCarCoordinates = 3124;   // float[60][3]
@@ -141,6 +142,7 @@ public sealed class AcEvoTelemetry : IRadarTelemetry
                 Orientation = orientation,
                 Left = WorldMath.LeftOf(orientation),
                 LapDist = isPlayer && trackLength > 0 ? F(_g, GNpos) * trackLength : double.NaN,
+                Model = isPlayer ? Str(_g, GCarModel, 33) : "",
                 InPits = isPlayer && (_g[GInPitBox] != 0 || _g[GInPitLane] != 0),
             };
             world.Vehicles.Add(vehicle);

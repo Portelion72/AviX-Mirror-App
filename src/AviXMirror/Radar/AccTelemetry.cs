@@ -29,6 +29,7 @@ public sealed class AccTelemetry : IRadarTelemetry
     const int PhysicsSize = 220;
 
     // Page « static ».
+    const int SCarModel = 68;           // wchar[33] (voiture du joueur, ex. « ferrari_296_gt3 »)
     const int STrack = 134;             // wchar[33]
     const int STrackLength = 520;
     const int StaticSize = 524;
@@ -132,6 +133,7 @@ public sealed class AccTelemetry : IRadarTelemetry
                 // Seule la progression du joueur est connue : elle suffit à apprendre le tracé.
                 LapDist = isPlayer && trackLength > 0 ? F(_g, GNormalizedPosition) * trackLength : double.NaN,
                 Class = "GT3",
+                Model = isPlayer ? W(_s, SCarModel, 33) : "",
                 InPits = isPlayer && I(_g, GIsInPit) != 0,
             };
             world.Vehicles.Add(vehicle);

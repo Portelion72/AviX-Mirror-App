@@ -18,7 +18,8 @@ public sealed class Ams2Telemetry : IRadarTelemetry
     const int ParticipantSize = 100;
     const int PActive = 0, PName = 1, PPosition = 68, PLapDistance = 80;
     const int MaxParticipants = 64;
-    const int OCarClassName = 6508;         // char[64] (voiture du joueur)
+    const int OCarName = 6444;              // char[64] (modèle de la voiture du joueur)
+    const int OCarClassName = 6508;         // char[64] (catégorie de la voiture du joueur)
     const int OTrackLocation = 6576;        // char[64]
     const int OTrackLength = 6704;
     const int OPitMode = 6808;
@@ -117,6 +118,7 @@ public sealed class Ams2Telemetry : IRadarTelemetry
                 Left = WorldMath.LeftOf(orientation),
                 LapDist = lapDistance >= 0 && trackLength > 0 && lapDistance <= trackLength ? lapDistance : double.NaN,
                 Class = isPlayer ? Str(OCarClassName, 64) : "",
+                Model = isPlayer ? Str(OCarName, 64) : "",
                 Name = Str(o + PName, 64),
                 InPits = isPlayer && I(OPitMode) is 1 or 2 or 3,
             };

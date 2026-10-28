@@ -29,6 +29,7 @@ public sealed partial class IRacingTelemetry : IRadarTelemetry
     double _trackLength;
     string _trackName = "";
     readonly Dictionary<int, string> _classes = new();
+    readonly Dictionary<int, string> _models = new();
     byte[] _buffer = Array.Empty<byte>();
 
     public string GameName => "iRacing";
@@ -136,6 +137,7 @@ public sealed partial class IRacingTelemetry : IRadarTelemetry
             Orientation = orientation,
             Left = WorldMath.Vec(1, 0, 0),
             Class = _classes.GetValueOrDefault(player, ""),
+            Model = _models.GetValueOrDefault(player, ""),
             InPits = Bool("CarIdxOnPitRoad", player),
         };
         world.Vehicles.Add(playerVehicle);
@@ -154,6 +156,7 @@ public sealed partial class IRacingTelemetry : IRadarTelemetry
                 Orientation = orientation,
                 Left = WorldMath.Vec(1, 0, 0),
                 Class = _classes.GetValueOrDefault(car, ""),
+                Model = _models.GetValueOrDefault(car, ""),
                 InPits = Bool("CarIdxOnPitRoad", car),
                 Place = Int("CarIdxPosition", car),
             });
@@ -211,6 +214,7 @@ public sealed partial class IRacingTelemetry : IRadarTelemetry
             _trackName = name.Groups[1].Value.Trim();
 
         _classes.Clear();
+        _models.Clear();
         foreach (var block in yaml.Split("- CarIdx:").Skip(1))
         {
             int end = block.IndexOfAny(new[] { '\r', '\n' });
@@ -219,6 +223,9 @@ public sealed partial class IRacingTelemetry : IRadarTelemetry
             var cls = CarClassRegex().Match(block);
             var car = CarNameRegex().Match(block);
             _classes[idx] = ((cls.Success ? cls.Groups[1].Value : "") + " " + (car.Success ? car.Groups[1].Value : "")).Trim();
+            var model = CarModelRegex().Match(block);
+            if (model.Success)
+                _models[idx] = model.Groups[1].Value.Trim();
         }
     }
 
@@ -233,6 +240,9 @@ public sealed partial class IRacingTelemetry : IRadarTelemetry
 
     [GeneratedRegex(@"CarScreenNameShort:\s*(.+)")]
     private static partial Regex CarNameRegex();
+
+    [GeneratedRegex(@"CarScreenName:\s*(.+)")]
+    private static partial Regex CarModelRegex();
 
     /// <summary>Copie le tampon de variables le plus récent (sur 4), en vérifiant qu'il n'a pas changé pendant la copie.</summary>
     bool ReadLatestBuffer()

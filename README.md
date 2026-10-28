@@ -84,7 +84,7 @@ Caméra AC, plus les onglets communs). Chaque valeur numérique a un curseur tou
 où taper la valeur ; l'explication du réglage survolé s'affiche en bas.
 
 **Profils : jeu puis voiture** : sous l'aperçu, deux menus. **Jeu** : *Tous les jeux* (réglages communs) ou
-un jeu. **Voiture** (LMU, rFactor 2, Assetto Corsa) : *Toutes (réglages du jeu)* ou une voiture — pour LMU
+un jeu. **Voiture** (tous les jeux sauf F1, où toutes les monoplaces ont le même cockpit) : *Toutes (réglages du jeu)* ou une voiture — pour LMU
 toutes les voitures connues, sinon celles déjà conduites ; *(en piste)* marque celle que vous conduisez, ●
 celles qui ont leurs propres réglages. Il suffit de modifier un réglage (zone de capture, cache, flèches,
 mode…) avec une voiture choisie pour qu'il ne vaille que pour elle ; le reste vient du jeu. *Calibrer* et
