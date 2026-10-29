@@ -184,7 +184,12 @@ Dans tous les cas, l'image part **en USB vers le VoCore**, avec son pilote USB :
 
 Téléchargez l'artefact `AviXMirror-win-x64` depuis l'onglet **Actions** du dépôt GitHub (ou
 **Releases**). Dézippez-le dans un dossier : **gardez `libusb-1.0.dll` à côté de `AviXMirror.exe`**.
-Les réglages sont enregistrés dans `AviXMirror.settings.json`, dans le même dossier.
+Les réglages sont enregistrés dans `%LOCALAPPDATA%\AviXMirror\AviXMirror.settings.json` : ils sont **conservés
+d'une mise à jour à l'autre**, même si vous extrayez la nouvelle version dans un autre dossier ou supprimez
+l'ancienne. Au premier lancement de la v1.3.6, les réglages d'une version précédente (à côté de l'ancien exe,
+retrouvé par le raccourci du bureau, le lancement avec Windows, ou dans Téléchargements / Bureau / Documents)
+sont repris automatiquement. Une copie de secours (`AviXMirror.settings.backup.json`, même dossier) est faite à
+chaque lancement et reprise si le fichier est abîmé. Le raccourci du bureau suit la nouvelle version.
 
 ## Jeux pris en charge
 
@@ -255,7 +260,7 @@ droite s'affiche.
 
 **Vibreurs aux couleurs du circuit**, dessinés seulement dans les virages : jaune/bleu au Mans,
 vert/blanc/rouge à Monza et Imola, rouge/jaune à Spa, blanc/vert/jaune à Interlagos, bleu/rouge au
-Paul Ricard, noir/blanc à Silverstone, rouge/blanc/noir à Lusail, rouge/blanc ailleurs. Les couleurs sont dans `AviXMirror.kerbs.v2.json` (créé à côté de l'exe au premier
+Paul Ricard, noir/blanc à Silverstone, rouge/blanc/noir à Lusail, rouge/blanc ailleurs. Les couleurs sont dans `AviXMirror.kerbs.v2.json` (créé dans `%LOCALAPPDATA%\AviXMirror` au premier
 lancement) : chaque ligne associe un mot du nom du circuit à une suite de couleurs, que vous pouvez
 modifier ou compléter, par exemple `"interlagos": ["#FFD700", "#009C3B"]`. Tous les circuits de LMU y
 sont listés, DLC compris (WEC, ELMS, US Track Pass), ainsi que les principaux circuits d'Assetto Corsa.

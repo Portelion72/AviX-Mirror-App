@@ -63,7 +63,9 @@ en jeu depuis Claude : le dire clairement dans chaque compte rendu.
 - Éditeurs (`Ui/Editors.cs`) : `GaugeAttribute`, `ColorHexEditor`, `ImageFileEditor` (repris par
   `SettingsPanel` ; `GaugeEditor` n'est plus utilisé par la fenêtre principale). Écran de veille
   personnalisé (`StandbyImage`, GIF animé) avec petit logo AVIX en bas à droite (`Splash.DrawCustom`).
-- `Settings.cs` : tous les réglages (JSON à côté de l'exe, `SettingsVersion` + migrations),
+- `Settings.cs` : tous les réglages (JSON dans `%LOCALAPPDATA%\AviXMirror` via `Util/UserData` : repris au 1er lancement
+  d'une ancienne installation — exe, cible du raccourci / clé Run, Téléchargements… —, écriture atomique, copie de secours
+  `.backup.json` ; `SettingsVersion` + migrations),
   enums, `MaskSample`, `LedClassColor`, `Tabs`. Valeurs par défaut = réglages du propriétaire ; profils
   par défaut dans `Assets/DefaultProfiles.json` (ressource `Defaults.Profiles.json`). `Settings.FirstRun`
   (pas de fichier) → tutoriel, puis options raccourci bureau / lancement avec Windows
@@ -128,7 +130,7 @@ zone de capture au format VoCore → ATH Bosch (flèches, échelles 10 graduatio
 flèches) → ATH net en capture → cache avec marges et couleur du décor → faces avant LMU → rangement
 (retrait MJPEG, extension de fenêtre, capture d'écran entier) → veille/pause/bureau, écran éteint,
 LEDs par catégorie, dive bomb, repères de calibration, onglets, points de couleur → licence
-propriétaire + avis de mise à jour → v1.1.0 → tutoriel de prise en main → v1.2.0 → réglages par défaut du propriétaire → v1.2.1 → jeux beta (rF2, ACC, AC EVO, AMS2/PC2, iRacing, F1) → profils par jeu, jauges, écran de veille personnalisé → réglages d'horizon ATH, outil « Aligner les flèches » (tous jeux), forme libre du cache (rétro F1) → panneau de réglages maison (curseurs + cases), onglets par mode, guides et réglages conseillés par jeu → réglages du propriétaire par défaut (profils inclus), LEDs IS31 seulement, catégories LEDs personnalisées, raccourci bureau + lancement avec Windows → v1.3.0 → animation de veille nette (fond noir uni, reflet doux, logo bicubique) → v1.3.1 → reconnaissance de plusieurs VoCore (n° de série / port, identification) → v1.3.2 → (essais ETS2 / ATS abandonnés, retirés : voir l'historique git avant v1.3.3) → rétro actif sans le focus (4 écrans) → v1.3.3 → profils par voiture, agrandissement net, calibration automatique des flèches → v1.3.4 → « Très net » renforcé (CAS + masque flou), calibration 1 min, cache retiré dans les menus ACC / AC EVO → profils simplifiés (menus Jeu puis Voiture) → détection de la voiture dans ACC, AC EVO, AMS2, iRacing → v1.3.5.
+propriétaire + avis de mise à jour → v1.1.0 → tutoriel de prise en main → v1.2.0 → réglages par défaut du propriétaire → v1.2.1 → jeux beta (rF2, ACC, AC EVO, AMS2/PC2, iRacing, F1) → profils par jeu, jauges, écran de veille personnalisé → réglages d'horizon ATH, outil « Aligner les flèches » (tous jeux), forme libre du cache (rétro F1) → panneau de réglages maison (curseurs + cases), onglets par mode, guides et réglages conseillés par jeu → réglages du propriétaire par défaut (profils inclus), LEDs IS31 seulement, catégories LEDs personnalisées, raccourci bureau + lancement avec Windows → v1.3.0 → animation de veille nette (fond noir uni, reflet doux, logo bicubique) → v1.3.1 → reconnaissance de plusieurs VoCore (n° de série / port, identification) → v1.3.2 → (essais ETS2 / ATS abandonnés, retirés : voir l'historique git avant v1.3.3) → rétro actif sans le focus (4 écrans) → v1.3.3 → profils par voiture, agrandissement net, calibration automatique des flèches → v1.3.4 → « Très net » renforcé (CAS + masque flou), calibration 1 min, cache retiré dans les menus ACC / AC EVO → profils simplifiés (menus Jeu puis Voiture) → détection de la voiture dans ACC, AC EVO, AMS2, iRacing → v1.3.5 → réglages conservés aux mises à jour (%LOCALAPPDATA%, reprise de l'ancienne installation).
 
 ## Git
 

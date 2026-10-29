@@ -723,8 +723,14 @@ public sealed class Settings
         Converters = { new JsonStringEnumConverter() },
     };
 
-    public static string FilePath =>
-        Path.Combine(AppContext.BaseDirectory, "AviXMirror.settings.json");
+    /// <summary>
+    /// Réglages dans %LOCALAPPDATA%\AviXMirror (conservés d'une mise à jour à l'autre) ; repris d'une ancienne
+    /// installation au premier lancement (voir <see cref="Util.UserData"/>).
+    /// </summary>
+    public static string FilePath => Util.UserData.Path("AviXMirror.settings.json");
+
+    static string BackupPath => Path.Combine(Util.UserData.Folder, "AviXMirror.settings.backup.json");
+    static bool _backedUp, _restoring;
 
     public static Settings Load()
     {
@@ -762,7 +768,24 @@ public sealed class Settings
         }
         catch
         {
-            // Fichier corrompu : on repart des valeurs par défaut.
+            // Fichier corrompu : on reprend la copie de secours, sinon les valeurs par défaut.
+            if (!_restoring && File.Exists(BackupPath))
+            {
+                try
+                {
+                    _restoring = true;
+                    File.Copy(BackupPath, FilePath, overwrite: true);
+                    return Load();
+                }
+                catch
+                {
+                    // Copie de secours inutilisable.
+                }
+                finally
+                {
+                    _restoring = false;
+                }
+            }
         }
         FirstRun = true;
         return new Settings { SettingsVersion = CurrentVersion };
@@ -776,11 +799,18 @@ public sealed class Settings
     {
         try
         {
-            File.WriteAllText(FilePath, JsonSerializer.Serialize(this, JsonOptions));
+            var path = FilePath;
+            // Copie de secours des réglages du lancement précédent (une fois par lancement).
+            if (!_backedUp && File.Exists(path))
+            {
+                _backedUp = true;
+                File.Copy(path, BackupPath, overwrite: true);
+            }
+            Util.UserData.WriteAllText(path, JsonSerializer.Serialize(this, JsonOptions));
         }
         catch
         {
-            // Dossier en lecture seule : les réglages ne seront pas conservés.
+            // Dossier inaccessible : les réglages ne seront pas conservés.
         }
     }
 

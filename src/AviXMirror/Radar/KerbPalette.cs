@@ -47,7 +47,7 @@ public static class KerbPalette
         (new[] { "suzuka" }, new[] { Red, White }),
     };
 
-    public static string FilePath => Path.Combine(AppContext.BaseDirectory, "AviXMirror.kerbs.v2.json");
+    public static string FilePath => Util.UserData.Path("AviXMirror.kerbs.v2.json");
 
     static Dictionary<string, string[]>? _table;
     static readonly Dictionary<string, Color[]> Cache = new();
@@ -94,7 +94,7 @@ public static class KerbPalette
             }
             else
             {
-                File.WriteAllText(FilePath, JsonSerializer.Serialize(_table, new JsonSerializerOptions { WriteIndented = true }));
+                Util.UserData.WriteAllText(FilePath, JsonSerializer.Serialize(_table, new JsonSerializerOptions { WriteIndented = true }));
             }
         }
         catch

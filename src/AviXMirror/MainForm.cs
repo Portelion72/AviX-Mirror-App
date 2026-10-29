@@ -55,6 +55,8 @@ public sealed class MainForm : Form
         Util.WindowsIntegration.RefreshStartWithWindows();
         _settings.StartWithWindows = Util.WindowsIntegration.StartsWithWindows;
         Theme.Configure(_settings.AccentColor, _settings.UiFont);
+        // Nouvelle version extraite ailleurs : le raccourci du bureau suit.
+        Util.WindowsIntegration.RefreshDesktopShortcut(Theme.CreateAppIcon());
 
         Text = "AVIX_3D Mirror";
         Icon = Theme.CreateAppIcon();

@@ -58,6 +58,54 @@ public static class WindowsIntegration
             SetStartWithWindows(true);
     }
 
+    /// <summary>
+    /// Emplacements de l'exe d'une installation précédente : lancement avec Windows et cible du raccourci du bureau
+    /// (pour y reprendre les réglages après une mise à jour extraite ailleurs). À lire avant de les mettre à jour.
+    /// </summary>
+    public static IEnumerable<string> PreviousExePaths()
+    {
+        var paths = new List<string>();
+        try
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(RunKey);
+            if (key?.GetValue(RunName) is string run && run.Trim().Trim('"') is { Length: > 0 } exe)
+                paths.Add(exe);
+        }
+        catch
+        {
+            // Registre illisible : ignoré.
+        }
+        if (ShortcutTarget() is { } target)
+            paths.Add(target);
+        return paths;
+    }
+
+    static string? ShortcutTarget()
+    {
+        if (!HasDesktopShortcut)
+            return null;
+        try
+        {
+            var link = (IShellLinkW)new ShellLink();
+            ((IPersistFile)link).Load(ShortcutPath, 0);
+            var path = new StringBuilder(260);
+            link.GetPath(path, path.Capacity, IntPtr.Zero, 0);
+            Marshal.ReleaseComObject(link);
+            return path.Length > 0 ? path.ToString() : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Si le raccourci du bureau existe, le fait pointer vers l'exe actuel (nouvelle version extraite ailleurs).</summary>
+    public static void RefreshDesktopShortcut(Icon? icon)
+    {
+        if (HasDesktopShortcut && !string.Equals(ShortcutTarget(), ExePath, StringComparison.OrdinalIgnoreCase))
+            CreateDesktopShortcut(icon);
+    }
+
     // ---------- Raccourci sur le bureau ----------
 
     public static bool HasDesktopShortcut => File.Exists(ShortcutPath);
