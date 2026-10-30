@@ -104,7 +104,11 @@ public static class Theme
 
     static Image? _logo;
 
-    /// <summary>Logo AVIX (« SIMRACING & IMPRESSION 3D »), fond transparent, texte clair pour fond sombre.</summary>
+    /// <summary>
+    /// Logo AVIX (« SIMRACING & IMPRESSION 3D »), fond transparent, texte clair pour fond sombre. Rendu net en
+    /// 1408 × 440 depuis la version vectorielle (Assets/avix-logo.svg, tracée par tools/logo-vectorize.py) : il est
+    /// toujours réduit à l'affichage, jamais agrandi.
+    /// </summary>
     public static Image Logo
     {
         get
