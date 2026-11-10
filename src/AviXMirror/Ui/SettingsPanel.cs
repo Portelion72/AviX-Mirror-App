@@ -11,6 +11,14 @@ namespace AviXMirror
         public ModeOnlyAttribute(params MirrorMode[] modes) => Modes = modes;
         public MirrorMode[] Modes { get; }
     }
+
+    /// <summary>Réglage affiché seulement pour une version des LEDs (ex. port et broche de l'Arduino).</summary>
+    [AttributeUsage(AttributeTargets.Property)]
+    public sealed class LedHardwareOnlyAttribute : Attribute
+    {
+        public LedHardwareOnlyAttribute(LedHardware hardware) => Hardware = hardware;
+        public LedHardware Hardware { get; }
+    }
 }
 
 namespace AviXMirror.Ui
@@ -46,6 +54,9 @@ namespace AviXMirror.Ui
 
         /// <summary>Bouton « Identifier les écrans » (le moteur doit libérer l'écran : géré par la fenêtre principale).</summary>
         public event Action? IdentifyScreens;
+
+        /// <summary>« Programmer l'Arduino » : port choisi (vide = automatique).</summary>
+        public event Action<string>? FlashArduino;
 
         public SettingsPanel()
         {
@@ -102,7 +113,8 @@ namespace AviXMirror.Ui
             _table.RowCount = 0;
             _tips.RemoveAll();
 
-            foreach (var property in PropertiesOf(tab, mode))
+            foreach (var property in PropertiesOf(tab, mode)
+                         .Where(p => p.GetCustomAttribute<LedHardwareOnlyAttribute>() is not { } only || only.Hardware == view.LedHardware))
                 AddRow(property);
 
             _help.Text = "Survolez un réglage pour afficher son explication.";
@@ -205,6 +217,9 @@ namespace AviXMirror.Ui
 
             if (name == nameof(Settings.VoCoreDevice))
                 return ScreenPicker(name, value as string ?? "");
+
+            if (name == nameof(Settings.LedArduinoPort))
+                return ArduinoPortPicker(name, value as string ?? "");
 
             if (type == typeof(string) && editorType.Contains(nameof(ColorHexEditor)))
                 return ColorEditor(name, value as string ?? "");
@@ -401,6 +416,62 @@ namespace AviXMirror.Ui
             };
             Fill();
             panel.Controls.AddRange(new Control[] { combo, refresh, identify });
+            return panel;
+        }
+
+        /// <summary>Port COM de l'Arduino Nano (automatique ou choisi), « Actualiser » et « Programmer l'Arduino ».</summary>
+        Control ArduinoPortPicker(string name, string current)
+        {
+            var panel = new Panel { Height = 28, BackColor = Color.Transparent };
+            var combo = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Theme.SurfaceRaised,
+                ForeColor = Theme.Text,
+                Font = Theme.Font(9f),
+                Width = 220,
+                Location = new Point(0, 2),
+            };
+            var refresh = new FlatButton { Text = "Actualiser", Width = 96, Height = 26, Location = new Point(228, 1) };
+            var flash = new FlatButton { Text = "Programmer l'Arduino", Width = 170, Height = 26, Location = new Point(330, 1) };
+
+            void Fill()
+            {
+                bool wasLoading = _loading;
+                _loading = true;
+                combo.Items.Clear();
+                combo.Items.Add(new ScreenItem("", "Automatique"));
+                var selected = (_view?.LedArduinoPort ?? current).Trim();
+                int index = 0;
+                foreach (var port in System.IO.Ports.SerialPort.GetPortNames().Distinct().OrderBy(p => p))
+                {
+                    combo.Items.Add(new ScreenItem(port, port + (port == Output.ArduinoLeds.LastPort ? " (Nano trouvé)" : "")));
+                    if (string.Equals(port, selected, StringComparison.OrdinalIgnoreCase))
+                        index = combo.Items.Count - 1;
+                }
+                if (index == 0 && selected.Length > 0)
+                {
+                    combo.Items.Add(new ScreenItem(selected, $"{selected} (non branché)"));
+                    index = combo.Items.Count - 1;
+                }
+                combo.SelectedIndex = index;
+                _loading = wasLoading;
+            }
+
+            combo.SelectedIndexChanged += (_, _) =>
+            {
+                if (combo.SelectedItem is ScreenItem item)
+                    Emit(name, item.Key, true);
+            };
+            refresh.Click += (_, _) => Fill();
+            flash.Click += (_, _) =>
+            {
+                FlashArduino?.Invoke(combo.SelectedItem is ScreenItem item ? item.Key : "");
+                Fill();
+            };
+            Fill();
+            panel.Controls.AddRange(new Control[] { combo, refresh, flash });
             return panel;
         }
 

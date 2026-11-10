@@ -34,6 +34,13 @@ public enum LedChainOrder
     GaucheDroite,
 }
 
+/// <summary>Carte qui pilote les LEDs : carte MPro du VoCore (I2C) ou Arduino Nano en USB (premiers rétros).</summary>
+public enum LedHardware
+{
+    CarteMPro,
+    ArduinoNano,
+}
+
 public enum LedProtocol
 {
     Is31Compatible,
@@ -447,8 +454,27 @@ public sealed class Settings
     // ---------- LEDs ----------
 
     [Category(Tabs.Leds), DisplayName("Activées")]
-    [Description("LEDs WS2812B pilotées par la carte MPro du VoCore : s'allument quand une voiture arrive ou est à côté de vous.")]
+    [Description("LEDs WS2812B : s'allument quand une voiture arrive ou est à côté de vous.")]
     public bool LedsEnabled { get; set; } = true;
+
+    [Category(Tabs.Leds), DisplayName("Version du rétro")]
+    [Description("Carte qui pilote les LEDs. CarteMPro : rétros récents, LEDs branchées sur la carte du VoCore. " +
+                 "ArduinoNano : premiers rétros, LEDs pilotées par un Arduino Nano branché en USB (programme AviX à " +
+                 "installer une fois avec « Programmer l'Arduino »).")]
+    public LedHardware LedHardware { get; set; } = LedHardware.CarteMPro;
+
+    [Category(Tabs.Leds), DisplayName("Port de l'Arduino")]
+    [Description("Port série (COM) du Nano. Automatique : AviX Mirror cherche le Nano qui répond. « Programmer l'Arduino » " +
+                 "installe le programme LEDs AviX sur le Nano (à faire une fois, ou s'il avait un autre programme, ex. SimHub).")]
+    [LedHardwareOnly(LedHardware.ArduinoNano)]
+    public string LedArduinoPort { get; set; } = "";
+
+    [Category(Tabs.Leds), DisplayName("Broche des LEDs (Arduino)")]
+    [Description("Broche du Nano reliée au fil de données des LEDs : D2 sur les rétros AVIX. À changer seulement si " +
+                 "les LEDs sont branchées ailleurs (2 à 13).")]
+    [Gauge(2, 13, 1), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]
+    [LedHardwareOnly(LedHardware.ArduinoNano)]
+    public int LedArduinoPin { get; set; } = 2;
 
     [Category(Tabs.Leds), DisplayName("LEDs par côté")]
     [Gauge(1, 32, 1), Editor(typeof(Ui.GaugeEditor), typeof(System.Drawing.Design.UITypeEditor))]

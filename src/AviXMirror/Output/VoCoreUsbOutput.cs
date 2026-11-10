@@ -63,7 +63,7 @@ public sealed class VoCoreUsbOutput : IDisposable
                     Thread.Sleep(2000);
                     continue;
                 }
-                if (_settings.LedsEnabled)
+                if (_settings.LedsEnabled && _settings.LedHardware == LedHardware.CarteMPro)
                     LedTestSweep();
             }
 

@@ -26,11 +26,15 @@
     <EmbeddedResource Include="Assets\avix-logo.png" LogicalName="Brand.avix-logo.png" />
     <EmbeddedResource Include="Radar\CarFronts.txt" LogicalName="Radar.CarFronts.txt" />
     <EmbeddedResource Include="Assets\DefaultProfiles.json" LogicalName="Defaults.Profiles.json" />
+    <!-- Programme LEDs du Nano, compilé par la CI (arduino-cli) avant la publication. -->
+    <EmbeddedResource Include="..\..\integrations\Arduino\build\AviXMirrorLeds.ino.hex" LogicalName="Arduino.AviXMirrorLeds.hex"
+                      Condition="Exists('..\..\integrations\Arduino\build\AviXMirrorLeds.ino.hex')" />
     <None Include="native\libusb-NOTICE.txt" Link="libusb-NOTICE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Vortice.Direct3D11" Version="3.6.2" />
+    <PackageReference Include="System.IO.Ports" Version="8.0.0" />
   </ItemGroup>
 
 </Project>

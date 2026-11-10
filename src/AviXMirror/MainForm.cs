@@ -76,6 +76,7 @@ public sealed class MainForm : Form
         // Curseurs : la valeur s'applique en direct pendant qu'on fait glisser.
         _panel.ValueChanged += OnPropertyChanged;
         _panel.IdentifyScreens += IdentifyScreens;
+        _panel.FlashArduino += FlashArduino;
         SetupProfiles();
 
         var body = new TableLayoutPanel
@@ -626,6 +627,14 @@ public sealed class MainForm : Form
             BeginInvoke(() => _panel.Build(_view, _tabs.Selected, _view.Mode));
             Refresh();
         }
+        if (name is nameof(Settings.LedHardware) or nameof(Settings.LedsEnabled))
+        {
+            // Autre carte de LEDs : réglages Arduino affichés ou masqués, sortie des LEDs relancée.
+            BeginInvoke(RefreshView);
+            if (_engine.Running)
+                ApplySettings();
+            return;
+        }
         if (name == nameof(Settings.VoCoreDevice) && _engine.Running)
         {
             ApplySettings(); // autre écran : la sortie USB est rouverte
@@ -832,6 +841,69 @@ public sealed class MainForm : Form
                                                    (r.Shown ? "" : " — occupé (SimHub ?), numéro non affiché"))) +
               "\n\nChoisissez dans « Écran utilisé » celui qui doit afficher le rétro.";
         MessageBox.Show(this, text, "Identifier les écrans", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
+
+    /// <summary>
+    /// Installe le programme LEDs AviX sur l'Arduino Nano (premiers rétros). Le rétro est arrêté pendant
+    /// l'opération pour libérer le port série, puis relancé.
+    /// </summary>
+    void FlashArduino(string port)
+    {
+        var firmware = Output.ArduinoFlasher.Firmware();
+        if (firmware == null)
+        {
+            MessageBox.Show(this, "Le programme Arduino n'est pas inclus dans cette version d'AviX Mirror.",
+                "Programmer l'Arduino", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+        var ports = System.IO.Ports.SerialPort.GetPortNames().Distinct().OrderBy(p => p).ToList();
+        if (string.IsNullOrWhiteSpace(port))
+        {
+            if (Output.ArduinoLeds.LastPort is { } found && ports.Contains(found))
+                port = found;
+            else if (ports.Count == 1)
+                port = ports[0];
+            else
+            {
+                MessageBox.Show(this, ports.Count == 0
+                        ? "Aucun port série trouvé. Branchez le Nano en USB (câble de données, pas seulement de charge). " +
+                          "Avec un clone, le pilote CH340 peut être nécessaire (Windows Update l'installe en général)."
+                        : "Plusieurs ports série : choisissez celui du Nano dans « Port de l'Arduino » (débranchez-le et " +
+                          "rebranchez-le puis « Actualiser » pour voir lequel apparaît), puis recommencez.",
+                    "Programmer l'Arduino", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+        }
+        if (MessageBox.Show(this, $"Installer le programme LEDs AviX sur l'Arduino Nano ({port}) ?\n\n" +
+                                  "Le programme actuel du Nano (par exemple celui de SimHub) sera remplacé. Le rétro est arrêté " +
+                                  "quelques secondes pendant l'opération.",
+                "Programmer l'Arduino", MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK)
+            return;
+
+        bool wasRunning = _engine.Running;
+        if (wasRunning)
+            _engine.Stop();
+        Cursor = Cursors.WaitCursor;
+        try
+        {
+            Output.ArduinoFlasher.Flash(port, firmware);
+            MessageBox.Show(this, $"Programme installé sur le Nano ({port}). Les LEDs utilisent la broche " +
+                                  $"D{Math.Clamp(_settings.LedArduinoPin, 2, 13)} ; elles s'allument une à une au démarrage du rétro.",
+                "Programmer l'Arduino", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, "Échec : " + ex.Message + "\n\nVérifiez que c'est bien le port du Nano, fermez SimHub et " +
+                                  "l'Arduino IDE, puis réessayez (en débranchant / rebranchant le Nano si besoin).",
+                "Programmer l'Arduino", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+        finally
+        {
+            Cursor = Cursors.Default;
+            if (wasRunning)
+                _engine.Start(_settings);
+            RefreshStatus();
+        }
     }
 
     void InstallAcApp()

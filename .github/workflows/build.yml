@@ -25,6 +25,17 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
+      - uses: arduino/setup-arduino-cli@v2
+
+      - name: Programme LEDs Arduino Nano
+        shell: pwsh
+        run: |
+          arduino-cli core update-index
+          arduino-cli core install arduino:avr
+          arduino-cli lib install "Adafruit NeoPixel"
+          arduino-cli compile --fqbn arduino:avr:nano --output-dir integrations/Arduino/build integrations/Arduino/AviXMirrorLeds
+          if (-not (Test-Path integrations/Arduino/build/AviXMirrorLeds.ino.hex)) { throw "AviXMirrorLeds.ino.hex manquant" }
+
       - name: Numéro de version
         id: version
         shell: pwsh
@@ -51,6 +62,8 @@ jobs:
           Copy-Item THIRD-PARTY-NOTICES.md publish/
           New-Item -ItemType Directory -Force publish/AssettoCorsa-app-CSP | Out-Null
           Copy-Item -Recurse integrations/AssettoCorsa/AviXMirror publish/AssettoCorsa-app-CSP/
+          New-Item -ItemType Directory -Force publish/Arduino-Nano-LEDs | Out-Null
+          Copy-Item -Recurse integrations/Arduino/AviXMirrorLeds publish/Arduino-Nano-LEDs/
 
       - uses: actions/upload-artifact@v4
         with:

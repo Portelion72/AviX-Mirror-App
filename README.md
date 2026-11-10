@@ -113,6 +113,20 @@ Réglage à la main : *Capture : repères de réglage* affiche sur le VoCore la 
 au sol (10, 20, 40, 80 m) ; ajustez *hauteur de l'horizon* (flèches sous les voitures → baissez), *champ
 de vision vertical* et *centre horizontal*, puis désactivez les repères.
 
+## LEDs spotter : premiers rétros (Arduino Nano)
+
+Les premiers rétros pilotent leurs LEDs avec un **Arduino Nano** branché en USB. Onglet *LEDs* :
+1. **Version du rétro** = `ArduinoNano`.
+2. **Programmer l'Arduino** (une seule fois) : AviX Mirror installe son programme LEDs sur le Nano, sans
+   Arduino IDE (le programme précédent, par exemple celui de SimHub, est remplacé). Avec plusieurs ports COM,
+   choisissez d'abord celui du Nano dans *Port de l'Arduino*.
+3. **Broche des LEDs** : D2 sur les rétros AVIX ; à changer seulement si le fil de données est ailleurs (2 à 13).
+
+Le Nano est ensuite trouvé tout seul à chaque démarrage (*Port de l'Arduino* = Automatique) et les LEDs
+s'allument une à une pour vérifier le câblage. Le programme (`Arduino-Nano-LEDs/AviXMirrorLeds.ino` dans le zip,
+bibliothèque *Adafruit NeoPixel*) peut aussi être téléversé avec l'Arduino IDE. Les LEDs s'éteignent d'elles-mêmes
+5 s après la fermeture d'AviX Mirror.
+
 ## LEDs spotter (WS2812B sur la carte MPro)
 
 Deux barrettes de 8 LEDs WS2812B, une de chaque côté de l'écran, branchées en série sur la carte MPro

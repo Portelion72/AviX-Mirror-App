@@ -26,6 +26,7 @@ public sealed class MirrorEngine : IDisposable
     VoCoreUsbOutput? _usb;
     AcCameraSource? _acCamera;
     Spotter? _spotter;
+    ArduinoLeds? _arduino;
     Hud.HudOverlay? _hud;
     GameActivity? _activity;
     GameState _state = GameState.NoGame;
@@ -122,8 +123,17 @@ public sealed class MirrorEngine : IDisposable
         if (_settings.LedsEnabled)
         {
             _spotter = new Spotter(_settings);
-            var usb = _usb;
-            _spotter.Changed += chain => usb.SetLeds(chain);
+            if (_settings.LedHardware == LedHardware.ArduinoNano)
+            {
+                // Premiers rétros : LEDs sur un Arduino Nano en USB série.
+                var arduino = _arduino = new ArduinoLeds(_settings);
+                _spotter.Changed += chain => arduino.SetLeds(chain);
+            }
+            else
+            {
+                var usb = _usb;
+                _spotter.Changed += chain => usb.SetLeds(chain);
+            }
         }
 
         if (_settings.Mode == MirrorMode.Radar)
@@ -218,6 +228,7 @@ public sealed class MirrorEngine : IDisposable
         _radar?.UpdateSettings(copy);
         _acCamera?.UpdateSettings(copy);
         _spotter?.UpdateSettings(copy);
+        _arduino?.UpdateSettings(copy);
         _hud?.UpdateSettings(copy);
     }
 
@@ -238,6 +249,8 @@ public sealed class MirrorEngine : IDisposable
         _hud = null;
         _spotter?.Dispose();
         _spotter = null;
+        _arduino?.Dispose();
+        _arduino = null;
         _radar?.Dispose();
         _radar = null;
         _acCamera?.Dispose();
@@ -342,6 +355,8 @@ public sealed class MirrorEngine : IDisposable
 
         if (_usb != null)
             messages.Add(_usb.Status);
+        if (_arduino != null)
+            messages.Add(_arduino.Status);
 
         Status = string.Join("\n", messages.Where(m => !string.IsNullOrEmpty(m)));
     }
